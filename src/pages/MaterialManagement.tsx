@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PlusCircle, Edit, Trash2, Search, Filter } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllMaterials, createMaterial, updateMaterial, deleteMaterial } from '@/integrations/supabase/data';
@@ -52,6 +53,8 @@ const MaterialManagement = () => {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [materialToDeleteId, setMaterialToDeleteId] = useState<string | null>(null);
 
   const { data: materials, isLoading, error } = useQuery<Material[]>({
     queryKey: ['materials'],
@@ -83,6 +86,7 @@ const MaterialManagement = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       setIsFormOpen(false);
+      showSuccess('Material creado exitosamente.');
     },
     onError: (err) => {
       showError(`Error al crear material: ${err.message}`);
@@ -96,6 +100,7 @@ const MaterialManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       setIsFormOpen(false);
       setEditingMaterial(null);
+      showSuccess('Material actualizado exitosamente.');
     },
     onError: (err) => {
       showError(`Error al actualizar material: ${err.message}`);
@@ -106,9 +111,14 @@ const MaterialManagement = () => {
     mutationFn: deleteMaterial,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['materials'] });
+      showSuccess('Material eliminado exitosamente.');
+      setIsDeleteDialogOpen(false);
+      setMaterialToDeleteId(null);
     },
     onError: (err) => {
       showError(`Error al eliminar material: ${err.message}`);
+      setIsDeleteDialogOpen(false);
+      setMaterialToDeleteId(null);
     },
   });
 
@@ -122,9 +132,14 @@ const MaterialManagement = () => {
     setIsFormOpen(true);
   };
 
-  const handleDeleteMaterial = async (id: string) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este material?')) {
-      await deleteMutation.mutateAsync(id);
+  const confirmDeleteMaterial = (id: string) => {
+    setMaterialToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDeleteMaterial = async () => {
+    if (materialToDeleteId) {
+      await deleteMutation.mutateAsync(materialToDeleteId);
     }
   };
 
@@ -249,7 +264,7 @@ const MaterialManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteMaterial(material.id)}
+                          onClick={() => confirmDeleteMaterial(material.id)}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -268,6 +283,24 @@ const MaterialManagement = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      {/* AlertDialog for delete confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el material.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDeleteMaterial} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

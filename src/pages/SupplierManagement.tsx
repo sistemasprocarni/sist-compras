@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PlusCircle, Edit, Trash2, Search, Phone, Instagram } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/integrations/supabase/data';
@@ -77,6 +78,8 @@ const SupplierManagement = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [supplierToDeleteId, setSupplierToDeleteId] = useState<string | null>(null);
 
   const { data: suppliers, isLoading, error } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
@@ -127,9 +130,14 @@ const SupplierManagement = () => {
     mutationFn: deleteSupplier,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      showSuccess('Proveedor eliminado exitosamente.');
+      setIsDeleteDialogOpen(false);
+      setSupplierToDeleteId(null);
     },
     onError: (err) => {
       showError(`Error al eliminar proveedor: ${err.message}`);
+      setIsDeleteDialogOpen(false);
+      setSupplierToDeleteId(null);
     },
   });
 
@@ -143,9 +151,14 @@ const SupplierManagement = () => {
     setIsFormOpen(true);
   };
 
-  const handleDeleteSupplier = async (id: string) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
-      await deleteMutation.mutateAsync(id);
+  const confirmDeleteSupplier = (id: string) => {
+    setSupplierToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDeleteSupplier = async () => {
+    if (supplierToDeleteId) {
+      await deleteMutation.mutateAsync(supplierToDeleteId);
     }
   };
 
@@ -285,7 +298,7 @@ const SupplierManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteSupplier(supplier.id); }}
+                        onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -304,7 +317,7 @@ const SupplierManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Código</TableHead> {/* New: Table header for code */}
+                    <TableHead>Código</TableHead>
                     <TableHead>RIF</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Email</TableHead>
@@ -321,7 +334,7 @@ const SupplierManagement = () => {
                 <TableBody>
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id} className="cursor-pointer" onClick={() => handleRowClick(supplier.id)}>
-                      <TableCell>{supplier.code || 'N/A'}</TableCell> {/* New: Display code */}
+                      <TableCell>{supplier.code || 'N/A'}</TableCell>
                       <TableCell>{supplier.rif}</TableCell>
                       <TableCell>{supplier.name}</TableCell>
                       <TableCell>{supplier.email || 'N/A'}</TableCell>
@@ -366,7 +379,7 @@ const SupplierManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteSupplier(supplier.id); }}
+                          onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -381,6 +394,24 @@ const SupplierManagement = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      {/* AlertDialog for delete confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el proveedor y todas sus relaciones con materiales.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDeleteSupplier} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
