@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { UploadCloud, FileText, Download } from 'lucide-react'; // Added Download icon
+import { UploadCloud, FileText, Download } from 'lucide-react';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 
@@ -21,7 +21,7 @@ const BulkUpload = () => {
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [relationFile, setRelationFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [downloadingTemplate, setDownloadingTemplate] = useState(false); // New state for template download
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'supplier' | 'material' | 'supplier_material_relation') => {
@@ -72,6 +72,7 @@ const BulkUpload = () => {
       const result: UploadResult = await response.json();
       setUploadResult(result);
 
+      dismissToast(loadingToastId); // Dismiss the loading toast
       if (result.failureCount > 0) {
         showError(`Carga completada con ${result.failureCount} errores. Revisa los detalles.`);
       } else {
@@ -89,9 +90,9 @@ const BulkUpload = () => {
 
     } catch (error: any) {
       console.error('[BulkUpload] Error during upload:', error);
+      dismissToast(loadingToastId); // Dismiss the loading toast even on error
       showError(error.message || 'Error desconocido al realizar la carga masiva.');
     } finally {
-      dismissToast(loadingToastId);
       setUploading(false);
     }
   };
@@ -134,11 +135,12 @@ const BulkUpload = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      showSuccess('Plantilla descargada exitosamente.', loadingToastId);
+      dismissToast(loadingToastId); // Dismiss the loading toast
+      showSuccess('Plantilla descargada exitosamente.');
     } catch (error: any) {
       console.error('[BulkUpload] Error downloading template:', error);
+      dismissToast(loadingToastId); // Dismiss the loading toast even on error
       showError(error.message || 'Error desconocido al descargar la plantilla.');
-      dismissToast(loadingToastId);
     } finally {
       setDownloadingTemplate(false);
     }
