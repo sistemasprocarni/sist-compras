@@ -14,7 +14,8 @@ import { ShoppingCartProvider } from "./context/ShoppingCartContext";
 import SearchSuppliersByMaterial from "./pages/SearchSuppliersByMaterial";
 import SupplierDetails from "./pages/SupplierDetails";
 import SupplierManagement from "./pages/SupplierManagement";
-import MaterialManagement from "./pages/MaterialManagement"; // New page
+import MaterialManagement from "./pages/MaterialManagement";
+import BulkUpload from "./pages/BulkUpload"; // New page import
 
 const queryClient = new QueryClient();
 
@@ -35,7 +36,8 @@ const App = () => (
                 <Route path="/search-suppliers-by-material" element={<SearchSuppliersByMaterial />} />
                 <Route path="/suppliers/:id" element={<SupplierDetails />} />
                 <Route path="/supplier-management" element={<SupplierManagement />} />
-                <Route path="/material-management" element={<MaterialManagement />} /> {/* New route */}
+                <Route path="/material-management" element={<MaterialManagement />} />
+                <Route path="/bulk-upload" element={<BulkUpload />} /> {/* New route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />

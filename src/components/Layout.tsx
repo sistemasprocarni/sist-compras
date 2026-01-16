@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box } from 'lucide-react'; // Added Box icon for materials
+import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload } from 'lucide-react'; // Added Upload icon for bulk upload
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -15,9 +15,10 @@ const Layout = () => {
     { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
     { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
     { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
-    { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' }, // New nav item
+    { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
     { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
     { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
+    { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' }, // New nav item
   ];
 
   const Sidebar = () => (
