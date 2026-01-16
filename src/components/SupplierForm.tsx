@@ -9,6 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { validateRif } from '@/utils/validators';
 
+// Define las opciones de términos de pago.
+// IMPORTANTE: Asegúrate de que estos valores coincidan exactamente con los permitidos por la restricción
+// 'suppliers_payment_terms_check' en tu tabla 'public.suppliers' en Supabase.
+// Puedes verificar esto en la consola de Supabase, en la sección de 'Database' -> 'Tables' -> 'suppliers' -> 'Constraints'.
+const PAYMENT_TERMS_OPTIONS = ['Net 30', 'Net 60', 'Cash', 'Other'];
+
 // Esquema de validación con Zod
 const supplierFormSchema = z.object({
   rif: z.string().min(1, { message: 'El RIF es requerido.' }).refine((val) => validateRif(val) !== null, {
@@ -17,7 +23,7 @@ const supplierFormSchema = z.object({
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   email: z.string().email({ message: 'Formato de email inválido.' }).optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
-  payment_terms: z.string().min(1, { message: 'Los términos de pago son requeridos.' }),
+  payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
   credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }),
   status: z.enum(['Active', 'Inactive'], { message: 'El estado es requerido.' }),
 });
@@ -39,7 +45,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       name: '',
       email: '',
       phone: '',
-      payment_terms: 'Net 30', // Default value
+      payment_terms: PAYMENT_TERMS_OPTIONS[0], // Default to the first valid option
       credit_days: 0,
       status: 'Active', // Default value
     },
@@ -53,9 +59,9 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       form.reset({
         rif: '',
         name: '',
-        email: '',
+      email: '',
         phone: '',
-        payment_terms: 'Net 30',
+        payment_terms: PAYMENT_TERMS_OPTIONS[0],
         credit_days: 0,
         status: 'Active',
       });
@@ -140,10 +146,9 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Net 30">Net 30</SelectItem>
-                  <SelectItem value="Net 60">Net 60</SelectItem>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Other">Otro</SelectItem>
+                  {PAYMENT_TERMS_OPTIONS.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

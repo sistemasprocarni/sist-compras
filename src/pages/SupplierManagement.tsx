@@ -130,7 +130,7 @@ const SupplierManagement = () => {
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Proveedor
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px]" description={editingSupplier ? 'Edita los detalles del proveedor existente.' : 'Completa los campos para añadir un nuevo proveedor.'}>
               <DialogHeader>
                 <DialogTitle>{editingSupplier ? 'Editar Proveedor' : 'Añadir Nuevo Proveedor'}</DialogTitle>
               </DialogHeader>
