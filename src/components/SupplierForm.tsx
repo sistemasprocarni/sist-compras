@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from '@hookform/react';
+import { useForm } from 'react-hook-form'; // Corregido: de '@hookform/react' a 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
