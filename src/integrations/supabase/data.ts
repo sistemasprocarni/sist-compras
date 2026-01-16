@@ -11,6 +11,7 @@ interface Supplier {
   email?: string;
   phone?: string;
   payment_terms: string;
+  custom_payment_terms?: string | null; // Añadida nueva columna
   credit_days: number;
   status: string;
   user_id: string;
@@ -60,7 +61,7 @@ interface PurchaseOrderItem {
 export const searchSuppliers = async (query: string): Promise<Supplier[]> => {
   const { data, error } = await supabase
     .from('suppliers')
-    .select('*')
+    .select('*') // Aseguramos que custom_payment_terms sea seleccionado
     .or(`rif.ilike.%${query}%,name.ilike.%${query}%`)
     .eq('status', 'Active'); // Solo buscar proveedores activos
 
@@ -152,8 +153,6 @@ export const createPurchaseOrder = async (
   return order;
 };
 
-// --- Nuevas funciones para la gestión de proveedores y búsqueda por material ---
-
 /**
  * Busca materiales por nombre o código.
  * @param query Cadena de búsqueda.
@@ -183,7 +182,7 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<(Suppl
     .from('supplier_materials')
     .select(`
       specification,
-      suppliers (id, rif, name, email, phone, payment_terms, credit_days, status)
+      suppliers (id, rif, name, email, phone, payment_terms, custom_payment_terms, credit_days, status)
     `)
     .eq('material_id', materialId);
 
@@ -249,7 +248,7 @@ export const getSupplierDetails = async (supplierId: string): Promise<(Supplier 
 export const getAllSuppliers = async (): Promise<Supplier[]> => {
   const { data, error } = await supabase
     .from('suppliers')
-    .select('*');
+    .select('*'); // Aseguramos que custom_payment_terms sea seleccionado
 
   if (error) {
     console.error('[getAllSuppliers] Error fetching all suppliers:', error);

@@ -18,6 +18,7 @@ interface Supplier {
   email?: string;
   phone?: string;
   payment_terms: string;
+  custom_payment_terms?: string | null; // Añadida nueva columna
   credit_days: number;
   status: string;
   user_id: string;
@@ -166,7 +167,11 @@ const SupplierManagement = () => {
                       <TableCell>{supplier.name}</TableCell>
                       <TableCell>{supplier.email || 'N/A'}</TableCell>
                       <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                      <TableCell>{supplier.payment_terms}</TableCell>
+                      <TableCell>
+                        {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
+                          ? supplier.custom_payment_terms
+                          : supplier.payment_terms}
+                      </TableCell>
                       <TableCell>{supplier.credit_days}</TableCell>
                       <TableCell>{supplier.status}</TableCell>
                       <TableCell className="text-right">

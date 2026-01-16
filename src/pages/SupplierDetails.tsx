@@ -72,7 +72,12 @@ const SupplierDetails = () => {
             <p><strong>RIF:</strong> {supplier.rif}</p>
             <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
             <p><strong>Teléfono:</strong> {supplier.phone || 'N/A'}</p>
-            <p><strong>Términos de Pago:</strong> {supplier.payment_terms}</p>
+            <p>
+              <strong>Términos de Pago:</strong>{' '}
+              {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
+                ? supplier.custom_payment_terms
+                : supplier.payment_terms}
+            </p>
             <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
             <p><strong>Estado:</strong> {supplier.status}</p>
           </div>

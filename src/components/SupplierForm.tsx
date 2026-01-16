@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form'; // Corregido: de '@hookform/react' a 'react-hook-form'
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,6 @@ import { Textarea } from '@/components/ui/textarea'; // Importar Textarea
 import { validateRif } from '@/utils/validators';
 
 // Define las opciones de términos de pago.
-// IMPORTANTE: Asegúrate de que estos valores coincidan exactamente con los permitidos por la restricción
-// 'suppliers_payment_terms_check' en tu tabla 'public.suppliers' en Supabase.
-// Puedes verificar esto en la consola de Supabase, en la sección de 'Database' -> 'Tables' -> 'suppliers' -> 'Constraints'.
 const PAYMENT_TERMS_OPTIONS = ['Contado', 'Credito', 'Otro'];
 
 // Esquema de validación con Zod
@@ -25,7 +22,7 @@ const supplierFormSchema = z.object({
   email: z.string().email({ message: 'Formato de email inválido.' }).optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
-  custom_payment_terms: z.string().optional(), // Nuevo campo para términos personalizados
+  custom_payment_terms: z.string().optional().nullable(), // Permitir null para custom_payment_terms
   credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }),
   status: z.enum(['Active', 'Inactive'], { message: 'El estado es requerido.' }),
 }).superRefine((data, ctx) => {
@@ -50,15 +47,15 @@ interface SupplierFormProps {
 const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCancel, isSubmitting }) => {
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
-    defaultValues: initialData || {
+    defaultValues: {
       rif: '',
       name: '',
       email: '',
       phone: '',
-      payment_terms: PAYMENT_TERMS_OPTIONS[0], // Default to the first valid option
-      custom_payment_terms: '',
+      payment_terms: PAYMENT_TERMS_OPTIONS[0],
+      custom_payment_terms: null, // Default a null
       credit_days: 0,
-      status: 'Active', // Default value
+      status: 'Active',
     },
   });
 
@@ -67,17 +64,26 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   // Set form values when initialData changes (for editing)
   React.useEffect(() => {
     if (initialData) {
-      // If initialData.payment_terms is not one of the predefined options,
-      // assume it's a custom term and set payment_terms to 'Otro'
-      // and custom_payment_terms to the actual value.
-      if (!PAYMENT_TERMS_OPTIONS.includes(initialData.payment_terms)) {
+      // Si initialData.payment_terms es 'Otro', usa su custom_payment_terms
+      // Si initialData.payment_terms es un valor personalizado antiguo (no en PAYMENT_TERMS_OPTIONS),
+      // establece payment_terms en 'Otro' y coloca el valor antiguo en custom_payment_terms.
+      if (initialData.payment_terms === 'Otro') {
+        form.reset({
+          ...initialData,
+          custom_payment_terms: initialData.custom_payment_terms || null, // Asegura que sea null si está vacío
+        });
+      } else if (!PAYMENT_TERMS_OPTIONS.includes(initialData.payment_terms)) {
+        // Manejar valores personalizados antiguos que estaban directamente en payment_terms
         form.reset({
           ...initialData,
           payment_terms: 'Otro',
-          custom_payment_terms: initialData.payment_terms,
+          custom_payment_terms: initialData.payment_terms, // Mueve el valor personalizado antiguo al nuevo campo
         });
       } else {
-        form.reset(initialData);
+        form.reset({
+          ...initialData,
+          custom_payment_terms: null, // Asegura que custom_payment_terms sea null si no es 'Otro'
+        });
       }
     } else {
       form.reset({
@@ -86,7 +92,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
         email: '',
         phone: '',
         payment_terms: PAYMENT_TERMS_OPTIONS[0],
-        custom_payment_terms: '',
+        custom_payment_terms: null,
         credit_days: 0,
         status: 'Active',
       });
@@ -94,19 +100,20 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   }, [initialData, form]);
 
   const handleFormSubmit = (data: SupplierFormValues) => {
-    // Normalize RIF before submitting
     const normalizedRif = validateRif(data.rif);
     if (!normalizedRif) {
       form.setError('rif', { message: 'Formato de RIF inválido.' });
       return;
     }
 
-    let finalPaymentTerms = data.payment_terms;
-    if (data.payment_terms === 'Otro' && data.custom_payment_terms) {
-      finalPaymentTerms = data.custom_payment_terms;
-    }
+    // Asegura que custom_payment_terms sea null si payment_terms no es 'Otro'
+    const finalCustomPaymentTerms = data.payment_terms === 'Otro' ? data.custom_payment_terms : null;
 
-    onSubmit({ ...data, rif: normalizedRif, payment_terms: finalPaymentTerms });
+    onSubmit({
+      ...data,
+      rif: normalizedRif,
+      custom_payment_terms: finalCustomPaymentTerms,
+    });
   };
 
   return (
@@ -194,7 +201,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
               <FormItem>
                 <FormLabel>Especificar Términos de Pago</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Ej: Pago a 45 días con 10% de anticipo" {...field} />
+                  <Textarea placeholder="Ej: Pago a 45 días con 10% de anticipo" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
