@@ -14,7 +14,7 @@ import SmartSearch from '@/components/SmartSearch';
 import { searchMaterials } from '@/integrations/supabase/data'; // Importar la función de búsqueda de materiales
 
 // Define las opciones de términos de pago.
-const PAYMENT_TERMS_OPTIONS = ['Contado', 'Credito', 'Otro'];
+const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro']; // Corregido: 'Crédito'
 
 // Esquema de validación para un material suministrado por el proveedor
 const supplierMaterialSchema = z.object({
@@ -34,7 +34,7 @@ const supplierFormSchema = z.object({
   phone: z.string().optional().or(z.literal('')),
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
   custom_payment_terms: z.string().optional().nullable(),
-  credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }),
+  credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }).optional(), // Hacer opcional para la validación condicional
   status: z.enum(['Active', 'Inactive'], { message: 'El estado es requerido.' }),
   materials: z.array(supplierMaterialSchema).optional(), // Lista de materiales suministrados
 }).superRefine((data, ctx) => {
@@ -43,6 +43,13 @@ const supplierFormSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: 'Por favor, especifica los términos de pago personalizados.',
       path: ['custom_payment_terms'],
+    });
+  }
+  if (data.payment_terms === 'Crédito' && (data.credit_days === undefined || data.credit_days < 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Los días de crédito son requeridos para términos de "Crédito" y no pueden ser negativos.',
+      path: ['credit_days'],
     });
   }
 });
@@ -251,19 +258,21 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
             )}
           />
         )}
-        <FormField
-          control={form.control}
-          name="credit_days"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Días de Crédito</FormLabel>
-              <FormControl>
-                <Input type="number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {selectedPaymentTerms === 'Crédito' && ( // Condición para mostrar "Días de Crédito"
+          <FormField
+            control={form.control}
+            name="credit_days"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Días de Crédito</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name="status"
