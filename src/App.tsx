@@ -11,9 +11,10 @@ import { SessionContextProvider } from "./components/SessionContextProvider";
 import GeneratePurchaseOrder from "./pages/GeneratePurchaseOrder";
 import GenerateQuoteRequest from "./pages/GenerateQuoteRequest";
 import { ShoppingCartProvider } from "./context/ShoppingCartContext";
-import SearchSuppliersByMaterial from "./pages/SearchSuppliersByMaterial"; // New page
-import SupplierDetails from "./pages/SupplierDetails"; // New page
-import SupplierManagement from "./pages/SupplierManagement"; // New page
+import SearchSuppliersByMaterial from "./pages/SearchSuppliersByMaterial";
+import SupplierDetails from "./pages/SupplierDetails";
+import SupplierManagement from "./pages/SupplierManagement";
+import MaterialManagement from "./pages/MaterialManagement"; // New page
 
 const queryClient = new QueryClient();
 
@@ -31,9 +32,10 @@ const App = () => (
                 <Route index element={<SearchManagement />} />
                 <Route path="/generate-quote" element={<GenerateQuoteRequest />} />
                 <Route path="/generate-po" element={<GeneratePurchaseOrder />} />
-                <Route path="/search-suppliers-by-material" element={<SearchSuppliersByMaterial />} /> {/* New route */}
-                <Route path="/suppliers/:id" element={<SupplierDetails />} /> {/* New route for supplier details */}
-                <Route path="/supplier-management" element={<SupplierManagement />} /> {/* New route */}
+                <Route path="/search-suppliers-by-material" element={<SearchSuppliersByMaterial />} />
+                <Route path="/suppliers/:id" element={<SupplierDetails />} />
+                <Route path="/supplier-management" element={<SupplierManagement />} />
+                <Route path="/material-management" element={<MaterialManagement />} /> {/* New route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />

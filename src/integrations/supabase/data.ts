@@ -22,6 +22,8 @@ interface Material {
   code: string;
   name: string;
   category?: string;
+  unit?: string; // Nueva columna
+  user_id: string; // Asegurar que user_id esté presente
 }
 
 interface SupplierMaterial {
@@ -89,7 +91,8 @@ export const getMaterialsBySupplier = async (supplierId: string): Promise<Suppli
         id,
         code,
         name,
-        category
+        category,
+        unit
       )
     `)
     .eq('supplier_id', supplierId);
@@ -212,7 +215,7 @@ export const getSupplierDetails = async (supplierId: string): Promise<(Supplier 
       supplier_materials (
         id,
         specification,
-        materials (id, code, name, category)
+        materials (id, code, name, category, unit)
       )
     `)
     .eq('id', supplierId)
@@ -319,5 +322,86 @@ export const deleteSupplier = async (id: string): Promise<boolean> => {
     return false;
   }
   showSuccess('Proveedor eliminado exitosamente.');
+  return true;
+};
+
+/**
+ * Obtiene todos los materiales.
+ * @returns Lista de todos los materiales.
+ */
+export const getAllMaterials = async (): Promise<Material[]> => {
+  const { data, error } = await supabase
+    .from('materials')
+    .select('*');
+
+  if (error) {
+    console.error('[getAllMaterials] Error fetching all materials:', error);
+    showError('Error al cargar los materiales.');
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * Crea un nuevo material.
+ * @param material Datos del nuevo material.
+ * @returns El material creado o null si falla.
+ */
+export const createMaterial = async (material: Omit<Material, 'id' | 'created_at' | 'updated_at'>): Promise<Material | null> => {
+  const { data, error } = await supabase
+    .from('materials')
+    .insert(material)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[createMaterial] Error creating material:', error);
+    showError('Error al crear el material.');
+    return null;
+  }
+  showSuccess('Material creado exitosamente.');
+  return data;
+};
+
+/**
+ * Actualiza un material existente.
+ * @param id ID del material a actualizar.
+ * @param updates Objeto con los campos a actualizar.
+ * @returns El material actualizado o null si falla.
+ */
+export const updateMaterial = async (id: string, updates: Partial<Omit<Material, 'id' | 'created_at' | 'updated_at'>>): Promise<Material | null> => {
+  const { data, error } = await supabase
+    .from('materials')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[updateMaterial] Error updating material:', error);
+    showError('Error al actualizar el material.');
+    return null;
+  }
+  showSuccess('Material actualizado exitosamente.');
+  return data;
+};
+
+/**
+ * Elimina un material.
+ * @param id ID del material a eliminar.
+ * @returns true si se eliminó exitosamente, false si falla.
+ */
+export const deleteMaterial = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('materials')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteMaterial] Error deleting material:', error);
+    showError('Error al eliminar el material.');
+    return false;
+  }
+  showSuccess('Material eliminado exitosamente.');
   return true;
 };
