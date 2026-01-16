@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form'; // Corregido: de '@hookform/react' a 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -106,10 +106,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       finalPaymentTerms = data.custom_payment_terms;
     }
 
-    // Crear un nuevo objeto de datos para enviar, excluyendo custom_payment_terms
-    const { custom_payment_terms, ...dataToSubmit } = data;
-
-    onSubmit({ ...dataToSubmit, rif: normalizedRif, payment_terms: finalPaymentTerms });
+    onSubmit({ ...data, rif: normalizedRif, payment_terms: finalPaymentTerms });
   };
 
   return (
