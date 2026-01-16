@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
+import { Input } from '@/components/ui/input'; // Importar Input para la barra de búsqueda
 
 interface Supplier {
   id: string;
@@ -18,7 +19,7 @@ interface Supplier {
   email?: string;
   phone?: string;
   payment_terms: string;
-  custom_payment_terms?: string | null; // Añadida nueva columna
+  custom_payment_terms?: string | null;
   credit_days: number;
   status: string;
   user_id: string;
@@ -31,11 +32,24 @@ const SupplierManagement = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
 
   const { data: suppliers, isLoading, error } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
     queryFn: getAllSuppliers,
   });
+
+  // Filtrar proveedores basado en el término de búsqueda
+  const filteredSuppliers = useMemo(() => {
+    if (!suppliers) return [];
+    if (!searchTerm) return suppliers;
+
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    return suppliers.filter(supplier =>
+      supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+      supplier.rif.toLowerCase().includes(lowerCaseSearchTerm)
+    );
+  }, [suppliers, searchTerm]);
 
   const createMutation = useMutation({
     mutationFn: (newSupplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
@@ -145,7 +159,18 @@ const SupplierManagement = () => {
           </Dialog>
         </CardHeader>
         <CardContent>
-          {suppliers && suppliers.length > 0 ? (
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar proveedor por RIF o nombre..."
+              className="w-full appearance-none bg-background pl-8 shadow-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {filteredSuppliers && filteredSuppliers.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -161,7 +186,7 @@ const SupplierManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers.map((supplier) => (
+                  {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell>{supplier.rif}</TableCell>
                       <TableCell>{supplier.name}</TableCell>
@@ -199,7 +224,7 @@ const SupplierManagement = () => {
             </div>
           ) : (
             <div className="text-center text-muted-foreground p-8">
-              No hay proveedores registrados. ¡Añade uno para empezar!
+              No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
             </div>
           )}
         </CardContent>
