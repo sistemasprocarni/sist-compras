@@ -37,7 +37,7 @@ const MATERIAL_UNITS = [
 
 // Esquema de validación con Zod
 const materialFormSchema = z.object({
-  code: z.string().optional(), // El código ahora es opcional para la creación (se autogenera)
+  code: z.string().optional(), // El código es opcional y se autogenera, no se gestiona directamente en el formulario
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   category: z.enum(MATERIAL_CATEGORIES as [string, ...string[]], { message: 'La categoría es requerida y debe ser válida.' }),
   unit: z.enum(MATERIAL_UNITS as [string, ...string[]], { message: 'La unidad es requerida y debe ser válida.' }),
@@ -56,7 +56,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
   const form = useForm<MaterialFormValues>({
     resolver: zodResolver(materialFormSchema),
     defaultValues: {
-      code: '',
+      code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
       name: '',
       category: MATERIAL_CATEGORIES[0],
       unit: MATERIAL_UNITS[0],
@@ -80,20 +80,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="code"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Código</FormLabel>
-              <FormControl>
-                {/* El campo de código es de solo lectura si ya existe (para edición) o vacío para nueva creación */}
-                <Input placeholder="Se generará automáticamente" {...field} readOnly={!!initialData?.id} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* El campo de código ha sido eliminado ya que se genera automáticamente */}
         <FormField
           control={form.control}
           name="name"
