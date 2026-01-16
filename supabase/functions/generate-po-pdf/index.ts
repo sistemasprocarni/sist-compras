@@ -2,14 +2,103 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-// Para la generación de PDF en Deno, podrías usar una librería como 'html-pdf' si es compatible,
-// o generar HTML y luego usar un servicio externo para convertirlo a PDF.
-// Para este ejemplo, simularemos la generación y devolveremos un placeholder.
+import { PDFDocument, rgb, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Re-implementación de las utilidades de cálculo para el entorno Deno
+const calculateTotals = (items: Array<{ quantity: number; unit_price: number; tax_rate?: number; is_exempt?: boolean }>) => {
+  let baseImponible = 0;
+  let montoIVA = 0;
+  let total = 0;
+
+  items.forEach(item => {
+    const itemTotal = item.quantity * item.unit_price;
+    if (item.is_exempt) {
+      baseImponible += itemTotal;
+    } else {
+      const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
+      baseImponible += itemTotal;
+      montoIVA += itemTotal * taxRate;
+    }
+    total += itemTotal;
+  });
+
+  total += montoIVA;
+
+  return {
+    baseImponible: parseFloat(baseImponible.toFixed(2)),
+    montoIVA: parseFloat(montoIVA.toFixed(2)),
+    total: parseFloat(total.toFixed(2)),
+  };
+};
+
+const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
+
+function convertirGrupo(num: number): string {
+  let c = Math.floor(num / 100);
+  let d = Math.floor((num % 100) / 10);
+  let u = num % 10;
+  let texto = '';
+
+  if (c === 1 && d === 0 && u === 0) {
+    texto += 'CIEN';
+  } else if (c > 0) {
+    texto += centenas[c] + ' ';
+  }
+
+  if (d === 1) {
+    texto += especiales[u];
+  } else if (d > 1) {
+    texto += decenas[d];
+    if (u > 0) {
+      texto += ' Y ' + unidades[u];
+    }
+  } else if (u > 0) {
+    texto += unidades[u];
+  }
+  return texto.trim();
+}
+
+const numberToWords = (amount: number, currency: 'VES' | 'USD'): string => {
+  if (amount === 0) {
+    return `CERO ${currency === 'VES' ? 'BOLIVARES' : 'DOLARES'} CON 00/100`;
+  }
+
+  const [entero, decimal] = amount.toFixed(2).split('.').map(Number);
+
+  let texto = '';
+  let tempEntero = entero;
+
+  if (tempEntero === 1) {
+    texto = `UN ${currency === 'VES' ? 'BOLIVAR' : 'DOLAR'}`;
+  } else if (tempEntero > 1) {
+    let miles = Math.floor(tempEntero / 1000);
+    let unidades = tempEntero % 1000;
+
+    if (miles > 0) {
+      if (miles === 1) {
+        texto += 'MIL ';
+      } else {
+        texto += convertirGrupo(miles) + ' MIL ';
+      }
+    }
+    texto += convertirGrupo(unidades);
+
+    texto = texto.trim() + ` ${currency === 'VES' ? 'BOLIVARES' : 'DOLARES'}`;
+  }
+
+  const decimalTexto = decimal.toString().padStart(2, '0');
+
+  return `${texto} CON ${decimalTexto}/100`.trim();
+};
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -42,7 +131,7 @@ serve(async (req) => {
       .from('purchase_orders')
       .select(`
         *,
-        suppliers (name, rif, email, phone),
+        suppliers (name, rif, email, phone, payment_terms),
         companies (name, logo_url, fiscal_data)
       `)
       .eq('id', orderId)
@@ -69,100 +158,174 @@ serve(async (req) => {
       });
     }
 
-    // --- Lógica de generación de HTML para el PDF ---
-    // Aquí construirías el HTML que representa tu plantilla A4.
-    // Esto puede ser complejo y requerir un motor de plantillas o construcción manual.
-    // Para este ejemplo, es un HTML muy básico.
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Orden de Compra #${order.sequence_number}</title>
-        <style>
-          body { font-family: sans-serif; margin: 20mm; font-size: 10pt; }
-          .header { text-align: center; margin-bottom: 20mm; }
-          .header img { max-width: 150px; height: auto; }
-          .header h1 { font-size: 18pt; margin: 5mm 0; }
-          .details { margin-bottom: 10mm; }
-          .details p { margin: 1mm 0; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .total-section { text-align: right; margin-top: 10mm; }
-          .footer { text-align: center; margin-top: 30mm; font-size: 8pt; }
-          .signature-line { border-top: 1px solid black; width: 200px; margin: 5mm auto 0; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          ${order.companies?.logo_url ? `<img src="${order.companies.logo_url}" alt="Company Logo">` : ''}
-          <h1>ORDEN DE COMPRA #${order.sequence_number}</h1>
-          <p>${order.companies?.name}</p>
-          <p>Fecha: ${new Date(order.created_at).toLocaleDateString()}</p>
-        </div>
+    // --- Generación de PDF con pdf-lib ---
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
 
-        <div class="details">
-          <p><strong>Proveedor:</strong> ${order.suppliers?.name} (RIF: ${order.suppliers?.rif})</p>
-          <p><strong>Email Proveedor:</strong> ${order.suppliers?.email}</p>
-          <p><strong>Términos de Pago:</strong> ${order.payment_terms}</p>
-          <p><strong>Moneda:</strong> ${order.currency} ${order.exchange_rate ? `(Tasa: ${order.exchange_rate})` : ''}</p>
-          <p><strong>Estado:</strong> ${order.status}</p>
-        </div>
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-        <table>
-          <thead>
-            <tr>
-              <th>Material</th>
-              <th>Cantidad</th>
-              <th>Precio Unitario</th>
-              <th>IVA (%)</th>
-              <th>Exento</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items?.map(item => `
-              <tr>
-                <td>${item.material_name}</td>
-                <td>${item.quantity}</td>
-                <td>${item.unit_price.toFixed(2)}</td>
-                <td>${(item.tax_rate * 100).toFixed(0)}%</td>
-                <td>${item.is_exempt ? 'Sí' : 'No'}</td>
-                <td>${(item.quantity * item.unit_price).toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+    const { width, height } = page.getSize();
+    const margin = 50;
+    let y = height - margin;
+    const fontSize = 10;
+    const lineHeight = fontSize * 1.2;
+    const tableHeaderBgColor = rgb(0.9, 0.9, 0.9);
+    const borderColor = rgb(0.8, 0.8, 0.8);
 
-        <div class="total-section">
-          <!-- Aquí podrías calcular y mostrar los totales usando la utilidad calculateTotals -->
-          <p><strong>Total:</strong> ${order.currency} ${order.total_amount ? order.total_amount.toFixed(2) : 'N/A'}</p>
-        </div>
+    // Helper para dibujar texto
+    const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
+      page.drawText(text, {
+        x,
+        y: yPos,
+        font: font,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+        ...options,
+      });
+    };
 
-        <div class="footer">
-          <p>Generado por: ${order.created_by || user.email}</p>
-          <div class="signature-line"></div>
-          <p>Firma Autorizada</p>
-        </div>
-      </body>
-      </html>
-    `;
+    // --- Header ---
+    // Logo (placeholder, ya que la carga de imágenes desde URL en Deno y pdf-lib es más compleja)
+    // Si `order.companies?.logo_url` existe, necesitarías fetch la imagen como ArrayBuffer y luego embedPng/embedJpg
+    // Para este ejemplo, usaremos un texto placeholder para el logo.
+    if (order.companies?.logo_url) {
+      // Ejemplo de cómo cargar una imagen (requiere fetch y manejo de ArrayBuffer)
+      // const logoResponse = await fetch(order.companies.logo_url);
+      // const logoBytes = await logoResponse.arrayBuffer();
+      // const logoImage = await pdfDoc.embedPng(logoBytes); // o embedJpg
+      // page.drawImage(logoImage, {
+      //   x: margin,
+      //   y: y - 50,
+      //   width: 100,
+      //   height: 50,
+      // });
+      drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
+    }
 
-    // --- Simulación de generación de PDF ---
-    // En un entorno real, aquí usarías una librería Deno para convertir HTML a PDF
-    // o enviarías el HTML a un servicio externo (ej. https://pdf.co, https://gotenberg.dev)
-    // Para este ejemplo, simplemente devolveremos el HTML como un archivo de texto.
-    // Si necesitas un PDF real, esto requerirá una integración más profunda o un servicio externo.
+    drawText('ORDEN DE COMPRA', width / 2, y, { font: boldFont, size: 18, x: width / 2 - boldFont.widthOfText('ORDEN DE COMPRA', { size: 18 }) / 2 });
+    y -= lineHeight * 2;
+    drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 12 });
+    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight, { font: font, size: 10 });
+    y -= lineHeight * 3;
 
-    // Para un PDF real, la respuesta sería algo como:
-    // const pdfBuffer = await generatePdfFromHtml(htmlContent); // Función hipotética
-    // return new Response(pdfBuffer, {
-    //   headers: { ...corsHeaders, 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="orden_compra_${order.sequence_number}.pdf"` },
-    // });
+    drawText(`Empresa: ${order.companies?.name || 'N/A'}`, margin, y, { font: boldFont });
+    y -= lineHeight;
+    drawText(`RIF Empresa: ${order.companies?.fiscal_data?.rif || 'N/A'}`, margin, y);
+    y -= lineHeight * 2;
 
-    // Devolviendo el HTML como texto para demostración
-    return new Response(htmlContent, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/html', 'Content-Disposition': `inline; filename="orden_compra_${order.sequence_number}.html"` },
+    // --- Detalles del Proveedor ---
+    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont });
+    y -= lineHeight;
+    drawText(`Nombre: ${order.suppliers?.name || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`RIF: ${order.suppliers?.rif || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Email: ${order.suppliers?.email || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Teléfono: ${order.suppliers?.phone || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Términos de Pago: ${order.suppliers?.payment_terms || 'N/A'}`, margin, y);
+    y -= lineHeight * 2;
+
+    // --- Detalles de la Orden ---
+    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont });
+    y -= lineHeight;
+    drawText(`Moneda: ${order.currency}`, margin, y);
+    y -= lineHeight;
+    if (order.exchange_rate) {
+      drawText(`Tasa de Cambio: ${order.exchange_rate.toFixed(2)}`, margin, y);
+      y -= lineHeight;
+    }
+    drawText(`Estado: ${order.status}`, margin, y);
+    y -= lineHeight * 2;
+
+    // --- Tabla de Ítems ---
+    const tableStartY = y;
+    const tableX = margin;
+    const tableWidth = width - 2 * margin;
+    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.2];
+    const colHeaders = ['Material', 'Cantidad', 'P. Unitario', 'IVA (%)', 'Exento', 'Subtotal'];
+
+    // Dibujar encabezados de tabla
+    let currentX = tableX;
+    page.drawRectangle({
+      x: tableX,
+      y: y - lineHeight,
+      width: tableWidth,
+      height: lineHeight,
+      color: tableHeaderBgColor,
+      borderColor: borderColor,
+      borderWidth: 1,
+    });
+    for (let i = 0; i < colHeaders.length; i++) {
+      drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
+      currentX += colWidths[i];
+    }
+    y -= lineHeight;
+
+    // Dibujar filas de ítems
+    for (const item of items) {
+      currentX = tableX;
+      page.drawRectangle({
+        x: tableX,
+        y: y - lineHeight,
+        width: tableWidth,
+        height: lineHeight,
+        borderColor: borderColor,
+        borderWidth: 1,
+      });
+      drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[0];
+      drawText(item.quantity.toString(), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[1];
+      drawText(item.unit_price.toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[2];
+      drawText(`${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[3];
+      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[4];
+      drawText((item.quantity * item.unit_price).toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      y -= lineHeight;
+    }
+    y -= lineHeight; // Espacio después de la tabla
+
+    // --- Totales ---
+    const calculatedTotals = calculateTotals(items);
+    const totalSectionX = width - margin - 200; // Alineado a la derecha
+
+    drawText(`Base Imponible: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`, totalSectionX, y);
+    y -= lineHeight;
+    drawText(`Monto IVA: ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`, totalSectionX, y);
+    y -= lineHeight;
+    drawText(`TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`, totalSectionX, y, { font: boldFont, size: fontSize + 2 });
+    y -= lineHeight * 2;
+
+    // Monto en palabras
+    const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
+    drawText(`Monto en Letras: ${amountInWords}`, margin, y, { font: italicFont });
+    y -= lineHeight * 3;
+
+    // --- Footer ---
+    drawText(`Generado por: ${order.created_by || user.email}`, margin, margin + lineHeight * 2);
+    page.drawLine({
+      start: { x: width / 2 - 100, y: margin + lineHeight },
+      end: { x: width / 2 + 100, y: margin + lineHeight },
+      thickness: 1,
+      color: rgb(0, 0, 0),
+    });
+    drawText('Firma Autorizada', width / 2 - 50, margin, { font: font, size: 9 });
+
+
+    const pdfBytes = await pdfDoc.save();
+
+    return new Response(pdfBytes, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="orden_compra_${order.sequence_number}.pdf"`,
+      },
     });
 
   } catch (error) {
