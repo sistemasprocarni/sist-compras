@@ -14,7 +14,7 @@ import SmartSearch from '@/components/SmartSearch';
 import { searchMaterials } from '@/integrations/supabase/data'; // Importar la función de búsqueda de materiales
 
 // Define las opciones de términos de pago.
-const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro']; // Corregido: 'Crédito'
+const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
 
 // Esquema de validación para un material suministrado por el proveedor
 const supplierMaterialSchema = z.object({
@@ -32,6 +32,8 @@ const supplierFormSchema = z.object({
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   email: z.string().email({ message: 'Formato de email inválido.' }).optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
+  phone_2: z.string().optional().or(z.literal('')), // Nuevo campo
+  instagram: z.string().optional().or(z.literal('')), // Nuevo campo
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
   custom_payment_terms: z.string().optional().nullable(),
   credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }).optional(), // Hacer opcional para la validación condicional
@@ -79,6 +81,8 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       name: '',
       email: '',
       phone: '',
+      phone_2: '', // Nuevo campo
+      instagram: '', // Nuevo campo
       payment_terms: PAYMENT_TERMS_OPTIONS[0],
       custom_payment_terms: null,
       credit_days: 0,
@@ -125,6 +129,8 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
         name: '',
         email: '',
         phone: '',
+        phone_2: '', // Nuevo campo
+        instagram: '', // Nuevo campo
         payment_terms: PAYMENT_TERMS_OPTIONS[0],
         custom_payment_terms: null,
         credit_days: 0,
@@ -213,9 +219,35 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Teléfono</FormLabel>
+              <FormLabel>Teléfono Principal</FormLabel>
               <FormControl>
                 <Input placeholder="Ej: +584121234567" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone_2"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Teléfono Secundario</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: +584127654321" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="instagram"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Instagram</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: @nombredeusuario" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

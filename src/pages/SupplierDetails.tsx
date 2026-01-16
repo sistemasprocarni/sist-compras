@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -23,6 +23,14 @@ const SupplierDetails = () => {
     enabled: !!id,
   });
 
+  const formatPhoneNumberForWhatsApp = (phone: string) => {
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (!digitsOnly.startsWith('58')) {
+      return `58${digitsOnly}`;
+    }
+    return digitsOnly;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
@@ -37,7 +45,7 @@ const SupplierDetails = () => {
       <div className="container mx-auto p-4 text-center text-destructive">
         Error: {error.message}
         <Button asChild variant="link" className="mt-4">
-          <Link to="/search-suppliers-by-material">Volver a la búsqueda</Link>
+          <Link to="/supplier-management">Volver a la gestión de proveedores</Link>
         </Button>
       </div>
     );
@@ -48,7 +56,7 @@ const SupplierDetails = () => {
       <div className="container mx-auto p-4 text-center text-muted-foreground">
         Proveedor no encontrado.
         <Button asChild variant="link" className="mt-4">
-          <Link to="/search-suppliers-by-material">Volver a la búsqueda</Link>
+          <Link to="/supplier-management">Volver a la gestión de proveedores</Link>
         </Button>
       </div>
     );
@@ -57,8 +65,8 @@ const SupplierDetails = () => {
   return (
     <div className="container mx-auto p-4">
       <Button asChild variant="outline" className="mb-4">
-        <Link to="/search-suppliers-by-material">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la búsqueda de materiales
+        <Link to="/supplier-management">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la gestión de proveedores
         </Link>
       </Button>
 
@@ -71,7 +79,30 @@ const SupplierDetails = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <p><strong>RIF:</strong> {supplier.rif}</p>
             <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
-            <p><strong>Teléfono:</strong> {supplier.phone || 'N/A'}</p>
+            <p>
+              <strong>Teléfono Principal:</strong>{' '}
+              {supplier.phone ? (
+                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                  {supplier.phone} <Phone className="ml-1 h-3 w-3" />
+                </a>
+              ) : 'N/A'}
+            </p>
+            <p>
+              <strong>Teléfono Secundario:</strong>{' '}
+              {supplier.phone_2 ? (
+                <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone_2)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                  {supplier.phone_2} <Phone className="ml-1 h-3 w-3" />
+                </a>
+              ) : 'N/A'}
+            </p>
+            <p>
+              <strong>Instagram:</strong>{' '}
+              {supplier.instagram ? (
+                <a href={`https://instagram.com/${supplier.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                  {supplier.instagram} <Instagram className="ml-1 h-3 w-3" />
+                </a>
+              ) : 'N/A'}
+            </p>
             <p>
               <strong>Términos de Pago:</strong>{' '}
               {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms

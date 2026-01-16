@@ -4,13 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Instagram } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
+import { Link, useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MaterialDetail {
   id: string;
@@ -32,6 +34,8 @@ interface Supplier {
   name: string;
   email?: string;
   phone?: string;
+  phone_2?: string; // Nuevo campo
+  instagram?: string; // Nuevo campo
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -45,6 +49,8 @@ interface SupplierFormValues {
   name: string;
   email?: string;
   phone?: string;
+  phone_2?: string;
+  instagram?: string;
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -61,6 +67,8 @@ const SupplierManagement = () => {
   const queryClient = useQueryClient();
   const { session } = useSession();
   const userId = session?.user?.id;
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -154,6 +162,20 @@ const SupplierManagement = () => {
     }
   };
 
+  const handleRowClick = (supplierId: string) => {
+    navigate(`/suppliers/${supplierId}`);
+  };
+
+  const formatPhoneNumberForWhatsApp = (phone: string) => {
+    // Elimina cualquier caracter que no sea un dígito y añade el prefijo internacional si no lo tiene
+    const digitsOnly = phone.replace(/\D/g, '');
+    // Asume que si no empieza con +, es un número local y le añade el prefijo de Venezuela
+    if (!digitsOnly.startsWith('58')) { // Asumiendo que los números locales son de Venezuela
+      return `58${digitsOnly}`;
+    }
+    return digitsOnly;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
@@ -210,7 +232,67 @@ const SupplierManagement = () => {
             />
           </div>
 
-          {filteredSuppliers && filteredSuppliers.length > 0 ? (
+          {isMobile ? (
+            <div className="grid gap-4">
+              {filteredSuppliers.length > 0 ? (
+                filteredSuppliers.map((supplier) => (
+                  <Card key={supplier.id} className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(supplier.id)}>
+                    <CardTitle className="text-lg mb-2">{supplier.name}</CardTitle>
+                    <CardDescription className="mb-2">RIF: {supplier.rif}</CardDescription>
+                    <div className="text-sm space-y-1">
+                      {supplier.email && <p>Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline">{supplier.email}</a></p>}
+                      {supplier.phone && (
+                        <p className="flex items-center">
+                          Teléfono 1: <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone)}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-600 hover:underline flex items-center">
+                            {supplier.phone} <Phone className="ml-1 h-3 w-3" />
+                          </a>
+                        </p>
+                      )}
+                      {supplier.phone_2 && (
+                        <p className="flex items-center">
+                          Teléfono 2: <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone_2)}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-600 hover:underline flex items-center">
+                            {supplier.phone_2} <Phone className="ml-1 h-3 w-3" />
+                          </a>
+                        </p>
+                      )}
+                      {supplier.instagram && (
+                        <p className="flex items-center">
+                          Instagram: <a href={`https://instagram.com/${supplier.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-600 hover:underline flex items-center">
+                            {supplier.instagram} <Instagram className="ml-1 h-3 w-3" />
+                          </a>
+                        </p>
+                      )}
+                      <p>Términos de Pago: {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
+                      <p>Días de Crédito: {supplier.credit_days}</p>
+                      <p>Estado: {supplier.status}</p>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier); }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteSupplier(supplier.id); }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
+                </div>
+              )}
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -218,7 +300,9 @@ const SupplierManagement = () => {
                     <TableHead>RIF</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Teléfono</TableHead>
+                    <TableHead>Teléfono 1</TableHead>
+                    <TableHead>Teléfono 2</TableHead>
+                    <TableHead>Instagram</TableHead>
                     <TableHead>Términos de Pago</TableHead>
                     <TableHead>Días de Crédito</TableHead>
                     <TableHead>Estado</TableHead>
@@ -227,11 +311,31 @@ const SupplierManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
+                    <TableRow key={supplier.id} className="cursor-pointer" onClick={() => handleRowClick(supplier.id)}>
                       <TableCell>{supplier.rif}</TableCell>
                       <TableCell>{supplier.name}</TableCell>
                       <TableCell>{supplier.email || 'N/A'}</TableCell>
-                      <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                      <TableCell>
+                        {supplier.phone ? (
+                          <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                            {supplier.phone} <Phone className="ml-1 h-3 w-3" />
+                          </a>
+                        ) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {supplier.phone_2 ? (
+                          <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone_2)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                            {supplier.phone_2} <Phone className="ml-1 h-3 w-3" />
+                          </a>
+                        ) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {supplier.instagram ? (
+                          <a href={`https://instagram.com/${supplier.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                            {supplier.instagram} <Instagram className="ml-1 h-3 w-3" />
+                          </a>
+                        ) : 'N/A'}
+                      </TableCell>
                       <TableCell>
                         {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
                           ? supplier.custom_payment_terms
@@ -243,7 +347,7 @@ const SupplierManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleEditSupplier(supplier)}
+                          onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier); }}
                           disabled={deleteMutation.isPending}
                         >
                           <Edit className="h-4 w-4" />
@@ -251,7 +355,7 @@ const SupplierManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteSupplier(supplier.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSupplier(supplier.id); }}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -261,10 +365,6 @@ const SupplierManagement = () => {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground p-8">
-              No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
             </div>
           )}
         </CardContent>
