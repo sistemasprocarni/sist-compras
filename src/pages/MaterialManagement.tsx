@@ -23,11 +23,24 @@ interface Material {
 }
 
 const MATERIAL_CATEGORIES = [
-  'Materia Prima Fresca',
-  'Materia Prima Seca',
-  'Empaques',
-  'Etiquetas',
-  'Sin Tipo Asignado',
+  'SECA',
+  'FRESCA',
+  'EMPAQUE',
+  'FERRETERIA Y CONSTRUCCION',
+  'AGROPECUARIA',
+  'GASES Y COMBUSTIBLE',
+  'ELECTRICIDAD',
+  'REFRIGERACION',
+  'INSUMOS DE OFICINA',
+  'INSUMOS INDUSTRIALES',
+  'MECANICA Y SELLOS',
+  'NEUMATICA',
+  'INSUMOS DE LIMPIEZA',
+  'FUMICACION',
+  'EQUIPOS DE CARNICERIA',
+  'FARMACIA',
+  'MEDICION Y MANIPULACION',
+  'ENCERADOS',
 ];
 
 const MaterialManagement = () => {

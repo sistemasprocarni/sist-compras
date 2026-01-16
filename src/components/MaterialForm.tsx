@@ -10,19 +10,37 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 
 // Define las opciones de categoría.
 const MATERIAL_CATEGORIES = [
-  'Materia Prima Fresca',
-  'Materia Prima Seca',
-  'Empaques',
-  'Etiquetas',
-  'Sin Tipo Asignado',
+  'SECA',
+  'FRESCA',
+  'EMPAQUE',
+  'FERRETERIA Y CONSTRUCCION',
+  'AGROPECUARIA',
+  'GASES Y COMBUSTIBLE',
+  'ELECTRICIDAD',
+  'REFRIGERACION',
+  'INSUMOS DE OFICINA',
+  'INSUMOS INDUSTRIALES',
+  'MECANICA Y SELLOS',
+  'NEUMATICA',
+  'INSUMOS DE LIMPIEZA',
+  'FUMICACION',
+  'EQUIPOS DE CARNICERIA',
+  'FARMACIA',
+  'MEDICION Y MANIPULACION',
+  'ENCERADOS',
+];
+
+// Define las unidades de medida.
+const MATERIAL_UNITS = [
+  'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
 
 // Esquema de validación con Zod
 const materialFormSchema = z.object({
-  code: z.string().min(1, { message: 'El código es requerido.' }),
+  code: z.string().optional(), // El código ahora es opcional para la creación (se autogenera)
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   category: z.enum(MATERIAL_CATEGORIES as [string, ...string[]], { message: 'La categoría es requerida y debe ser válida.' }),
-  unit: z.string().min(1, { message: 'La unidad es requerida.' }),
+  unit: z.enum(MATERIAL_UNITS as [string, ...string[]], { message: 'La unidad es requerida y debe ser válida.' }),
 });
 
 type MaterialFormValues = z.infer<typeof materialFormSchema>;
@@ -41,7 +59,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
       code: '',
       name: '',
       category: MATERIAL_CATEGORIES[0],
-      unit: '',
+      unit: MATERIAL_UNITS[0],
     },
   });
 
@@ -51,10 +69,10 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
       form.reset(initialData);
     } else {
       form.reset({
-        code: '',
+        code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
         name: '',
         category: MATERIAL_CATEGORIES[0],
-        unit: '',
+        unit: MATERIAL_UNITS[0],
       });
     }
   }, [initialData, form]);
@@ -69,7 +87,8 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
             <FormItem>
               <FormLabel>Código</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: MPF-001" {...field} />
+                {/* El campo de código es de solo lectura si ya existe (para edición) o vacío para nueva creación */}
+                <Input placeholder="Se generará automáticamente" {...field} readOnly={!!initialData?.id} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,9 +135,18 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
           render={({ field }) => (
             <FormItem>
               <FormLabel>Unidad</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej: Kg, L, Und" {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una unidad" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {MATERIAL_UNITS.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
