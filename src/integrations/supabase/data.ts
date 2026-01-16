@@ -11,7 +11,7 @@ interface Supplier {
   email?: string;
   phone?: string;
   payment_terms: string;
-  custom_payment_terms?: string | null; // Añadida nueva columna
+  custom_payment_terms?: string | null;
   credit_days: number;
   status: string;
   user_id: string;
@@ -22,8 +22,8 @@ interface Material {
   code: string;
   name: string;
   category?: string;
-  unit?: string; // Nueva columna
-  user_id: string; // Asegurar que user_id esté presente
+  unit?: string;
+  user_id: string;
 }
 
 interface SupplierMaterial {
@@ -63,9 +63,9 @@ interface PurchaseOrderItem {
 export const searchSuppliers = async (query: string): Promise<Supplier[]> => {
   const { data, error } = await supabase
     .from('suppliers')
-    .select('*') // Aseguramos que custom_payment_terms sea seleccionado
+    .select('*')
     .or(`rif.ilike.%${query}%,name.ilike.%${query}%`)
-    .eq('status', 'Active'); // Solo buscar proveedores activos
+    .eq('status', 'Active');
 
   if (error) {
     console.error('[searchSuppliers] Error searching suppliers:', error);
@@ -115,7 +115,6 @@ export const createPurchaseOrder = async (
   orderData: Omit<PurchaseOrderHeader, 'id'>,
   itemsData: Omit<PurchaseOrderItem, 'id' | 'order_id'>[]
 ): Promise<PurchaseOrderHeader | null> => {
-  // Validación de tasa de cambio
   if (orderData.currency === 'VES' && (!orderData.exchange_rate || orderData.exchange_rate <= 0)) {
     showError('La tasa de cambio debe ser mayor que cero para órdenes en Bolívares.');
     return null;
@@ -146,8 +145,6 @@ export const createPurchaseOrder = async (
     if (itemsError) {
       console.error('[createPurchaseOrder] Error creating purchase order items:', itemsError);
       showError('Error al crear los ítems de la orden de compra. La orden de compra fue creada, pero los ítems no.');
-      // Considerar una lógica de rollback o compensación aquí si es crítico que ambos se creen o ninguno.
-      // Para Supabase, esto requeriría una función de base de datos o una Edge Function para una verdadera transacción.
       return null;
     }
   }
@@ -195,7 +192,6 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<(Suppl
     return [];
   }
 
-  // Mapear para aplanar la estructura y asegurar el tipo
   return data.map(sm => ({
     ...sm.suppliers,
     specification: sm.specification,
@@ -207,7 +203,7 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<(Suppl
  * @param supplierId ID del proveedor.
  * @returns Objeto con los detalles del proveedor y una lista de sus materiales.
  */
-export const getSupplierDetails = async (supplierId: string): Promise<(Supplier & { materials: SupplierMaterial[] }) | null> => {
+export const getSupplierDetails = async (supplierId: string): Promise<(Supplier & { materials: (SupplierMaterial & { materials: Material })[] }) | null> => {
   const { data: supplierData, error: supplierError } = await supabase
     .from('suppliers')
     .select(`
@@ -231,11 +227,10 @@ export const getSupplierDetails = async (supplierId: string): Promise<(Supplier 
     return null;
   }
 
-  // Mapear para aplanar la estructura de los materiales
   const materials = supplierData.supplier_materials.map((sm: any) => ({
     id: sm.id,
     specification: sm.specification,
-    materials: sm.materials, // El objeto material completo
+    materials: sm.materials,
   }));
 
   return {
@@ -251,7 +246,7 @@ export const getSupplierDetails = async (supplierId: string): Promise<(Supplier 
 export const getAllSuppliers = async (): Promise<Supplier[]> => {
   const { data, error } = await supabase
     .from('suppliers')
-    .select('*'); // Aseguramos que custom_payment_terms sea seleccionado
+    .select('*');
 
   if (error) {
     console.error('[getAllSuppliers] Error fetching all suppliers:', error);
@@ -261,48 +256,145 @@ export const getAllSuppliers = async (): Promise<Supplier[]> => {
   return data || [];
 };
 
+interface SupplierMaterialPayload {
+  material_id: string;
+  specification?: string;
+}
+
 /**
- * Crea un nuevo proveedor.
+ * Crea un nuevo proveedor y sus materiales asociados.
  * @param supplier Datos del nuevo proveedor.
+ * @param materials Lista de materiales a asociar.
  * @returns El proveedor creado o null si falla.
  */
-export const createSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>): Promise<Supplier | null> => {
-  const { data, error } = await supabase
+export const createSupplier = async (
+  supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>,
+  materials: SupplierMaterialPayload[],
+): Promise<Supplier | null> => {
+  const { data: newSupplier, error: supplierError } = await supabase
     .from('suppliers')
     .insert(supplier)
     .select()
     .single();
 
-  if (error) {
-    console.error('[createSupplier] Error creating supplier:', error);
+  if (supplierError) {
+    console.error('[createSupplier] Error creating supplier:', supplierError);
     showError('Error al crear el proveedor.');
     return null;
   }
-  showSuccess('Proveedor creado exitosamente.');
-  return data;
+
+  if (newSupplier && materials.length > 0) {
+    const materialsToInsert = materials.map(mat => ({
+      supplier_id: newSupplier.id,
+      material_id: mat.material_id,
+      specification: mat.specification,
+      user_id: newSupplier.user_id,
+    }));
+
+    const { error: materialsError } = await supabase
+      .from('supplier_materials')
+      .insert(materialsToInsert);
+
+    if (materialsError) {
+      console.error('[createSupplier] Error associating materials with supplier:', materialsError);
+      showError('Proveedor creado, pero hubo un error al asociar los materiales.');
+      // Considerar una lógica de rollback o compensación aquí si es crítico que ambos se creen o ninguno.
+      return null;
+    }
+  }
+
+  return newSupplier;
 };
 
 /**
- * Actualiza un proveedor existente.
+ * Actualiza un proveedor existente y sus materiales asociados.
  * @param id ID del proveedor a actualizar.
- * @param updates Objeto con los campos a actualizar.
+ * @param updates Objeto con los campos a actualizar del proveedor.
+ * @param materials Lista de materiales a asociar (para actualizar/crear/eliminar).
  * @returns El proveedor actualizado o null si falla.
  */
-export const updateSupplier = async (id: string, updates: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>): Promise<Supplier | null> => {
-  const { data, error } = await supabase
+export const updateSupplier = async (
+  id: string,
+  updates: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>,
+  materials: SupplierMaterialPayload[],
+): Promise<Supplier | null> => {
+  const { data: updatedSupplier, error: supplierError } = await supabase
     .from('suppliers')
     .update(updates)
     .eq('id', id)
     .select()
     .single();
 
-  if (error) {
-    console.error('[updateSupplier] Error updating supplier:', error);
+  if (supplierError) {
+    console.error('[updateSupplier] Error updating supplier:', supplierError);
     showError('Error al actualizar el proveedor.');
     return null;
   }
-  showSuccess('Proveedor actualizado exitosamente.');
-  return data;
+
+  // Manejar actualizaciones de supplier_materials
+  const { data: existingSupplierMaterials, error: fetchError } = await supabase
+    .from('supplier_materials')
+    .select('id, material_id')
+    .eq('supplier_id', id);
+
+  if (fetchError) {
+    console.error('[updateSupplier] Error fetching existing supplier materials:', fetchError);
+    showError('Error al actualizar los materiales del proveedor.');
+    return null;
+  }
+
+  const existingMaterialMap = new Map(existingSupplierMaterials.map(sm => [sm.material_id, sm.id]));
+  const newMaterialIds = new Set(materials.map(mat => mat.material_id));
+
+  // Materiales a eliminar (existentes que ya no están en la lista nueva)
+  const materialsToDelete = existingSupplierMaterials.filter(sm => !newMaterialIds.has(sm.material_id));
+  if (materialsToDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('supplier_materials')
+      .delete()
+      .in('id', materialsToDelete.map(sm => sm.id));
+    if (deleteError) {
+      console.error('[updateSupplier] Error deleting old supplier materials:', deleteError);
+      showError('Error al eliminar materiales antiguos del proveedor.');
+      return null;
+    }
+  }
+
+  // Materiales a insertar/actualizar
+  for (const mat of materials) {
+    if (!existingMaterialMap.has(mat.material_id)) {
+      // Insertar nuevo material
+      const { error: insertError } = await supabase
+        .from('supplier_materials')
+        .insert({
+          supplier_id: id,
+          material_id: mat.material_id,
+          specification: mat.specification,
+          user_id: updatedSupplier.user_id,
+        });
+      if (insertError) {
+        console.error('[updateSupplier] Error inserting new supplier material:', insertError);
+        showError('Error al insertar nuevos materiales para el proveedor.');
+        return null;
+      }
+    } else {
+      // Actualizar especificación de material existente
+      const existingSmId = existingMaterialMap.get(mat.material_id);
+      if (existingSmId) {
+        const { error: updateMaterialError } = await supabase
+          .from('supplier_materials')
+          .update({ specification: mat.specification })
+          .eq('id', existingSmId);
+        if (updateMaterialError) {
+          console.error('[updateSupplier] Error updating supplier material specification:', updateMaterialError);
+          showError('Error al actualizar la especificación del material del proveedor.');
+          return null;
+        }
+      }
+    }
+  }
+
+  return updatedSupplier;
 };
 
 /**

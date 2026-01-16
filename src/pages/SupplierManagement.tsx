@@ -10,7 +10,21 @@ import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from 
 import { showError, showSuccess } from '@/utils/toast';
 import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
-import { Input } from '@/components/ui/input'; // Importar Input para la barra de búsqueda
+import { Input } from '@/components/ui/input';
+
+interface MaterialDetail {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+  unit?: string;
+}
+
+interface SupplierMaterial {
+  id: string;
+  specification?: string;
+  materials: MaterialDetail;
+}
 
 interface Supplier {
   id: string;
@@ -23,6 +37,24 @@ interface Supplier {
   credit_days: number;
   status: string;
   user_id: string;
+  materials?: SupplierMaterial[]; // Incluir materiales para la edición
+}
+
+interface SupplierFormValues {
+  rif: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  payment_terms: string;
+  custom_payment_terms?: string | null;
+  credit_days: number;
+  status: string;
+  materials?: Array<{
+    material_id: string;
+    material_name: string;
+    material_category?: string;
+    specification?: string;
+  }>;
 }
 
 const SupplierManagement = () => {
@@ -32,14 +64,13 @@ const SupplierManagement = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [searchTerm, setSearchTerm] = useState(''); // Estado para el término de búsqueda
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: suppliers, isLoading, error } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
     queryFn: getAllSuppliers,
   });
 
-  // Filtrar proveedores basado en el término de búsqueda
   const filteredSuppliers = useMemo(() => {
     if (!suppliers) return [];
     if (!searchTerm) return suppliers;
@@ -52,11 +83,12 @@ const SupplierManagement = () => {
   }, [suppliers, searchTerm]);
 
   const createMutation = useMutation({
-    mutationFn: (newSupplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'user_id'>) =>
-      createSupplier({ ...newSupplier, user_id: userId! }),
+    mutationFn: ({ supplierData, materials }: { supplierData: Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'materials'>; materials: { material_id: string; specification?: string }[] }) =>
+      createSupplier({ ...supplierData, user_id: userId! }, materials),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsFormOpen(false);
+      showSuccess('Proveedor creado exitosamente.');
     },
     onError: (err) => {
       showError(`Error al crear proveedor: ${err.message}`);
@@ -64,12 +96,13 @@ const SupplierManagement = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'user_id'>> }) =>
-      updateSupplier(id, updates),
+    mutationFn: ({ id, supplierData, materials }: { id: string; supplierData: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'materials'>>; materials: { material_id: string; specification?: string }[] }) =>
+      updateSupplier(id, supplierData, materials),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       setIsFormOpen(false);
       setEditingSupplier(null);
+      showSuccess('Proveedor actualizado exitosamente.');
     },
     onError: (err) => {
       showError(`Error al actualizar proveedor: ${err.message}`);
@@ -102,15 +135,22 @@ const SupplierManagement = () => {
     }
   };
 
-  const handleSubmitForm = async (data: Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+  const handleSubmitForm = async (data: SupplierFormValues) => {
     if (!userId) {
       showError('Usuario no autenticado. No se puede realizar la operación.');
       return;
     }
+
+    const { materials, ...supplierData } = data;
+    const materialsPayload = materials?.map(mat => ({
+      material_id: mat.material_id,
+      specification: mat.specification,
+    })) || [];
+
     if (editingSupplier) {
-      await updateMutation.mutateAsync({ id: editingSupplier.id, updates: data });
+      await updateMutation.mutateAsync({ id: editingSupplier.id, supplierData, materials: materialsPayload });
     } else {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync({ supplierData, materials: materialsPayload });
     }
   };
 
@@ -145,7 +185,7 @@ const SupplierManagement = () => {
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Proveedor
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]" description={editingSupplier ? 'Edita los detalles del proveedor existente.' : 'Completa los campos para añadir un nuevo proveedor.'}>
+            <DialogContent className="sm:max-w-[425px] md:max-w-2xl" description={editingSupplier ? 'Edita los detalles del proveedor existente.' : 'Completa los campos para añadir un nuevo proveedor.'}>
               <DialogHeader>
                 <DialogTitle>{editingSupplier ? 'Editar Proveedor' : 'Añadir Nuevo Proveedor'}</DialogTitle>
               </DialogHeader>
