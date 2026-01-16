@@ -7,6 +7,7 @@ import { showSuccess, showError } from '@/utils/toast';
 interface Supplier {
   id: string;
   rif: string;
+  code?: string; // New: Add code field
   name: string;
   email?: string;
   phone?: string;
@@ -185,7 +186,7 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<(Suppl
     .from('supplier_materials')
     .select(`
       specification,
-      suppliers (id, rif, name, email, phone, phone_2, instagram, address, payment_terms, custom_payment_terms, credit_days, status)
+      suppliers (id, rif, code, name, email, phone, phone_2, instagram, address, payment_terms, custom_payment_terms, credit_days, status)
     `)
     .eq('material_id', materialId);
 

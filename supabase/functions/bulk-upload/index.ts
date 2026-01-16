@@ -90,13 +90,14 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2; // Excel rows are 1-indexed, plus header row
 
+        const code = rowData['Código']; // New: Read code
         const rif = validateRif(rowData['RIF']);
         const name = rowData['Nombre'];
         const email = rowData['Email'];
         const phone = rowData['Teléfono Principal'];
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
-        const address = rowData['Dirección']; // New: Read address
+        const address = rowData['Dirección'];
         let payment_terms = rowData['Términos de Pago'];
         let custom_payment_terms = rowData['Términos de Pago Personalizados'];
         let credit_days = rowData['Días de Crédito'];
@@ -117,7 +118,7 @@ serve(async (req) => {
           errors.push({ row: rowNum, data: rowData, reason: 'Formato de Email inválido.' });
           continue;
         }
-        if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
+        if (!payment_terms || !PAYMENT_TERONS_OPTIONS.includes(payment_terms)) {
           // Handle cases where payment_terms might be an old custom value
           if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
             custom_payment_terms = payment_terms;
@@ -146,13 +147,14 @@ serve(async (req) => {
         }
 
         const supplierData = {
+          code: code || null, // New: Include code, let DB handle if null
           rif: rif,
           name: name,
           email: email || null,
           phone: phone || null,
           phone_2: phone_2 || null,
           instagram: instagram || null,
-          address: address || null, // New: Include address
+          address: address || null,
           payment_terms: payment_terms,
           custom_payment_terms: custom_payment_terms || null,
           credit_days: credit_days,
@@ -160,15 +162,21 @@ serve(async (req) => {
           user_id: user.id,
         };
 
-        // Check if supplier already exists by RIF
-        const { data: existingSupplier, error: fetchError } = await supabaseClient
+        // Check if supplier already exists by RIF or Code
+        let existingSupplierQuery = supabaseClient
           .from('suppliers')
-          .select('id')
-          .eq('rif', rif)
-          .single();
+          .select('id');
+
+        if (code) {
+          existingSupplierQuery = existingSupplierQuery.eq('code', code);
+        } else {
+          existingSupplierQuery = existingSupplierQuery.eq('rif', rif);
+        }
+
+        const { data: existingSupplier, error: fetchError } = await existingSupplierQuery.single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-          console.error(`[bulk-upload] Error checking existing supplier for RIF ${rif}:`, fetchError);
+          console.error(`[bulk-upload] Error checking existing supplier for RIF ${rif} or Code ${code}:`, fetchError);
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Error de base de datos al verificar proveedor: ${fetchError.message}` });
           continue;
@@ -285,8 +293,8 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2;
 
-        const supplierRif = String(rowData['RIF'] || '').trim(); // Changed from ID PROV
-        const materialCode = String(rowData['Código'] || '').trim(); // Changed from ID MT
+        const supplierRif = String(rowData['RIF'] || '').trim();
+        const materialCode = String(rowData['Código'] || '').trim();
         const specification = String(rowData['ESPECIFICACION'] || '').trim();
 
         if (!supplierRif) {

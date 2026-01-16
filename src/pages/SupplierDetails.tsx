@@ -77,6 +77,7 @@ const SupplierDetails = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <p><strong>Código:</strong> {supplier.code || 'N/A'}</p> {/* New: Display code */}
             <p><strong>RIF:</strong> {supplier.rif}</p>
             <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
             <p>
@@ -103,7 +104,7 @@ const SupplierDetails = () => {
                 </a>
               ) : 'N/A'}
             </p>
-            <p><strong>Dirección:</strong> {supplier.address || 'N/A'}</p> {/* New: Display address */}
+            <p><strong>Dirección:</strong> {supplier.address || 'N/A'}</p>
             <p>
               <strong>Términos de Pago:</strong>{' '}
               {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms

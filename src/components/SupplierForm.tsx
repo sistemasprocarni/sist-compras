@@ -26,6 +26,7 @@ const supplierMaterialSchema = z.object({
 
 // Esquema de validación con Zod para el formulario completo del proveedor
 const supplierFormSchema = z.object({
+  code: z.string().optional(), // New: Code is optional and auto-generated
   rif: z.string().min(1, { message: 'El RIF es requerido.' }).refine((val) => validateRif(val) !== null, {
     message: 'Formato de RIF inválido. Ej: J123456789',
   }),
@@ -78,6 +79,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
+      code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
       rif: '',
       name: '',
       email: '',
@@ -127,6 +129,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       });
     } else {
       form.reset({
+        code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
         rif: '',
         name: '',
         email: '',
@@ -178,6 +181,19 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código del Proveedor</FormLabel>
+              <FormControl>
+                <Input placeholder="Se autogenerará (ej: P001)" {...field} readOnly className="bg-gray-100" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="rif"

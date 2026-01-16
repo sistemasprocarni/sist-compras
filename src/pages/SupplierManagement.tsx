@@ -31,6 +31,7 @@ interface SupplierMaterial {
 interface Supplier {
   id: string;
   rif: string;
+  code?: string; // New: Add code field
   name: string;
   email?: string;
   phone?: string;
@@ -46,6 +47,7 @@ interface Supplier {
 }
 
 interface SupplierFormValues {
+  code?: string; // New: Add code field
   rif: string;
   name: string;
   email?: string;
@@ -87,9 +89,10 @@ const SupplierManagement = () => {
 
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return suppliers.filter(supplier =>
+      (supplier.code && supplier.code.toLowerCase().includes(lowerCaseSearchTerm)) || // New: Search by code
       supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       supplier.rif.toLowerCase().includes(lowerCaseSearchTerm) ||
-      (supplier.address && supplier.address.toLowerCase().includes(lowerCaseSearchTerm)) // New: Search by address
+      (supplier.address && supplier.address.toLowerCase().includes(lowerCaseSearchTerm))
     );
   }, [suppliers, searchTerm]);
 
@@ -228,7 +231,7 @@ const SupplierManagement = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar proveedor por RIF, nombre o dirección..."
+              placeholder="Buscar proveedor por RIF, código, nombre o dirección..."
               className="w-full appearance-none bg-background pl-8 shadow-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -241,7 +244,7 @@ const SupplierManagement = () => {
                 filteredSuppliers.map((supplier) => (
                   <Card key={supplier.id} className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(supplier.id)}>
                     <CardTitle className="text-lg mb-2">{supplier.name}</CardTitle>
-                    <CardDescription className="mb-2">RIF: {supplier.rif}</CardDescription>
+                    <CardDescription className="mb-2">Código: {supplier.code || 'N/A'} | RIF: {supplier.rif}</CardDescription>
                     <div className="text-sm space-y-1">
                       {supplier.email && <p>Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline">{supplier.email}</a></p>}
                       {supplier.phone && (
@@ -265,7 +268,7 @@ const SupplierManagement = () => {
                           </a>
                         </p>
                       )}
-                      {supplier.address && <p>Dirección: {supplier.address}</p>} {/* New: Display address */}
+                      {supplier.address && <p>Dirección: {supplier.address}</p>}
                       <p>Términos de Pago: {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
                       <p>Días de Crédito: {supplier.credit_days}</p>
                       <p>Estado: {supplier.status}</p>
@@ -301,13 +304,14 @@ const SupplierManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Código</TableHead> {/* New: Table header for code */}
                     <TableHead>RIF</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Teléfono 1</TableHead>
                     <TableHead>Teléfono 2</TableHead>
                     <TableHead>Instagram</TableHead>
-                    <TableHead>Dirección</TableHead> {/* New: Table header for address */}
+                    <TableHead>Dirección</TableHead>
                     <TableHead>Términos de Pago</TableHead>
                     <TableHead>Días de Crédito</TableHead>
                     <TableHead>Estado</TableHead>
@@ -317,6 +321,7 @@ const SupplierManagement = () => {
                 <TableBody>
                   {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id} className="cursor-pointer" onClick={() => handleRowClick(supplier.id)}>
+                      <TableCell>{supplier.code || 'N/A'}</TableCell> {/* New: Display code */}
                       <TableCell>{supplier.rif}</TableCell>
                       <TableCell>{supplier.name}</TableCell>
                       <TableCell>{supplier.email || 'N/A'}</TableCell>
@@ -341,7 +346,7 @@ const SupplierManagement = () => {
                           </a>
                         ) : 'N/A'}
                       </TableCell>
-                      <TableCell>{supplier.address || 'N/A'}</TableCell> {/* New: Display address */}
+                      <TableCell>{supplier.address || 'N/A'}</TableCell>
                       <TableCell>
                         {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
                           ? supplier.custom_payment_terms

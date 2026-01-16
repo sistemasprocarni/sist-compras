@@ -164,15 +164,15 @@ const BulkUpload = () => {
           <br />
           {type === 'supplier' ? (
             <>
-              `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Dirección`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive)
+              `Código` (opcional, se autogenera si está vacío, ej: P001), `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Dirección`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive)
             </>
           ) : type === 'material' ? (
             <>
-              `Código` (opcional, se autogenera si está vacío), `Nombre` (requerido), `Categoría` (requerido, ej: SECA, FRESCA, etc.), `Unidad` (requerido, ej: KG, LT, UND)
+              `Código` (opcional, se autogenera si está vacío, ej: MT001), `Nombre` (requerido), `Categoría` (requerido, ej: SECA, FRESCA, etc.), `Unidad` (requerido, ej: KG, LT, UND)
             </>
           ) : (
             <>
-              `RIF` (código del proveedor, requerido, ej: J123456789), `Código` (código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
+              `RIF` (RIF del proveedor, requerido, ej: J123456789), `Código` (Código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
             </>
           )}
         </p>
