@@ -7,6 +7,7 @@ import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase
 import { showError } from '@/utils/toast';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Phone, Instagram } from 'lucide-react'; // Importar iconos
 
 interface Material {
   id: string;
@@ -21,6 +22,8 @@ interface SupplierResult {
   rif: string;
   email?: string;
   phone?: string;
+  phone_2?: string; // Añadido
+  instagram?: string; // Añadido
   payment_terms: string;
   credit_days: number;
   status: string;
@@ -31,6 +34,14 @@ const SearchSuppliersByMaterial = () => {
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+
+  const formatPhoneNumberForWhatsApp = (phone: string) => {
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (!digitsOnly.startsWith('58')) {
+      return `58${digitsOnly}`;
+    }
+    return digitsOnly;
+  };
 
   const handleMaterialSelect = async (material: Material) => {
     setSelectedMaterial(material);
@@ -93,7 +104,30 @@ const SearchSuppliersByMaterial = () => {
                     <AccordionContent className="p-4 bg-muted/20 rounded-b-md">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
-                        <p><strong>Teléfono:</strong> {supplier.phone || 'N/A'}</p>
+                        <p>
+                          <strong>Teléfono Principal:</strong>{' '}
+                          {supplier.phone ? (
+                            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                              {supplier.phone} <Phone className="ml-1 h-3 w-3" />
+                            </a>
+                          ) : 'N/A'}
+                        </p>
+                        <p>
+                          <strong>Teléfono Secundario:</strong>{' '}
+                          {supplier.phone_2 ? (
+                            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone_2)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                              {supplier.phone_2} <Phone className="ml-1 h-3 w-3" />
+                            </a>
+                          ) : 'N/A'}
+                        </p>
+                        <p>
+                          <strong>Instagram:</strong>{' '}
+                          {supplier.instagram ? (
+                            <a href={`https://instagram.com/${supplier.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                              {supplier.instagram} <Instagram className="ml-1 h-3 w-3" />
+                            </a>
+                          ) : 'N/A'}
+                        </p>
                         <p><strong>Términos de Pago:</strong> {supplier.payment_terms}</p>
                         <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
                         <p><strong>Estado:</strong> {supplier.status}</p>
