@@ -159,7 +159,8 @@ const BulkUpload = () => {
           <br />
           {type === 'supplier' ? (
             <>
-              `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive)
+              `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive), <br/>
+              `Material 1 (Nombre/Código)`, `Especificación Material 1`, `Material 2 (Nombre/Código)`, `Especificación Material 2`, `Material 3 (Nombre/Código)`, `Especificación Material 3` (opcional, para asociar materiales existentes)
             </>
           ) : (
             <>

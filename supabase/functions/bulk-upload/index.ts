@@ -158,6 +158,7 @@ serve(async (req) => {
           user_id: user.id,
         };
 
+        let supplierId: string | null = null;
         // Check if supplier already exists by RIF
         const { data: existingSupplier, error: fetchError } = await supabaseClient
           .from('suppliers')
@@ -174,26 +175,104 @@ serve(async (req) => {
 
         let dbOperation;
         if (existingSupplier) {
-          // Update existing supplier
+          supplierId = existingSupplier.id;
           dbOperation = await supabaseClient
             .from('suppliers')
             .update(supplierData)
-            .eq('id', existingSupplier.id);
+            .eq('id', supplierId);
           console.log(`[bulk-upload] Updated supplier ${rif}`);
         } else {
-          // Insert new supplier
           dbOperation = await supabaseClient
             .from('suppliers')
-            .insert(supplierData);
+            .insert(supplierData)
+            .select('id') // Select the ID of the newly inserted supplier
+            .single();
+          if (dbOperation.data) {
+            supplierId = dbOperation.data.id;
+          }
           console.log(`[bulk-upload] Inserted new supplier ${rif}`);
         }
 
-        if (dbOperation.error) {
+        if (dbOperation.error || !supplierId) {
           console.error(`[bulk-upload] Error saving supplier ${rif}:`, dbOperation.error);
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: `Error al guardar proveedor: ${dbOperation.error.message}` });
+          errors.push({ row: rowNum, data: rowData, reason: `Error al guardar proveedor: ${dbOperation.error?.message || 'No se pudo obtener el ID del proveedor.'}` });
+          continue;
         } else {
-          successCount++;
+          successCount++; // Increment success count for supplier header
+        }
+
+        // --- Process materials for this supplier ---
+        const materialsToProcess = [];
+        for (let m = 1; m <= 3; m++) { // Assuming up to 3 materials per supplier row
+          const materialNameOrCode = rowData[`Material ${m} (Nombre/Código)`];
+          const specification = rowData[`Especificación Material ${m}`];
+
+          if (materialNameOrCode) {
+            materialsToProcess.push({
+              nameOrCode: String(materialNameOrCode).trim(),
+              specification: String(specification || '').trim(),
+            });
+          }
+        }
+
+        if (materialsToProcess.length > 0) {
+          for (const mat of materialsToProcess) {
+            // Find material_id from 'materials' table
+            const { data: materialLookup, error: materialLookupError } = await supabaseClient
+              .from('materials')
+              .select('id')
+              .or(`name.ilike.%${mat.nameOrCode}%,code.ilike.%${mat.nameOrCode}%`)
+              .single();
+
+            if (materialLookupError || !materialLookup) {
+              console.warn(`[bulk-upload] Material '${mat.nameOrCode}' not found for supplier ${rif}. Skipping association.`);
+              errors.push({ row: rowNum, data: rowData, reason: `Material '${mat.nameOrCode}' no encontrado para el proveedor ${rif}.` });
+              continue;
+            }
+
+            const materialId = materialLookup.id;
+
+            // Check if supplier_material relationship already exists
+            const { data: existingSupplierMaterial, error: smFetchError } = await supabaseClient
+              .from('supplier_materials')
+              .select('id')
+              .eq('supplier_id', supplierId)
+              .eq('material_id', materialId)
+              .single();
+
+            if (smFetchError && smFetchError.code !== 'PGRST116') {
+              console.error(`[bulk-upload] Error checking existing supplier_material for supplier ${supplierId}, material ${materialId}:`, smFetchError);
+              errors.push({ row: rowNum, data: rowData, reason: `Error de base de datos al verificar relación proveedor-material para '${mat.nameOrCode}': ${smFetchError.message}` });
+              continue;
+            }
+
+            let smOperation;
+            if (existingSupplierMaterial) {
+              // Update existing supplier_material
+              smOperation = await supabaseClient
+                .from('supplier_materials')
+                .update({ specification: mat.specification, user_id: user.id })
+                .eq('id', existingSupplierMaterial.id);
+              console.log(`[bulk-upload] Updated supplier_material for supplier ${rif}, material ${mat.nameOrCode}`);
+            } else {
+              // Insert new supplier_material
+              smOperation = await supabaseClient
+                .from('supplier_materials')
+                .insert({
+                  supplier_id: supplierId,
+                  material_id: materialId,
+                  specification: mat.specification,
+                  user_id: user.id,
+                });
+              console.log(`[bulk-upload] Inserted new supplier_material for supplier ${rif}, material ${mat.nameOrCode}`);
+            }
+
+            if (smOperation.error) {
+              console.error(`[bulk-upload] Error saving supplier_material for supplier ${rif}, material ${mat.nameOrCode}:`, smOperation.error);
+              errors.push({ row: rowNum, data: rowData, reason: `Error al guardar relación proveedor-material para '${mat.nameOrCode}': ${smOperation.error.message}` });
+            }
+          }
         }
       }
     } else if (uploadType === 'material') {
