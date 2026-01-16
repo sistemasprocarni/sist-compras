@@ -96,6 +96,7 @@ serve(async (req) => {
         const phone = rowData['Teléfono Principal'];
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
+        const address = rowData['Dirección']; // New: Read address
         let payment_terms = rowData['Términos de Pago'];
         let custom_payment_terms = rowData['Términos de Pago Personalizados'];
         let credit_days = rowData['Días de Crédito'];
@@ -151,6 +152,7 @@ serve(async (req) => {
           phone: phone || null,
           phone_2: phone_2 || null,
           instagram: instagram || null,
+          address: address || null, // New: Include address
           payment_terms: payment_terms,
           custom_payment_terms: custom_payment_terms || null,
           credit_days: credit_days,
@@ -283,18 +285,18 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2;
 
-        const supplierCode = String(rowData['ID PROV'] || '').trim();
-        const materialCode = String(rowData['ID MT'] || '').trim();
+        const supplierRif = String(rowData['RIF'] || '').trim(); // Changed from ID PROV
+        const materialCode = String(rowData['Código'] || '').trim(); // Changed from ID MT
         const specification = String(rowData['ESPECIFICACION'] || '').trim();
 
-        if (!supplierCode) {
+        if (!supplierRif) {
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: 'ID PROV (RIF del proveedor) faltante.' });
+          errors.push({ row: rowNum, data: rowData, reason: 'RIF del proveedor faltante.' });
           continue;
         }
         if (!materialCode) {
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: 'ID MT (Código del material) faltante.' });
+          errors.push({ row: rowNum, data: rowData, reason: 'Código del material faltante.' });
           continue;
         }
 
@@ -302,13 +304,13 @@ serve(async (req) => {
         const { data: supplierLookup, error: supplierLookupError } = await supabaseClient
           .from('suppliers')
           .select('id')
-          .eq('rif', supplierCode)
+          .eq('rif', supplierRif)
           .single();
 
         if (supplierLookupError || !supplierLookup) {
-          console.warn(`[bulk-upload] Supplier with RIF '${supplierCode}' not found for row ${rowNum}. Skipping relation.`);
+          console.warn(`[bulk-upload] Supplier with RIF '${supplierRif}' not found for row ${rowNum}. Skipping relation.`);
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: `Proveedor con RIF '${supplierCode}' no encontrado.` });
+          errors.push({ row: rowNum, data: rowData, reason: `Proveedor con RIF '${supplierRif}' no encontrado.` });
           continue;
         }
         const supplierId = supplierLookup.id;
@@ -350,7 +352,7 @@ serve(async (req) => {
             .from('supplier_materials')
             .update({ specification: specification, user_id: user.id })
             .eq('id', existingRelation.id);
-          console.log(`[bulk-upload] Updated supplier_material relation for supplier ${supplierCode}, material ${materialCode}`);
+          console.log(`[bulk-upload] Updated supplier_material relation for supplier ${supplierRif}, material ${materialCode}`);
         } else {
           // Insert new relation
           dbOperation = await supabaseClient
@@ -361,7 +363,7 @@ serve(async (req) => {
               specification: specification,
               user_id: user.id,
             });
-          console.log(`[bulk-upload] Inserted new supplier_material relation for supplier ${supplierCode}, material ${materialCode}`);
+          console.log(`[bulk-upload] Inserted new supplier_material relation for supplier ${supplierRif}, material ${materialCode}`);
         }
 
         if (dbOperation.error) {

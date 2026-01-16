@@ -12,6 +12,7 @@ interface Supplier {
   phone?: string;
   phone_2?: string; // Nuevo campo
   instagram?: string; // Nuevo campo
+  address?: string; // New: Add address field
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -184,7 +185,7 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<(Suppl
     .from('supplier_materials')
     .select(`
       specification,
-      suppliers (id, rif, name, email, phone, phone_2, instagram, payment_terms, custom_payment_terms, credit_days, status)
+      suppliers (id, rif, name, email, phone, phone_2, instagram, address, payment_terms, custom_payment_terms, credit_days, status)
     `)
     .eq('material_id', materialId);
 

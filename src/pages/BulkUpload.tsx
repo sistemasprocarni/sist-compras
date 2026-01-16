@@ -164,7 +164,7 @@ const BulkUpload = () => {
           <br />
           {type === 'supplier' ? (
             <>
-              `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive)
+              `RIF` (requerido, ej: J123456789), `Nombre` (requerido), `Email`, `Teléfono Principal`, `Teléfono Secundario`, `Instagram`, `Dirección`, `Términos de Pago` (Contado, Crédito, Otro), `Términos de Pago Personalizados` (si es 'Otro'), `Días de Crédito` (si es 'Crédito'), `Estado` (Active, Inactive)
             </>
           ) : type === 'material' ? (
             <>
@@ -172,7 +172,7 @@ const BulkUpload = () => {
             </>
           ) : (
             <>
-              `ID PROV` (RIF del proveedor, requerido, ej: J123456789), `ID MT` (Código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
+              `RIF` (código del proveedor, requerido, ej: J123456789), `Código` (código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
             </>
           )}
         </p>

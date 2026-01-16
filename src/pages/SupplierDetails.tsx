@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram } from 'lucide-react'; // Importar iconos
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -103,6 +103,7 @@ const SupplierDetails = () => {
                 </a>
               ) : 'N/A'}
             </p>
+            <p><strong>Dirección:</strong> {supplier.address || 'N/A'}</p> {/* New: Display address */}
             <p>
               <strong>Términos de Pago:</strong>{' '}
               {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms

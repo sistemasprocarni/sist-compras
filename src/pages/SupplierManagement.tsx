@@ -36,6 +36,7 @@ interface Supplier {
   phone?: string;
   phone_2?: string; // Nuevo campo
   instagram?: string; // Nuevo campo
+  address?: string; // New: Address field
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -51,6 +52,7 @@ interface SupplierFormValues {
   phone?: string;
   phone_2?: string;
   instagram?: string;
+  address?: string; // New: Address field
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -86,7 +88,8 @@ const SupplierManagement = () => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return suppliers.filter(supplier =>
       supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      supplier.rif.toLowerCase().includes(lowerCaseSearchTerm)
+      supplier.rif.toLowerCase().includes(lowerCaseSearchTerm) ||
+      (supplier.address && supplier.address.toLowerCase().includes(lowerCaseSearchTerm)) // New: Search by address
     );
   }, [suppliers, searchTerm]);
 
@@ -225,7 +228,7 @@ const SupplierManagement = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar proveedor por RIF o nombre..."
+              placeholder="Buscar proveedor por RIF, nombre o dirección..."
               className="w-full appearance-none bg-background pl-8 shadow-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -262,6 +265,7 @@ const SupplierManagement = () => {
                           </a>
                         </p>
                       )}
+                      {supplier.address && <p>Dirección: {supplier.address}</p>} {/* New: Display address */}
                       <p>Términos de Pago: {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
                       <p>Días de Crédito: {supplier.credit_days}</p>
                       <p>Estado: {supplier.status}</p>
@@ -303,6 +307,7 @@ const SupplierManagement = () => {
                     <TableHead>Teléfono 1</TableHead>
                     <TableHead>Teléfono 2</TableHead>
                     <TableHead>Instagram</TableHead>
+                    <TableHead>Dirección</TableHead> {/* New: Table header for address */}
                     <TableHead>Términos de Pago</TableHead>
                     <TableHead>Días de Crédito</TableHead>
                     <TableHead>Estado</TableHead>
@@ -336,6 +341,7 @@ const SupplierManagement = () => {
                           </a>
                         ) : 'N/A'}
                       </TableCell>
+                      <TableCell>{supplier.address || 'N/A'}</TableCell> {/* New: Display address */}
                       <TableCell>
                         {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
                           ? supplier.custom_payment_terms

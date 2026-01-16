@@ -34,6 +34,7 @@ const supplierFormSchema = z.object({
   phone: z.string().optional().or(z.literal('')),
   phone_2: z.string().optional().or(z.literal('')), // Nuevo campo
   instagram: z.string().optional().or(z.literal('')), // Nuevo campo
+  address: z.string().optional().or(z.literal('')), // New: Address field
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
   custom_payment_terms: z.string().optional().nullable(),
   credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }).optional(), // Hacer opcional para la validación condicional
@@ -83,6 +84,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       phone: '',
       phone_2: '', // Nuevo campo
       instagram: '', // Nuevo campo
+      address: '', // New: Default for address
       payment_terms: PAYMENT_TERMS_OPTIONS[0],
       custom_payment_terms: null,
       credit_days: 0,
@@ -131,6 +133,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
         phone: '',
         phone_2: '', // Nuevo campo
         instagram: '', // Nuevo campo
+        address: '', // New: Default for address
         payment_terms: PAYMENT_TERMS_OPTIONS[0],
         custom_payment_terms: null,
         credit_days: 0,
@@ -248,6 +251,19 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
               <FormLabel>Instagram</FormLabel>
               <FormControl>
                 <Input placeholder="Ej: @nombredeusuario" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dirección</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Dirección completa del proveedor" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
