@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { UploadCloud, FileText } from 'lucide-react';
+import { UploadCloud, FileText, Download } from 'lucide-react'; // Added Download icon
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 
@@ -19,8 +19,9 @@ const BulkUpload = () => {
   const { session } = useSession();
   const [supplierFile, setSupplierFile] = useState<File | null>(null);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
-  const [relationFile, setRelationFile] = useState<File | null>(null); // Nuevo estado para el archivo de relaciones
+  const [relationFile, setRelationFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false); // New state for template download
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'supplier' | 'material' | 'supplier_material_relation') => {
@@ -29,7 +30,7 @@ const BulkUpload = () => {
         setSupplierFile(event.target.files[0]);
       } else if (type === 'material') {
         setMaterialFile(event.target.files[0]);
-      } else { // 'supplier_material_relation'
+      } else {
         setRelationFile(event.target.files[0]);
       }
       setUploadResult(null); // Clear previous results
@@ -95,6 +96,54 @@ const BulkUpload = () => {
     }
   };
 
+  const handleDownloadTemplate = async (type: 'supplier' | 'material' | 'supplier_material_relation') => {
+    if (!session) {
+      showError('No hay sesión activa. Por favor, inicia sesión para descargar la plantilla.');
+      return;
+    }
+
+    setDownloadingTemplate(true);
+    const loadingToastId = showLoading(`Generando plantilla de ${type === 'supplier' ? 'proveedores' : (type === 'material' ? 'materiales' : 'relaciones proveedor-material')}...`);
+
+    try {
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-template`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al generar la plantilla.');
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const fileNameMatch = contentDisposition && contentDisposition.match(/filename="([^"]+)"/);
+      const fileName = fileNameMatch ? fileNameMatch[1] : `template_${type}.xlsx`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showSuccess('Plantilla descargada exitosamente.', loadingToastId);
+    } catch (error: any) {
+      console.error('[BulkUpload] Error downloading template:', error);
+      showError(error.message || 'Error desconocido al descargar la plantilla.');
+      dismissToast(loadingToastId);
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
   const renderUploadSection = (type: 'supplier' | 'material' | 'supplier_material_relation') => (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -156,8 +205,15 @@ const BulkUpload = () => {
         <p className="text-sm text-muted-foreground">
           Descarga la plantilla para asegurarte de que tu archivo Excel tenga el formato correcto.
         </p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => showError('Descarga de plantilla en desarrollo.')}>
-          Descargar Plantilla
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={() => handleDownloadTemplate(type)}
+          disabled={downloadingTemplate}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {downloadingTemplate ? 'Generando...' : 'Descargar Plantilla'}
         </Button>
         <p className="text-xs text-muted-foreground mt-2">
           **Columnas esperadas para {type === 'supplier' ? 'Proveedores' : (type === 'material' ? 'Materiales' : 'Relaciones Proveedor-Material')}:**
@@ -189,10 +245,10 @@ const BulkUpload = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="suppliers" className="w-full">
-            <TabsList className="grid w-full grid-cols-3"> {/* Cambiado a 3 columnas */}
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="suppliers">Proveedores</TabsTrigger>
               <TabsTrigger value="materials">Materiales</TabsTrigger>
-              <TabsTrigger value="relations">Relaciones P-M</TabsTrigger> {/* Nueva pestaña */}
+              <TabsTrigger value="relations">Relaciones P-M</TabsTrigger>
             </TabsList>
             <TabsContent value="suppliers">
               {renderUploadSection('supplier')}
@@ -200,7 +256,7 @@ const BulkUpload = () => {
             <TabsContent value="materials">
               {renderUploadSection('material')}
             </TabsContent>
-            <TabsContent value="relations"> {/* Nuevo contenido para la pestaña de relaciones */}
+            <TabsContent value="relations">
               {renderUploadSection('supplier_material_relation')}
             </TabsContent>
           </Tabs>
