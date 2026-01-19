@@ -233,7 +233,7 @@ const BulkUpload = () => {
             </>
           ) : (
             <>
-              `RIF` (RIF del proveedor, requerido, ej: J123456789), `Código` (Código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
+              `Código P` (Código del proveedor, requerido, ej: P001), `Código MP` (Código del material, requerido, ej: MT001), `ESPECIFICACION` (opcional, ej: Presentación de 10kg)
             </>
           )}
         </p>

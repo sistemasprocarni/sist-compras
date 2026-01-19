@@ -51,7 +51,8 @@ serve(async (req) => {
         fileName = 'plantilla_materiales.xlsx';
         break;
       case 'supplier_material_relation':
-        headers = ['RIF', 'Código', 'ESPECIFICACION'];
+        // Updated headers to match bulk-upload function's expectations
+        headers = ['Código P', 'Código MP', 'ESPECIFICACION'];
         fileName = 'plantilla_relaciones_proveedor_material.xlsx';
         break;
       default:
