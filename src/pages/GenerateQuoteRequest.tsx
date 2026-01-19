@@ -42,7 +42,7 @@ const MATERIAL_UNITS = [
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
 
-  const [companyId, setCompanyId] = useState<string>('');
+  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(null); // State for the default company ID
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>(''); // For SmartSearch display
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
@@ -53,7 +53,7 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch companies
+  // Fetch companies to get the default one
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
@@ -70,6 +70,15 @@ const GenerateQuoteRequest = () => {
     },
     enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
+
+  // Set the default company ID once companies are loaded
+  React.useEffect(() => {
+    if (companies && companies.length > 0) {
+      setDefaultCompanyId(companies[0].id);
+    } else if (!isLoadingCompanies && !companiesError) {
+      showError('No hay empresas registradas. Por favor, registra una empresa primero.');
+    }
+  }, [companies, isLoadingCompanies, companiesError]);
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
@@ -95,8 +104,8 @@ const GenerateQuoteRequest = () => {
       showError('Usuario no autenticado.');
       return;
     }
-    if (!companyId) {
-      showError('Por favor, selecciona una empresa.');
+    if (!defaultCompanyId) {
+      showError('No se ha podido determinar la empresa de origen. Asegúrate de que haya al menos una empresa registrada.');
       return;
     }
     if (!supplierId) {
@@ -115,7 +124,7 @@ const GenerateQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: companyId,
+      company_id: defaultCompanyId, // Use the default company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       status: 'Draft', // O el estado inicial que desees
@@ -127,7 +136,7 @@ const GenerateQuoteRequest = () => {
 
     if (createdRequest) {
       showSuccess('Solicitud de cotización creada exitosamente.');
-      setCompanyId('');
+      setDefaultCompanyId(null); // Reset default company ID
       setSupplierId('');
       setSupplierName('');
       setCurrency('USD');
@@ -143,24 +152,16 @@ const GenerateQuoteRequest = () => {
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Solicitud de Cotización (SC)</CardTitle>
           <CardDescription>Crea una nueva solicitud de cotización para tus proveedores.</CardDescription>
-        </CardHeader>
+        </CardDescription>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
-                <SelectTrigger id="company">
-                  <SelectValue placeholder="Selecciona una empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies?.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Eliminado el selector de empresa */}
+            {defaultCompanyId && companies && companies.length > 0 && (
+              <div>
+                <Label>Empresa de Origen</Label>
+                <Input value={companies.find(c => c.id === defaultCompanyId)?.name || 'Cargando...'} readOnly className="bg-gray-100" />
+              </div>
+            )}
             <div>
               <Label htmlFor="supplier">Proveedor</Label>
               <SmartSearch
@@ -255,7 +256,7 @@ const GenerateQuoteRequest = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !defaultCompanyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Solicitud de Cotización'}
             </Button>
           </div>

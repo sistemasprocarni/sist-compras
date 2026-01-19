@@ -42,7 +42,7 @@ interface PurchaseOrderHeader {
   id?: string;
   sequence_number?: number; // Added for PO sequence
   supplier_id: string;
-  company_id: string;
+  company_id: string; // Keep company_id as it's in the DB, but it will be set internally
   currency: string;
   exchange_rate?: number;
   status?: string;
@@ -66,7 +66,7 @@ interface PurchaseOrderItem {
 interface QuoteRequestHeader {
   id?: string;
   supplier_id: string;
-  company_id: string;
+  company_id: string; // Keep company_id as it's in the DB, but it will be set internally
   currency: string;
   exchange_rate?: number | null;
   status?: string;
@@ -84,6 +84,13 @@ interface QuoteRequestItem {
   quantity: number;
   created_at?: string;
   updated_at?: string;
+}
+
+interface Company { // Re-defining Company interface for clarity in data.ts
+  id: string;
+  name: string;
+  logo_url?: string;
+  fiscal_data?: any;
 }
 
 /**

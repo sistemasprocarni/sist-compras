@@ -10,7 +10,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers, getMaterialsBySupplier } from '@/integrations/supabase/data';
+import { createPurchaseOrder, searchSuppliers } from '@/integrations/supabase/data'; // Removed getMaterialsBySupplier as it's not used here
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,7 +26,7 @@ const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
 
-  const [companyId, setCompanyId] = React.useState<string>('');
+  const [defaultCompanyId, setDefaultCompanyId] = React.useState<string | null>(null); // State for the default company ID
   const [supplierId, setSupplierId] = React.useState<string>('');
   const [supplierName, setSupplierName] = React.useState<string>('');
   const [currency, setCurrency] = React.useState<'USD' | 'VES'>('USD');
@@ -37,7 +37,7 @@ const GeneratePurchaseOrder = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch companies
+  // Fetch companies to get the default one
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
@@ -54,6 +54,15 @@ const GeneratePurchaseOrder = () => {
     },
     enabled: !!session && !isLoadingSession,
   });
+
+  // Set the default company ID once companies are loaded
+  React.useEffect(() => {
+    if (companies && companies.length > 0) {
+      setDefaultCompanyId(companies[0].id);
+    } else if (!isLoadingCompanies && !companiesError) {
+      showError('No hay empresas registradas. Por favor, registra una empresa primero.');
+    }
+  }, [companies, isLoadingCompanies, companiesError]);
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
@@ -74,8 +83,8 @@ const GeneratePurchaseOrder = () => {
       showError('Usuario no autenticado.');
       return;
     }
-    if (!companyId) {
-      showError('Por favor, selecciona una empresa.');
+    if (!defaultCompanyId) {
+      showError('No se ha podido determinar la empresa de origen. Asegúrate de que haya al menos una empresa registrada.');
       return;
     }
     if (!supplierId) {
@@ -94,7 +103,7 @@ const GeneratePurchaseOrder = () => {
     setIsSubmitting(true);
     const orderData = {
       supplier_id: supplierId,
-      company_id: companyId,
+      company_id: defaultCompanyId, // Use the default company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       status: 'Draft', // O el estado inicial que desees
@@ -107,7 +116,6 @@ const GeneratePurchaseOrder = () => {
     if (createdOrder) {
       showSuccess('Orden de compra creada exitosamente.');
       clearCart();
-      setCompanyId('');
       setSupplierId('');
       setSupplierName('');
       setExchangeRate(undefined);
@@ -125,21 +133,13 @@ const GeneratePurchaseOrder = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
-                <SelectTrigger id="company">
-                  <SelectValue placeholder="Selecciona una empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies?.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Eliminado el selector de empresa */}
+            {defaultCompanyId && companies && companies.length > 0 && (
+              <div>
+                <Label>Empresa de Origen</Label>
+                <Input value={companies.find(c => c.id === defaultCompanyId)?.name || 'Cargando...'} readOnly className="bg-gray-100" />
+              </div>
+            )}
             <div>
               <Label htmlFor="supplier">Proveedor</Label>
               <SmartSearch
@@ -247,7 +247,7 @@ const GeneratePurchaseOrder = () => {
           <div className="flex justify-end gap-2 mt-6">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" disabled={isSubmitting}>
+                <Button variant="secondary" disabled={isSubmitting || !defaultCompanyId}>
                   Previsualizar PDF
                 </Button>
               </DialogTrigger>
@@ -258,7 +258,7 @@ const GeneratePurchaseOrder = () => {
                 <PurchaseOrderPreviewModal
                   orderData={{
                     supplier_id: supplierId,
-                    company_id: companyId,
+                    company_id: defaultCompanyId || '', // Pass the default company ID
                     currency,
                     exchange_rate: currency === 'VES' ? exchangeRate : null,
                     status: 'Draft',
@@ -270,7 +270,7 @@ const GeneratePurchaseOrder = () => {
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !defaultCompanyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Orden de Compra'}
             </Button>
           </div>

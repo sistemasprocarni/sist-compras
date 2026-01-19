@@ -44,9 +44,9 @@ const MATERIAL_UNITS = [
 const EditQuoteRequest = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session, isLoadingSession } = useSession(); // Obtener isLoadingSession
+  const { session, isLoadingSession } = useSession();
 
-  const [companyId, setCompanyId] = useState<string>('');
+  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(null); // State for the default company ID
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
@@ -57,32 +57,44 @@ const EditQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch existing quote request data
-  const { data: initialRequest, isLoading: isLoadingRequest, error: requestError } = useQuery({
-    queryKey: ['quoteRequestDetails', id],
-    queryFn: () => getQuoteRequestDetails(id!),
-    enabled: !!id && !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
-  });
-
-  // Fetch companies
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery<Company[]>({
+  // Fetch companies to get the default one
+  const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
+      if (!session || !session.supabase) {
+        return [];
+      }
       const { data, error } = await session.supabase.from('companies').select('id, name');
       if (error) {
-        console.error('Error fetching companies:', error);
+        console.error('[EditQuoteRequest] Error fetching companies:', error);
         showError('Error al cargar las empresas.');
         return [];
       }
       return data || [];
     },
-    enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
+    enabled: !!session && !isLoadingSession,
   });
+
+  // Fetch existing quote request data
+  const { data: initialRequest, isLoading: isLoadingRequest, error: requestError } = useQuery({
+    queryKey: ['quoteRequestDetails', id],
+    queryFn: () => getQuoteRequestDetails(id!),
+    enabled: !!id && !!session && !isLoadingSession,
+  });
+
+  // Set the default company ID once companies are loaded
+  useEffect(() => {
+    if (companies && companies.length > 0) {
+      setDefaultCompanyId(companies[0].id);
+    } else if (!isLoadingCompanies && !companiesError) {
+      showError('No hay empresas registradas. Por favor, registra una empresa primero.');
+    }
+  }, [companies, isLoadingCompanies, companiesError]);
 
   // Populate form fields when initialRequest data is loaded
   useEffect(() => {
-    if (initialRequest) {
-      setCompanyId(initialRequest.company_id);
+    if (initialRequest && defaultCompanyId) { // Ensure defaultCompanyId is set before populating
+      // setCompanyId(initialRequest.company_id); // No longer needed as it's auto-set
       setSupplierId(initialRequest.supplier_id);
       setSupplierName(initialRequest.suppliers?.name || '');
       setCurrency(initialRequest.currency as 'USD' | 'VES');
@@ -95,9 +107,9 @@ const EditQuoteRequest = () => {
         unit: item.unit || MATERIAL_UNITS[0],
       })));
     }
-  }, [initialRequest]);
+  }, [initialRequest, defaultCompanyId]); // Add defaultCompanyId to dependencies
 
-  if (isLoadingRequest || isLoadingCompanies || isLoadingSession) { // Deshabilitar si la sesión está cargando
+  if (isLoadingRequest || isLoadingCompanies || isLoadingSession || !defaultCompanyId) { // Deshabilitar si la sesión o la empresa por defecto están cargando
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
         Cargando solicitud de cotización para edición...
@@ -152,8 +164,8 @@ const EditQuoteRequest = () => {
       showError('Usuario no autenticado.');
       return;
     }
-    if (!companyId) {
-      showError('Por favor, selecciona una empresa.');
+    if (!defaultCompanyId) {
+      showError('No se ha podido determinar la empresa de origen. Asegúrate de que haya al menos una empresa registrada.');
       return;
     }
     if (!supplierId) {
@@ -172,7 +184,7 @@ const EditQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: companyId,
+      company_id: defaultCompanyId, // Use the default company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       status: initialRequest.status, // Keep original status or allow editing
@@ -206,21 +218,13 @@ const EditQuoteRequest = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
-                <SelectTrigger id="company">
-                  <SelectValue placeholder="Selecciona una empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies?.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Eliminado el selector de empresa */}
+            {defaultCompanyId && companies && companies.length > 0 && (
+              <div>
+                <Label>Empresa de Origen</Label>
+                <Input value={companies.find(c => c.id === defaultCompanyId)?.name || 'Cargando...'} readOnly className="bg-gray-100" />
+              </div>
+            )}
             <div>
               <Label htmlFor="supplier">Proveedor</Label>
               <SmartSearch
@@ -315,7 +319,7 @@ const EditQuoteRequest = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !defaultCompanyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </div>
