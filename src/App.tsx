@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import BulkUpload from "./pages/BulkUpload"; // Importar el componente BulkUpload
+import BulkUpload from "./pages/BulkUpload";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 
 const queryClient = new QueryClient();
@@ -19,10 +19,11 @@ const App = () => (
       <BrowserRouter>
         <SessionContextProvider>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<BulkUpload />} /> {/* Cambiar la ruta principal a BulkUpload */}
+            <Route path="/" element={<Index />} /> {/* Página de inicio */}
+            <Route path="/login" element={<Login />} /> {/* Página de login */}
+            <Route path="/bulk-upload" element={<BulkUpload />} /> {/* Página de carga masiva */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<NotFound />} /> {/* Ruta para páginas no encontradas */}
           </Routes>
         </SessionContextProvider>
       </BrowserRouter>
