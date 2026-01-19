@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react'; // Import useState
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit } from 'lucide-react';
+import { ArrowLeft, Edit, FileText } from 'lucide-react'; // Import FileText icon
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'; // Import Dialog components
+import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal'; // Import new modal component
 
 interface QuoteRequestItem {
   id: string;
@@ -52,6 +54,7 @@ interface QuoteRequestDetailsData {
 
 const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -103,11 +106,29 @@ const QuoteRequestDetails = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la gestión de solicitudes
           </Link>
         </Button>
-        <Button asChild className="bg-procarni-secondary hover:bg-green-700">
-          <Link to={`/quote-requests/edit/${request.id}`}>
-            <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary">
+                <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
+              </DialogHeader>
+              <QuoteRequestPreviewModal
+                requestId={request.id}
+                onClose={() => setIsModalOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+          <Button asChild className="bg-procarni-secondary hover:bg-green-700">
+            <Link to={`/quote-requests/edit/${request.id}`}>
+              <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="mb-6">
