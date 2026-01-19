@@ -91,7 +91,7 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2; // Excel rows are 1-indexed, plus header row
 
-        const code = rowData['Código'];
+        const codeFromExcel = rowData['Código']; // Read code from Excel
         const rif = validateRif(rowData['RIF']);
         const name = rowData['Nombre'];
         const email = rowData['Email'];
@@ -146,8 +146,7 @@ serve(async (req) => {
           status = 'Active';
         }
 
-        const supplierData = {
-          code: code || null,
+        const supplierData: any = {
           rif: rif,
           name: name,
           email: email || null,
@@ -161,6 +160,11 @@ serve(async (req) => {
           status: status,
           user_id: user.id,
         };
+
+        // Only add code if it's explicitly provided in the Excel
+        if (codeFromExcel) {
+          supplierData.code = codeFromExcel;
+        }
 
         // ALWAYS check for existing supplier by RIF
         const { data: existingSupplier, error: fetchError } = await supabaseClient
@@ -206,7 +210,7 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2;
 
-        let code = rowData['Código']; // Can be null/empty for auto-generation
+        const codeFromExcel = rowData['Código']; // Read code from Excel
         const name = rowData['Nombre'];
         const category = rowData['Categoría'];
         const unit = rowData['Unidad'];
@@ -227,22 +231,29 @@ serve(async (req) => {
           continue;
         }
 
-        const materialData = {
-          code: code || null, // Let DB trigger handle if null
+        const materialData: any = {
           name: name,
           category: category,
           unit: unit,
           user_id: user.id,
         };
 
+        // Only add code if it's explicitly provided in the Excel
+        if (codeFromExcel) {
+          materialData.code = codeFromExcel;
+        } else {
+          // If code is not provided, ensure it's null for insert to trigger auto-generation
+          materialData.code = null;
+        }
+
         // Check if material already exists by name and category (or code if provided)
         let existingMaterialQuery = supabaseClient
           .from('materials')
           .select('id');
 
-        if (code) {
-          existingMaterialQuery = existingMaterialQuery.eq('code', code);
-        } else {
+        if (codeFromExcel) { // If code is provided, prioritize searching by code
+          existingMaterialQuery = existingMaterialQuery.eq('code', codeFromExcel);
+        } else { // Otherwise, search by name and category
           existingMaterialQuery = existingMaterialQuery
             .eq('name', name)
             .eq('category', category);
@@ -329,6 +340,8 @@ serve(async (req) => {
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Material con código '${materialCode}' no encontrado.` });
           continue;
+          // If material is not found, we could also try to create it here if desired,
+          // but for now, we'll skip the relation.
         }
         const materialId = materialLookup.id;
 
@@ -387,7 +400,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[bulk-upload] General error:', error.message, error); // Improved error logging
+    console.error('[bulk-upload] General error:', error.message, error);
     return new Response(JSON.stringify({ error: error.message || 'Error desconocido en la función Edge.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
