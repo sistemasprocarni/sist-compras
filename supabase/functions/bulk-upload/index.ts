@@ -27,6 +27,7 @@ const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
 
+// Definir la constante PAYMENT_TERMS_OPTIONS aquí para que esté disponible en la función Edge
 const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
 
 serve(async (req) => {
@@ -118,9 +119,9 @@ serve(async (req) => {
           errors.push({ row: rowNum, data: rowData, reason: 'Formato de Email inválido.' });
           continue;
         }
-        if (!payment_terms || !PAYMENT_TERONS_OPTIONS.includes(payment_terms)) {
+        if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) { // Corrected typo here
           // Handle cases where payment_terms might be an old custom value
-          if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
+          if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) { // Corrected typo here
             custom_payment_terms = payment_terms;
             payment_terms = 'Otro';
           } else {
