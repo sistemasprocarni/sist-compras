@@ -99,10 +99,10 @@ serve(async (req) => {
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
         const address = rowData['Dirección'];
-        let payment_terms = rowData['Términos de Pago']; // Changed to let
-        let custom_payment_terms = rowData['Términos de Pago Personalizados']; // Changed to let
-        let credit_days = rowData['Días de Crédito']; // Changed to let
-        let status = rowData['Estado']; // Changed to let
+        let payment_terms = rowData['Términos de Pago'];
+        let custom_payment_terms = rowData['Términos de Pago Personalizados'];
+        let credit_days = rowData['Días de Crédito'];
+        let status = rowData['Estado'];
 
         if (!rif) {
           failureCount++;
@@ -298,13 +298,13 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2;
 
-        const supplierRif = String(rowData['RIF'] || '').trim();
-        const materialCode = String(rowData['Código'] || '').trim();
+        const supplierCode = String(rowData['Código P'] || '').trim(); // Changed from RIF to Código P
+        const materialCode = String(rowData['Código MP'] || '').trim(); // Changed from Código to Código MP
         const specification = String(rowData['ESPECIFICACION'] || '').trim();
 
-        if (!supplierRif) {
+        if (!supplierCode) { // Validate supplier code
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: 'RIF del proveedor faltante.' });
+          errors.push({ row: rowNum, data: rowData, reason: 'Código del proveedor faltante.' });
           continue;
         }
         if (!materialCode) {
@@ -313,26 +313,26 @@ serve(async (req) => {
           continue;
         }
 
-        // Find supplier_id by RIF
+        // Find supplier_id by code (Código P)
         const { data: supplierLookup, error: supplierLookupError } = await supabaseClient
           .from('suppliers')
           .select('id')
-          .eq('rif', supplierRif)
+          .eq('code', supplierCode) // Changed to 'code'
           .single();
 
         if (supplierLookupError || !supplierLookup) {
-          console.warn(`[bulk-upload] Supplier with RIF '${supplierRif}' not found for row ${rowNum}. Skipping relation.`);
+          console.warn(`[bulk-upload] Supplier with code '${supplierCode}' not found for row ${rowNum}. Skipping relation.`);
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: `Proveedor con RIF '${supplierRif}' no encontrado.` });
+          errors.push({ row: rowNum, data: rowData, reason: `Proveedor con código '${supplierCode}' no encontrado.` });
           continue;
         }
         const supplierId = supplierLookup.id;
 
-        // Find material_id by code
+        // Find material_id by code (Código MP)
         const { data: materialLookup, error: materialLookupError } = await supabaseClient
           .from('materials')
           .select('id')
-          .eq('code', materialCode)
+          .eq('code', materialCode) // Already 'code', but confirming
           .single();
 
         if (materialLookupError || !materialLookup) {
@@ -365,7 +365,7 @@ serve(async (req) => {
             .from('supplier_materials')
             .update({ specification: specification, user_id: user.id })
             .eq('id', existingRelation.id);
-          console.log(`[bulk-upload] Updated supplier_material relation for supplier ${supplierRif}, material ${materialCode}`);
+          console.log(`[bulk-upload] Updated supplier_material relation for supplier ${supplierCode}, material ${materialCode}`);
         } else {
           // Insert new relation
           dbOperation = await supabaseClient
@@ -376,7 +376,7 @@ serve(async (req) => {
               specification: specification,
               user_id: user.id,
             });
-          console.log(`[bulk-upload] Inserted new supplier_material relation for supplier ${supplierRif}, material ${materialCode}`);
+          console.log(`[bulk-upload] Inserted new supplier_material relation for supplier ${supplierCode}, material ${materialCode}`);
         }
 
         if (dbOperation.error) {
