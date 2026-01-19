@@ -91,7 +91,7 @@ serve(async (req) => {
         const rowData = jsonData[i];
         const rowNum = i + 2; // Excel rows are 1-indexed, plus header row
 
-        const code = rowData['Código']; // New: Read code
+        const code = rowData['Código'];
         const rif = validateRif(rowData['RIF']);
         const name = rowData['Nombre'];
         const email = rowData['Email'];
@@ -119,13 +119,12 @@ serve(async (req) => {
           errors.push({ row: rowNum, data: rowData, reason: 'Formato de Email inválido.' });
           continue;
         }
-        if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) { // Corrected typo here
-          // Handle cases where payment_terms might be an old custom value
-          if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) { // Corrected typo here
+        if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
+          if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
             custom_payment_terms = payment_terms;
             payment_terms = 'Otro';
           } else {
-            payment_terms = 'Contado'; // Default if invalid or missing
+            payment_terms = 'Contado';
           }
         }
         if (payment_terms === 'Otro' && (!custom_payment_terms || custom_payment_terms.trim() === '')) {
@@ -141,14 +140,14 @@ serve(async (req) => {
           }
           credit_days = Number(credit_days);
         } else {
-          credit_days = 0; // Default to 0 if not credit
+          credit_days = 0;
         }
         if (!status || !['Active', 'Inactive'].includes(status)) {
-          status = 'Active'; // Default if invalid or missing
+          status = 'Active';
         }
 
         const supplierData = {
-          code: code || null, // New: Include code, let DB handle if null
+          code: code || null,
           rif: rif,
           name: name,
           email: email || null,
@@ -163,23 +162,17 @@ serve(async (req) => {
           user_id: user.id,
         };
 
-        // Check if supplier already exists by RIF or Code
-        let existingSupplierQuery = supabaseClient
+        // ALWAYS check for existing supplier by RIF
+        const { data: existingSupplier, error: fetchError } = await supabaseClient
           .from('suppliers')
-          .select('id');
-
-        if (code) {
-          existingSupplierQuery = existingSupplierQuery.eq('code', code);
-        } else {
-          existingSupplierQuery = existingSupplierQuery.eq('rif', rif);
-        }
-
-        const { data: existingSupplier, error: fetchError } = await existingSupplierQuery.single();
+          .select('id')
+          .eq('rif', rif)
+          .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-          console.error(`[bulk-upload] Error checking existing supplier for RIF ${rif} or Code ${code}:`, fetchError);
+          console.error(`[bulk-upload] Error checking existing supplier for RIF ${rif}:`, fetchError);
           failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: `Error de base de datos al verificar proveedor: ${fetchError.message}` });
+          errors.push({ row: rowNum, data: rowData, reason: `Error de base de datos al verificar proveedor por RIF: ${fetchError.message}` });
           continue;
         }
 
@@ -190,17 +183,17 @@ serve(async (req) => {
             .from('suppliers')
             .update(supplierData)
             .eq('id', existingSupplier.id);
-          console.log(`[bulk-upload] Updated supplier ${rif}`);
+          console.log(`[bulk-upload] Updated supplier with RIF ${rif}`);
         } else {
           // Insert new supplier
           dbOperation = await supabaseClient
             .from('suppliers')
             .insert(supplierData);
-          console.log(`[bulk-upload] Inserted new supplier ${rif}`);
+          console.log(`[bulk-upload] Inserted new supplier with RIF ${rif}`);
         }
 
         if (dbOperation.error) {
-          console.error(`[bulk-upload] Error saving supplier ${rif}:`, dbOperation.error);
+          console.error(`[bulk-upload] Error saving supplier with RIF ${rif}:`, dbOperation.error);
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Error al guardar proveedor: ${dbOperation.error.message}` });
         } else {
@@ -394,8 +387,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[bulk-upload] General error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[bulk-upload] General error:', error.message, error); // Improved error logging
+    return new Response(JSON.stringify({ error: error.message || 'Error desconocido en la función Edge.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
