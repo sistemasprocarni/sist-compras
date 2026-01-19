@@ -776,8 +776,8 @@ export const searchCompanies = async (query: string): Promise<Company[]> => {
     .or(`rif.ilike.%${query}%,name.ilike.%${query}%`);
 
   if (error) {
-    console.error('[searchCompanies] Error searching companies:', error);
-    showError('Error al buscar empresas.');
+    console.error('[searchCompanies] Error searching companies:', error.message); // Log the specific error message
+    showError('Error al buscar empresas: ' + error.message); // Show more specific error to user
     return [];
   }
   return data || [];
