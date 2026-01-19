@@ -40,7 +40,7 @@ const MATERIAL_UNITS = [
 ];
 
 const GenerateQuoteRequest = () => {
-  const { session, isLoadingSession } = useSession(); // Obtener isLoadingSession
+  const { session, isLoadingSession } = useSession();
 
   const [companyId, setCompanyId] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
@@ -54,19 +54,31 @@ const GenerateQuoteRequest = () => {
   const userEmail = session?.user?.email;
 
   // Fetch companies
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery<Company[]>({
+  const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
+      console.log('[GenerateQuoteRequest] Fetching companies...');
+      if (!session || !session.supabase) {
+        console.log('[GenerateQuoteRequest] Session or supabase client not available.');
+        return [];
+      }
       const { data, error } = await session.supabase.from('companies').select('id, name');
       if (error) {
-        console.error('Error fetching companies:', error);
+        console.error('[GenerateQuoteRequest] Error fetching companies:', error);
         showError('Error al cargar las empresas.');
         return [];
       }
+      console.log('[GenerateQuoteRequest] Companies fetched:', data);
       return data || [];
     },
     enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
+
+  console.log('[GenerateQuoteRequest] Session:', session);
+  console.log('[GenerateQuoteRequest] isLoadingSession:', isLoadingSession);
+  console.log('[GenerateQuoteRequest] Companies:', companies);
+  console.log('[GenerateQuoteRequest] isLoadingCompanies:', isLoadingCompanies);
+  console.log('[GenerateQuoteRequest] Companies Error:', companiesError);
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
@@ -145,7 +157,7 @@ const GenerateQuoteRequest = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}> {/* Deshabilitar si la sesión está cargando */}
+              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
                 <SelectTrigger id="company">
                   <SelectValue placeholder="Selecciona una empresa" />
                 </SelectTrigger>
