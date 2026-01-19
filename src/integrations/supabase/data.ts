@@ -89,12 +89,12 @@ interface QuoteRequestItem {
 interface Company { // Re-defining Company interface for clarity in data.ts
   id: string;
   name: string;
-  rif: string; // Added RIF
+  rif: string; // Added RIF directly as a column
   logo_url?: string;
   address?: string; // Added address
   phone?: string; // Added phone
   email?: string; // Added email
-  fiscal_data?: any;
+  fiscal_data?: any; // fiscal_data is now optional and can be used for other fiscal details
   created_at?: string;
   updated_at?: string;
   user_id: string;
@@ -772,7 +772,7 @@ export const getAllQuoteRequests = async (): Promise<QuoteRequestHeader[]> => {
 export const searchCompanies = async (query: string): Promise<Company[]> => {
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, rif') // Solo necesitamos id, name y rif para el SmartSearch
+    .select('id, name, rif') // Ahora 'rif' es una columna directa
     .or(`rif.ilike.%${query}%,name.ilike.%${query}%`);
 
   if (error) {
