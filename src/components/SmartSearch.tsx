@@ -15,11 +15,13 @@ interface SearchResult {
 interface SmartSearchProps {
   placeholder: string;
   onSelect: (item: SearchResult) => void;
-  fetchFunction: (query: string) => Promise<SearchResult[]>;
+  fetchFunction: (query: string, supplierId?: string) => Promise<SearchResult[]>; // Updated to accept supplierId
   displayValue?: string; // Optional prop to control the displayed value
+  supplierId?: string; // New optional prop for filtering by supplier
+  disabled?: boolean; // New optional prop to disable the search
 }
 
-const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue }) => {
+const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue, supplierId, disabled = false }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -43,13 +45,14 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       return;
     }
     try {
-      const data = await fetchFunction(searchQuery);
+      // Pass supplierId to the fetchFunction if it exists
+      const data = await fetchFunction(searchQuery, supplierId);
       setResults(data);
     } catch (error) {
       console.error('Error fetching search results:', error);
       setResults([]);
     }
-  }, [fetchFunction]);
+  }, [fetchFunction, supplierId]); // Add supplierId to dependencies
 
   useEffect(() => {
     if (debounceTimeoutRef.current) {
@@ -81,6 +84,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={disabled} // Disable the button
         >
           {selectedItem ? selectedItem.name : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -92,6 +96,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
             placeholder={placeholder}
             value={query}
             onValueChange={setQuery}
+            disabled={disabled} // Disable the input
           />
           <CommandList>
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>

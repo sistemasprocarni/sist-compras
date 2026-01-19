@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
+import { createPurchaseOrder, searchSuppliers, searchCompanies, searchSupplierMaterials } from '@/integrations/supabase/data'; // Added searchCompanies and searchSupplierMaterials
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -23,24 +23,34 @@ interface Company {
   rif: string; // Added rif for SmartSearch
 }
 
+interface MaterialSearchResult {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+  unit?: string;
+}
+
 const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
 
-  const [companyId, setCompanyId] = React.useState<string>(''); // Now explicitly selected
-  const [companyName, setCompanyName] = React.useState<string>(''); // For SmartSearch display
-  const [supplierId, setSupplierId] = React.useState<string>('');
-  const [supplierName, setSupplierName] = React.useState<string>('');
-  const [currency, setCurrency] = React.useState<'USD' | 'VES'>('USD');
-  const [exchangeRate, setExchangeRate] = React.useState<number | undefined>(undefined);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
+  const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
+  const [supplierId, setSupplierId] = useState<string>('');
+  const [supplierName, setSupplierName] = useState<string>('');
+  const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
+  const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // No longer fetching all companies to auto-select the first one.
-  // The SmartSearch will handle fetching companies as needed.
+  // Clear items when supplier changes
+  useEffect(() => {
+    clearCart();
+  }, [supplierId]);
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
@@ -52,6 +62,11 @@ const GeneratePurchaseOrder = () => {
 
   const handleRemoveItem = (index: number) => {
     removeItem(index);
+  };
+
+  const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
+    handleItemChange(index, 'material_name', material.name);
+    // Optionally, you could pre-fill unit_price or other details if available from material search
   };
 
   const handleCompanySelect = (company: Company) => {
@@ -171,11 +186,13 @@ const GeneratePurchaseOrder = () => {
               <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-md">
                 <div className="md:col-span-2">
                   <Label htmlFor={`material_name-${index}`}>Material</Label>
-                  <Input
-                    id={`material_name-${index}`}
-                    value={item.material_name}
-                    onChange={(e) => handleItemChange(index, 'material_name', e.target.value)}
-                    placeholder="Nombre del material"
+                  <SmartSearch
+                    placeholder="Buscar material por nombre o código"
+                    onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+                    fetchFunction={searchSupplierMaterials} // Use searchSupplierMaterials
+                    supplierId={supplierId} // Pass selected supplierId
+                    displayValue={item.material_name}
+                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div>
@@ -186,6 +203,7 @@ const GeneratePurchaseOrder = () => {
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
                     min="0"
+                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div>
@@ -197,6 +215,7 @@ const GeneratePurchaseOrder = () => {
                     value={item.unit_price}
                     onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value))}
                     min="0"
+                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div className="flex items-center space-x-2">
@@ -204,15 +223,16 @@ const GeneratePurchaseOrder = () => {
                     id={`is_exempt-${index}`}
                     checked={item.is_exempt}
                     onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
+                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                   <Label htmlFor={`is_exempt-${index}`}>Exento IVA</Label>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
+                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} disabled={!supplierId}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-            <Button variant="outline" onClick={handleAddItem} className="w-full">
+            <Button variant="outline" onClick={handleAddItem} className="w-full" disabled={!supplierId}>
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
             </Button>
           </div>
@@ -235,7 +255,7 @@ const GeneratePurchaseOrder = () => {
           <div className="flex justify-end gap-2 mt-6">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" disabled={isSubmitting || !companyId}>
+                <Button variant="secondary" disabled={isSubmitting || !companyId || !supplierId}>
                   Previsualizar PDF
                 </Button>
               </DialogTrigger>
@@ -258,7 +278,7 @@ const GeneratePurchaseOrder = () => {
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !supplierId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Orden de Compra'}
             </Button>
           </div>
