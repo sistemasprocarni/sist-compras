@@ -40,6 +40,7 @@ interface SupplierMaterial {
 
 interface PurchaseOrderHeader {
   id?: string;
+  sequence_number?: number; // Added for PO sequence
   supplier_id: string;
   company_id: string;
   currency: string;
@@ -47,6 +48,8 @@ interface PurchaseOrderHeader {
   status?: string;
   created_by?: string;
   user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface PurchaseOrderItem {
@@ -57,6 +60,30 @@ interface PurchaseOrderItem {
   unit_price: number;
   tax_rate?: number;
   is_exempt?: boolean;
+}
+
+// Nuevas interfaces para Solicitud de Cotización
+interface QuoteRequestHeader {
+  id?: string;
+  supplier_id: string;
+  company_id: string;
+  currency: string;
+  exchange_rate?: number | null;
+  status?: string;
+  created_by?: string;
+  user_id: string;
+  created_at?: string;
+}
+
+interface QuoteRequestItem {
+  id?: string;
+  request_id?: string;
+  material_name: string;
+  description?: string; // Nueva columna
+  unit?: string; // Nueva columna
+  quantity: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -116,7 +143,7 @@ export const getMaterialsBySupplier = async (supplierId: string): Promise<Suppli
  * @returns La orden de compra creada o null si falla.
  */
 export const createPurchaseOrder = async (
-  orderData: Omit<PurchaseOrderHeader, 'id'>,
+  orderData: Omit<PurchaseOrderHeader, 'id' | 'sequence_number' | 'created_at' | 'updated_at'>,
   itemsData: Omit<PurchaseOrderItem, 'id' | 'order_id'>[]
 ): Promise<PurchaseOrderHeader | null> => {
   if (orderData.currency === 'VES' && (!orderData.exchange_rate || orderData.exchange_rate <= 0)) {
@@ -500,4 +527,223 @@ export const deleteMaterial = async (id: string): Promise<boolean> => {
   }
   showSuccess('Material eliminado exitosamente.');
   return true;
+};
+
+// --- Funciones CRUD para Solicitudes de Cotización (Quote Requests) ---
+
+/**
+ * Crea una nueva solicitud de cotización con sus ítems.
+ * @param requestData Datos de la cabecera de la solicitud de cotización.
+ * @param itemsData Array de ítems de la solicitud de cotización.
+ * @returns La solicitud de cotización creada o null si falla.
+ */
+export const createQuoteRequest = async (
+  requestData: Omit<QuoteRequestHeader, 'id' | 'created_at'>,
+  itemsData: Omit<QuoteRequestItem, 'id' | 'request_id' | 'created_at' | 'updated_at'>[]
+): Promise<QuoteRequestHeader | null> => {
+  if (requestData.currency === 'VES' && (!requestData.exchange_rate || requestData.exchange_rate <= 0)) {
+    showError('La tasa de cambio debe ser mayor que cero para solicitudes en Bolívares.');
+    return null;
+  }
+
+  const { data: request, error: requestError } = await supabase
+    .from('quote_requests')
+    .insert(requestData)
+    .select()
+    .single();
+
+  if (requestError) {
+    console.error('[createQuoteRequest] Error creating quote request header:', requestError);
+    showError('Error al crear la cabecera de la solicitud de cotización.');
+    return null;
+  }
+
+  if (request && itemsData.length > 0) {
+    const itemsWithRequestId = itemsData.map(item => ({
+      ...item,
+      request_id: request.id,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('quote_request_items')
+      .insert(itemsWithRequestId);
+
+    if (itemsError) {
+      console.error('[createQuoteRequest] Error creating quote request items:', itemsError);
+      showError('Error al crear los ítems de la solicitud de cotización. La solicitud fue creada, pero los ítems no.');
+      return null;
+    }
+  }
+
+  showSuccess('Solicitud de cotización creada exitosamente.');
+  return request;
+};
+
+/**
+ * Obtiene los detalles completos de una solicitud de cotización.
+ * @param requestId ID de la solicitud de cotización.
+ * @returns Objeto con los detalles de la solicitud, proveedor, empresa y sus ítems.
+ */
+export const getQuoteRequestDetails = async (
+  requestId: string
+): Promise<(QuoteRequestHeader & {
+  suppliers: Pick<Supplier, 'id' | 'name' | 'rif' | 'email' | 'phone' | 'phone_2' | 'instagram' | 'address'>;
+  companies: Pick<Company, 'id' | 'name' | 'logo_url' | 'fiscal_data'>;
+  quote_request_items: QuoteRequestItem[];
+}) | null> => {
+  const { data: request, error } = await supabase
+    .from('quote_requests')
+    .select(`
+      *,
+      suppliers (id, name, rif, email, phone, phone_2, instagram, address),
+      companies (id, name, logo_url, fiscal_data),
+      quote_request_items (*)
+    `)
+    .eq('id', requestId)
+    .single();
+
+  if (error) {
+    console.error('[getQuoteRequestDetails] Error fetching quote request details:', error);
+    showError('Error al obtener los detalles de la solicitud de cotización.');
+    return null;
+  }
+
+  return request as any; // Cast para manejar la complejidad del tipo de retorno con joins
+};
+
+/**
+ * Actualiza una solicitud de cotización existente y sus ítems.
+ * @param id ID de la solicitud de cotización a actualizar.
+ * @param updates Objeto con los campos a actualizar de la solicitud.
+ * @param items Lista de ítems a asociar (para actualizar/crear/eliminar).
+ * @returns La solicitud de cotización actualizada o null si falla.
+ */
+export const updateQuoteRequest = async (
+  id: string,
+  updates: Partial<Omit<QuoteRequestHeader, 'id' | 'created_at'>>,
+  items: Omit<QuoteRequestItem, 'created_at' | 'updated_at'>[]
+): Promise<QuoteRequestHeader | null> => {
+  const { data: updatedRequest, error: requestError } = await supabase
+    .from('quote_requests')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (requestError) {
+    console.error('[updateQuoteRequest] Error updating quote request header:', requestError);
+    showError('Error al actualizar la solicitud de cotización.');
+    return null;
+  }
+
+  // Manejar actualizaciones de quote_request_items
+  const { data: existingItems, error: fetchError } = await supabase
+    .from('quote_request_items')
+    .select('id')
+    .eq('request_id', id);
+
+  if (fetchError) {
+    console.error('[updateQuoteRequest] Error fetching existing quote request items:', fetchError);
+    showError('Error al actualizar los ítems de la solicitud de cotización.');
+    return null;
+  }
+
+  const existingItemIds = new Set(existingItems.map(item => item.id));
+  const newItemIds = new Set(items.filter(item => item.id).map(item => item.id));
+
+  // Ítems a eliminar (existentes que ya no están en la lista nueva)
+  const itemsToDelete = existingItems.filter(item => !newItemIds.has(item.id));
+  if (itemsToDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('quote_request_items')
+      .delete()
+      .in('id', itemsToDelete.map(item => item.id));
+    if (deleteError) {
+      console.error('[updateQuoteRequest] Error deleting old quote request items:', deleteError);
+      showError('Error al eliminar ítems antiguos de la solicitud.');
+      return null;
+    }
+  }
+
+  // Ítems a insertar/actualizar
+  for (const item of items) {
+    if (item.id && existingItemIds.has(item.id)) {
+      // Actualizar ítem existente
+      const { error: updateItemError } = await supabase
+        .from('quote_request_items')
+        .update({
+          material_name: item.material_name,
+          description: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+        })
+        .eq('id', item.id);
+      if (updateItemError) {
+        console.error('[updateQuoteRequest] Error updating quote request item:', updateItemError);
+        showError('Error al actualizar un ítem de la solicitud.');
+        return null;
+      }
+    } else {
+      // Insertar nuevo ítem
+      const { error: insertError } = await supabase
+        .from('quote_request_items')
+        .insert({
+          request_id: id,
+          material_name: item.material_name,
+          description: item.description,
+          unit: item.unit,
+          quantity: item.quantity,
+        });
+      if (insertError) {
+        console.error('[updateQuoteRequest] Error inserting new quote request item:', insertError);
+        showError('Error al insertar un nuevo ítem en la solicitud.');
+        return null;
+      }
+    }
+  }
+
+  showSuccess('Solicitud de cotización actualizada exitosamente.');
+  return updatedRequest;
+};
+
+/**
+ * Elimina una solicitud de cotización.
+ * @param id ID de la solicitud de cotización a eliminar.
+ * @returns true si se eliminó exitosamente, false si falla.
+ */
+export const deleteQuoteRequest = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('quote_requests')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteQuoteRequest] Error deleting quote request:', error);
+    showError('Error al eliminar la solicitud de cotización.');
+    return false;
+  }
+  showSuccess('Solicitud de cotización eliminada exitosamente.');
+  return true;
+};
+
+/**
+ * Obtiene todas las solicitudes de cotización para el usuario actual.
+ * @returns Lista de todas las solicitudes de cotización.
+ */
+export const getAllQuoteRequests = async (): Promise<QuoteRequestHeader[]> => {
+  const { data, error } = await supabase
+    .from('quote_requests')
+    .select(`
+      *,
+      suppliers (name),
+      companies (name)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[getAllQuoteRequests] Error fetching all quote requests:', error);
+    showError('Error al cargar las solicitudes de cotización.');
+    return [];
+  }
+  return data || [];
 };
