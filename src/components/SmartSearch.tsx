@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button'; // Keep Button import if it's used elsewhere, otherwise it can be removed.
-import { Check, ChevronsUpDown } from 'lucide-react'; // ChevronsUpDown can be removed if not used.
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
