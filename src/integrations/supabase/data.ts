@@ -776,7 +776,7 @@ export const searchCompanies = async (query: string): Promise<Company[]> => {
     .or(`rif.ilike.%${query}%,name.ilike.%${query}%`);
 
   if (error) {
-    console.error('[searchCompanies] Error searching companies:', error.message); // Log the specific error message
+    console.error('[searchCompanies] Error searching companies:', error); // Log the full error object
     showError('Error al buscar empresas: ' + error.message); // Show more specific error to user
     return [];
   }
@@ -793,7 +793,7 @@ export const getAllCompanies = async (): Promise<Company[]> => {
     .select('*');
 
   if (error) {
-    console.error('[getAllCompanies] Error fetching all companies:', error);
+    console.error('[getAllCompanies] Error fetching all companies:', error); // Log the full error object
     showError('Error al cargar las empresas.');
     return [];
   }
@@ -813,7 +813,7 @@ export const createCompany = async (company: Omit<Company, 'id' | 'created_at' |
     .single();
 
   if (error) {
-    console.error('[createCompany] Error creating company:', error);
+    console.error('[createCompany] Error creating company:', error); // Log the full error object
     showError('Error al crear la empresa.');
     return null;
   }
@@ -836,7 +836,7 @@ export const updateCompany = async (id: string, updates: Partial<Omit<Company, '
     .single();
 
   if (error) {
-    console.error('[updateCompany] Error updating company:', error);
+    console.error('[updateCompany] Error updating company:', error); // Log the full error object
     showError('Error al actualizar la empresa.');
     return null;
   }
@@ -856,7 +856,7 @@ export const deleteCompany = async (id: string): Promise<boolean> => {
     .eq('id', id);
 
   if (error) {
-    console.error('[deleteCompany] Error deleting company:', error);
+    console.error('[deleteCompany] Error deleting company:', error); // Log the full error object
     showError('Error al eliminar la empresa.');
     return false;
   }
