@@ -23,7 +23,7 @@ interface Company {
 }
 
 const GeneratePurchaseOrder = () => {
-  const { session, isLoadingSession } = useSession(); // Obtener isLoadingSession
+  const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
 
   const [companyId, setCompanyId] = React.useState<string>('');
@@ -38,19 +38,33 @@ const GeneratePurchaseOrder = () => {
   const userEmail = session?.user?.email;
 
   // Fetch companies
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery<Company[]>({
+  const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
+      console.log('[GeneratePurchaseOrder] QueryFn called. Session:', session, 'isLoadingSession:', isLoadingSession);
+      if (!session || !session.supabase) {
+        console.error('[GeneratePurchaseOrder] session or supabase client not available in queryFn.');
+        return [];
+      }
       const { data, error } = await session.supabase.from('companies').select('id, name');
       if (error) {
-        console.error('Error fetching companies:', error);
+        console.error('[GeneratePurchaseOrder] Error fetching companies:', error);
         showError('Error al cargar las empresas.');
         return [];
       }
+      console.log('[GeneratePurchaseOrder] Fetched companies data:', data);
       return data || [];
     },
-    enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
+    enabled: !!session && !isLoadingSession,
   });
+
+  // Logs para depuración en el render
+  console.log('[GeneratePurchaseOrder Render] isLoadingSession:', isLoadingSession);
+  console.log('[GeneratePurchaseOrder Render] session:', session);
+  console.log('[GeneratePurchaseOrder Render] isLoadingCompanies:', isLoadingCompanies);
+  console.log('[GeneratePurchaseOrder Render] companies:', companies);
+  console.log('[GeneratePurchaseOrder Render] companiesError:', companiesError);
+
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
@@ -124,7 +138,7 @@ const GeneratePurchaseOrder = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}> {/* Deshabilitar si la sesión está cargando */}
+              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
                 <SelectTrigger id="company">
                   <SelectValue placeholder="Selecciona una empresa" />
                 </SelectTrigger>
