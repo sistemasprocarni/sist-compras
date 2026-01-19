@@ -10,7 +10,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers } from '@/integrations/supabase/data'; // Removed getMaterialsBySupplier as it's not used here
+import { createPurchaseOrder, searchSuppliers } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -26,7 +26,7 @@ const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
 
-  const [defaultCompanyId, setDefaultCompanyId] = React.useState<string | null>(null); // State for the default company ID
+  const [defaultCompanyId, setDefaultCompanyId] = React.useState<string | null>(null);
   const [supplierId, setSupplierId] = React.useState<string>('');
   const [supplierName, setSupplierName] = React.useState<string>('');
   const [currency, setCurrency] = React.useState<'USD' | 'VES'>('USD');
@@ -37,7 +37,6 @@ const GeneratePurchaseOrder = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch companies to get the default one
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
@@ -58,7 +57,12 @@ const GeneratePurchaseOrder = () => {
   // Set the default company ID once companies are loaded
   React.useEffect(() => {
     if (companies && companies.length > 0) {
-      setDefaultCompanyId(companies[0].id);
+      const montanoAntilia = companies.find(company => company.name === 'Montano Antilia');
+      if (montanoAntilia) {
+        setDefaultCompanyId(montanoAntilia.id);
+      } else {
+        setDefaultCompanyId(companies[0].id);
+      }
     } else if (!isLoadingCompanies && !companiesError) {
       showError('No hay empresas registradas. Por favor, registra una empresa primero.');
     }
@@ -133,7 +137,6 @@ const GeneratePurchaseOrder = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Eliminado el selector de empresa */}
             {defaultCompanyId && companies && companies.length > 0 && (
               <div>
                 <Label>Empresa de Origen</Label>
@@ -258,7 +261,7 @@ const GeneratePurchaseOrder = () => {
                 <PurchaseOrderPreviewModal
                   orderData={{
                     supplier_id: supplierId,
-                    company_id: defaultCompanyId || '', // Pass the default company ID
+                    company_id: defaultCompanyId || '',
                     currency,
                     exchange_rate: currency === 'VES' ? exchangeRate : null,
                     status: 'Draft',
