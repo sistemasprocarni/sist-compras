@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createQuoteRequest, searchSuppliers, searchSupplierMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies and searchSupplierMaterials
+import { createQuoteRequest, searchSuppliers, searchMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
@@ -55,10 +55,8 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Clear items when supplier changes
-  useEffect(() => {
-    setItems([]);
-  }, [supplierId]);
+  // No longer fetching all companies to auto-select the first one.
+  // The SmartSearch will handle fetching companies as needed.
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
@@ -198,10 +196,8 @@ const GenerateQuoteRequest = () => {
                   <SmartSearch
                     placeholder="Buscar material por nombre o código"
                     onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                    fetchFunction={searchSupplierMaterials} // Use searchSupplierMaterials
-                    supplierId={supplierId} // Pass selected supplierId
+                    fetchFunction={searchMaterials}
                     displayValue={item.material_name}
-                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div>
@@ -212,7 +208,6 @@ const GenerateQuoteRequest = () => {
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
                     min="0"
-                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -223,12 +218,11 @@ const GenerateQuoteRequest = () => {
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                     placeholder="Especificación, marca, etc."
                     rows={1}
-                    disabled={!supplierId} // Disable if no supplier is selected
                   />
                 </div>
                 <div>
                   <Label htmlFor={`unit-${index}`}>Unidad</Label>
-                  <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)} disabled={!supplierId}>
+                  <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
                     <SelectTrigger id={`unit-${index}`}>
                       <SelectValue placeholder="Unidad" />
                     </SelectTrigger>
@@ -239,18 +233,18 @@ const GenerateQuoteRequest = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} disabled={!supplierId}>
+                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-            <Button variant="outline" onClick={handleAddItem} className="w-full" disabled={!supplierId}>
+            <Button variant="outline" onClick={handleAddItem} className="w-full">
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
             </Button>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !supplierId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Solicitud de Cotización'}
             </Button>
           </div>
