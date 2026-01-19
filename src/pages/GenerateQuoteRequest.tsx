@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -42,9 +42,9 @@ const MATERIAL_UNITS = [
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
 
-  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(null); // State for the default company ID
+  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(null);
   const [supplierId, setSupplierId] = useState<string>('');
-  const [supplierName, setSupplierName] = useState<string>(''); // For SmartSearch display
+  const [supplierName, setSupplierName] = useState<string>('');
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   const [items, setItems] = useState<QuoteRequestItem[]>([]);
@@ -53,7 +53,6 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch companies to get the default one
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
@@ -68,11 +67,10 @@ const GenerateQuoteRequest = () => {
       }
       return data || [];
     },
-    enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
+    enabled: !!session && !isLoadingSession,
   });
 
-  // Set the default company ID once companies are loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (companies && companies.length > 0) {
       setDefaultCompanyId(companies[0].id);
     } else if (!isLoadingCompanies && !companiesError) {
@@ -96,7 +94,7 @@ const GenerateQuoteRequest = () => {
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
-    handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]); // Set unit if available from material
+    handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
   };
 
   const handleSubmit = async () => {
@@ -124,10 +122,10 @@ const GenerateQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: defaultCompanyId, // Use the default company ID
+      company_id: defaultCompanyId,
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
-      status: 'Draft', // O el estado inicial que desees
+      status: 'Draft',
       created_by: userEmail || 'unknown',
       user_id: userId,
     };
@@ -136,7 +134,7 @@ const GenerateQuoteRequest = () => {
 
     if (createdRequest) {
       showSuccess('Solicitud de cotización creada exitosamente.');
-      setDefaultCompanyId(null); // Reset default company ID
+      // Reset form fields
       setSupplierId('');
       setSupplierName('');
       setCurrency('USD');
@@ -152,10 +150,9 @@ const GenerateQuoteRequest = () => {
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Solicitud de Cotización (SC)</CardTitle>
           <CardDescription>Crea una nueva solicitud de cotización para tus proveedores.</CardDescription>
-        </CardDescription>
+        </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Eliminado el selector de empresa */}
             {defaultCompanyId && companies && companies.length > 0 && (
               <div>
                 <Label>Empresa de Origen</Label>
