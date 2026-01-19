@@ -15,7 +15,10 @@ import SearchSuppliersByMaterial from "./pages/SearchSuppliersByMaterial";
 import SupplierDetails from "./pages/SupplierDetails";
 import SupplierManagement from "./pages/SupplierManagement";
 import MaterialManagement from "./pages/MaterialManagement";
-import BulkUpload from "./pages/BulkUpload"; // New page import
+import BulkUpload from "./pages/BulkUpload";
+import QuoteRequestManagement from "./pages/QuoteRequestManagement"; // New import
+import QuoteRequestDetails from "./pages/QuoteRequestDetails"; // New import
+import EditQuoteRequest from "./pages/EditQuoteRequest"; // New import
 
 const queryClient = new QueryClient();
 
@@ -37,7 +40,10 @@ const App = () => (
                 <Route path="/suppliers/:id" element={<SupplierDetails />} />
                 <Route path="/supplier-management" element={<SupplierManagement />} />
                 <Route path="/material-management" element={<MaterialManagement />} />
-                <Route path="/bulk-upload" element={<BulkUpload />} /> {/* New route */}
+                <Route path="/bulk-upload" element={<BulkUpload />} />
+                <Route path="/quote-request-management" element={<QuoteRequestManagement />} /> {/* New route */}
+                <Route path="/quote-requests/:id" element={<QuoteRequestDetails />} /> {/* New route */}
+                <Route path="/quote-requests/edit/:id" element={<EditQuoteRequest />} /> {/* New route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
