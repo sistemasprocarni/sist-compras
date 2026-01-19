@@ -99,10 +99,10 @@ serve(async (req) => {
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
         const address = rowData['Dirección'];
-        let payment_terms = rowData['Términos de Pago'];
-        let custom_payment_terms = rowData['Términos de Pago Personalizados'];
-        let credit_days = rowData['Días de Crédito'];
-        const status = rowData['Estado'];
+        let payment_terms = rowData['Términos de Pago']; // Changed to let
+        let custom_payment_terms = rowData['Términos de Pago Personalizados']; // Changed to let
+        let credit_days = rowData['Días de Crédito']; // Changed to let
+        let status = rowData['Estado']; // Changed to let
 
         if (!rif) {
           failureCount++;
