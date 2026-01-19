@@ -44,7 +44,7 @@ const MATERIAL_UNITS = [
 const EditQuoteRequest = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { session } = useSession();
+  const { session, isLoadingSession } = useSession(); // Obtener isLoadingSession
 
   const [companyId, setCompanyId] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
@@ -61,7 +61,7 @@ const EditQuoteRequest = () => {
   const { data: initialRequest, isLoading: isLoadingRequest, error: requestError } = useQuery({
     queryKey: ['quoteRequestDetails', id],
     queryFn: () => getQuoteRequestDetails(id!),
-    enabled: !!id && !!session,
+    enabled: !!id && !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
 
   // Fetch companies
@@ -76,7 +76,7 @@ const EditQuoteRequest = () => {
       }
       return data || [];
     },
-    enabled: !!session,
+    enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
 
   // Populate form fields when initialRequest data is loaded
@@ -97,7 +97,7 @@ const EditQuoteRequest = () => {
     }
   }, [initialRequest]);
 
-  if (isLoadingRequest || isLoadingCompanies) {
+  if (isLoadingRequest || isLoadingCompanies || isLoadingSession) { // Deshabilitar si la sesión está cargando
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
         Cargando solicitud de cotización para edición...
@@ -208,7 +208,7 @@ const EditQuoteRequest = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies}>
+              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}>
                 <SelectTrigger id="company">
                   <SelectValue placeholder="Selecciona una empresa" />
                 </SelectTrigger>

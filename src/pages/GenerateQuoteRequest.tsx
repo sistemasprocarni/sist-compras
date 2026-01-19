@@ -40,7 +40,7 @@ const MATERIAL_UNITS = [
 ];
 
 const GenerateQuoteRequest = () => {
-  const { session } = useSession();
+  const { session, isLoadingSession } = useSession(); // Obtener isLoadingSession
 
   const [companyId, setCompanyId] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
@@ -65,7 +65,7 @@ const GenerateQuoteRequest = () => {
       }
       return data || [];
     },
-    enabled: !!session,
+    enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
 
   const handleAddItem = () => {
@@ -145,7 +145,7 @@ const GenerateQuoteRequest = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <Label htmlFor="company">Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies}>
+              <Select value={companyId} onValueChange={setCompanyId} disabled={isLoadingCompanies || isLoadingSession}> {/* Deshabilitar si la sesión está cargando */}
                 <SelectTrigger id="company">
                   <SelectValue placeholder="Selecciona una empresa" />
                 </SelectTrigger>

@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 interface SessionContextType {
   session: Session | null;
   supabase: typeof supabase;
+  isLoadingSession: boolean; // Añadido: estado de carga de la sesión
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
@@ -48,7 +49,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }
 
   return (
-    <SessionContext.Provider value={{ session, supabase }}>
+    <SessionContext.Provider value={{ session, supabase, isLoadingSession: loading }}>
       {children}
     </SessionContext.Provider>
   );
