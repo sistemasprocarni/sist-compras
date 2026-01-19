@@ -7,6 +7,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { UploadCloud, FileText, Download } from 'lucide-react';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import DialogTitle and DialogDescription
 
 interface UploadResult {
   successCount: number;
@@ -172,31 +173,33 @@ const BulkUpload = () => {
       </div>
 
       {uploadResult && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>Resultados de la Carga</CardTitle>
-            <CardDescription>
-              {uploadResult.successCount} registros procesados exitosamente, {uploadResult.failureCount} con errores.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {uploadResult.errors.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-destructive">Errores ({uploadResult.failureCount}):</h4>
-                <ul className="list-disc pl-5 text-sm text-destructive">
-                  {uploadResult.errors.map((err, index) => (
-                    <li key={index}>
-                      Fila {err.row}: {err.reason} (Datos: {JSON.stringify(err.data)})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {uploadResult.errors.length === 0 && (
-              <p className="text-sm text-green-600">Todos los registros se procesaron sin errores.</p>
-            )}
-          </CardContent>
-        </Card>
+        <Dialog open={!!uploadResult} onOpenChange={() => setUploadResult(null)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Resultados de la Carga Masiva</DialogTitle> {/* Added DialogTitle */}
+              <DialogDescription>
+                {uploadResult.successCount} registros procesados exitosamente, {uploadResult.failureCount} con errores.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[400px] overflow-y-auto">
+              {uploadResult.errors.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-destructive">Errores ({uploadResult.failureCount}):</h4>
+                  <ul className="list-disc pl-5 text-sm text-destructive">
+                    {uploadResult.errors.map((err, index) => (
+                      <li key={index}>
+                        Fila {err.row}: {err.reason} (Datos: {JSON.stringify(err.data)})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {uploadResult.errors.length === 0 && (
+                <p className="text-sm text-green-600">Todos los registros se procesaron sin errores.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       <div className="mt-6 p-4 border rounded-md bg-muted/20">

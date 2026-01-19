@@ -197,7 +197,7 @@ serve(async (req) => {
         }
 
         if (dbOperation.error) {
-          console.error(`[bulk-upload] Error saving supplier with RIF ${rif}:`, dbOperation.error);
+          console.error(`[bulk-upload] Error saving supplier with RIF ${rif}:`, dbOperation.error); // Log full error object
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Error al guardar proveedor: ${dbOperation.error.message}` });
         } else {
@@ -285,7 +285,7 @@ serve(async (req) => {
         }
 
         if (dbOperation.error) {
-          console.error(`[bulk-upload] Error saving material ${name}:`, dbOperation.error);
+          console.error(`[bulk-upload] Error saving material ${name}:`, dbOperation.error); // Log full error object
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Error al guardar material: ${dbOperation.error.message}` });
         } else {
@@ -340,8 +340,6 @@ serve(async (req) => {
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Material con código '${materialCode}' no encontrado.` });
           continue;
-          // If material is not found, we could also try to create it here if desired,
-          // but for now, we'll skip the relation.
         }
         const materialId = materialLookup.id;
 
@@ -382,7 +380,7 @@ serve(async (req) => {
         }
 
         if (dbOperation.error) {
-          console.error(`[bulk-upload] Error saving supplier_material relation for row ${rowNum}:`, dbOperation.error);
+          console.error(`[bulk-upload] Error saving supplier_material relation for row ${rowNum}:`, dbOperation.error); // Log full error object
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: `Error al guardar relación: ${dbOperation.error.message}` });
         } else {
@@ -400,7 +398,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[bulk-upload] General error:', error.message, error);
+    console.error('[bulk-upload] General error:', error); // Log full error object
     return new Response(JSON.stringify({ error: error.message || 'Error desconocido en la función Edge.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
