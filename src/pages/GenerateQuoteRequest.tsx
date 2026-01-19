@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createQuoteRequest, searchSuppliers, searchMaterials } from '@/integrations/supabase/data';
+import { createQuoteRequest, searchSuppliers, searchMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
@@ -17,6 +17,7 @@ import SmartSearch from '@/components/SmartSearch';
 interface Company {
   id: string;
   name: string;
+  rif: string; // Added rif for SmartSearch
 }
 
 interface QuoteRequestItem {
@@ -42,7 +43,8 @@ const MATERIAL_UNITS = [
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
 
-  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
+  const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
@@ -53,30 +55,8 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      if (!session || !session.supabase) {
-        return [];
-      }
-      const { data, error } = await session.supabase.from('companies').select('id, name');
-      if (error) {
-        console.error('[GenerateQuoteRequest] Error fetching companies:', error);
-        showError('Error al cargar las empresas.');
-        return [];
-      }
-      return data || [];
-    },
-    enabled: !!session && !isLoadingSession,
-  });
-
-  useEffect(() => {
-    if (companies && companies.length > 0) {
-      setDefaultCompanyId(companies[0].id);
-    } else if (!isLoadingCompanies && !companiesError) {
-      showError('No hay empresas registradas. Por favor, registra una empresa primero.');
-    }
-  }, [companies, isLoadingCompanies, companiesError]);
+  // No longer fetching all companies to auto-select the first one.
+  // The SmartSearch will handle fetching companies as needed.
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
@@ -97,13 +77,18 @@ const GenerateQuoteRequest = () => {
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
   };
 
+  const handleCompanySelect = (company: Company) => {
+    setCompanyId(company.id);
+    setCompanyName(company.name);
+  };
+
   const handleSubmit = async () => {
     if (!userId) {
       showError('Usuario no autenticado.');
       return;
     }
-    if (!defaultCompanyId) {
-      showError('No se ha podido determinar la empresa de origen. Asegúrate de que haya al menos una empresa registrada.');
+    if (!companyId) {
+      showError('Por favor, selecciona una empresa de origen.');
       return;
     }
     if (!supplierId) {
@@ -122,7 +107,7 @@ const GenerateQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: defaultCompanyId,
+      company_id: companyId, // Use the selected company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       status: 'Draft',
@@ -135,6 +120,8 @@ const GenerateQuoteRequest = () => {
     if (createdRequest) {
       showSuccess('Solicitud de cotización creada exitosamente.');
       // Reset form fields
+      setCompanyId('');
+      setCompanyName('');
       setSupplierId('');
       setSupplierName('');
       setCurrency('USD');
@@ -153,12 +140,16 @@ const GenerateQuoteRequest = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {defaultCompanyId && companies && companies.length > 0 && (
-              <div>
-                <Label>Empresa de Origen</Label>
-                <Input value={companies.find(c => c.id === defaultCompanyId)?.name || 'Cargando...'} readOnly className="bg-gray-100" />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="company">Empresa de Origen</Label>
+              <SmartSearch
+                placeholder="Buscar empresa por RIF o nombre"
+                onSelect={handleCompanySelect}
+                fetchFunction={searchCompanies}
+                displayValue={companyName}
+              />
+              {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
+            </div>
             <div>
               <Label htmlFor="supplier">Proveedor</Label>
               <SmartSearch
@@ -253,7 +244,7 @@ const GenerateQuoteRequest = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !defaultCompanyId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Solicitud de Cotización'}
             </Button>
           </div>

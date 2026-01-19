@@ -10,7 +10,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers } from '@/integrations/supabase/data'; // Removed getMaterialsBySupplier as it's not used here
+import { createPurchaseOrder, searchSuppliers, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -20,13 +20,15 @@ import SmartSearch from '@/components/SmartSearch';
 interface Company {
   id: string;
   name: string;
+  rif: string; // Added rif for SmartSearch
 }
 
 const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
 
-  const [defaultCompanyId, setDefaultCompanyId] = React.useState<string | null>(null); // State for the default company ID
+  const [companyId, setCompanyId] = React.useState<string>(''); // Now explicitly selected
+  const [companyName, setCompanyName] = React.useState<string>(''); // For SmartSearch display
   const [supplierId, setSupplierId] = React.useState<string>('');
   const [supplierName, setSupplierName] = React.useState<string>('');
   const [currency, setCurrency] = React.useState<'USD' | 'VES'>('USD');
@@ -37,32 +39,8 @@ const GeneratePurchaseOrder = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch companies to get the default one
-  const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      if (!session || !session.supabase) {
-        return [];
-      }
-      const { data, error } = await session.supabase.from('companies').select('id, name');
-      if (error) {
-        console.error('[GeneratePurchaseOrder] Error fetching companies:', error);
-        showError('Error al cargar las empresas.');
-        return [];
-      }
-      return data || [];
-    },
-    enabled: !!session && !isLoadingSession,
-  });
-
-  // Set the default company ID once companies are loaded
-  React.useEffect(() => {
-    if (companies && companies.length > 0) {
-      setDefaultCompanyId(companies[0].id);
-    } else if (!isLoadingCompanies && !companiesError) {
-      showError('No hay empresas registradas. Por favor, registra una empresa primero.');
-    }
-  }, [companies, isLoadingCompanies, companiesError]);
+  // No longer fetching all companies to auto-select the first one.
+  // The SmartSearch will handle fetching companies as needed.
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
@@ -76,6 +54,11 @@ const GeneratePurchaseOrder = () => {
     removeItem(index);
   };
 
+  const handleCompanySelect = (company: Company) => {
+    setCompanyId(company.id);
+    setCompanyName(company.name);
+  };
+
   const totals = calculateTotals(items);
 
   const handleSubmit = async () => {
@@ -83,8 +66,8 @@ const GeneratePurchaseOrder = () => {
       showError('Usuario no autenticado.');
       return;
     }
-    if (!defaultCompanyId) {
-      showError('No se ha podido determinar la empresa de origen. Asegúrate de que haya al menos una empresa registrada.');
+    if (!companyId) {
+      showError('Por favor, selecciona una empresa de origen.');
       return;
     }
     if (!supplierId) {
@@ -103,7 +86,7 @@ const GeneratePurchaseOrder = () => {
     setIsSubmitting(true);
     const orderData = {
       supplier_id: supplierId,
-      company_id: defaultCompanyId, // Use the default company ID
+      company_id: companyId, // Use the selected company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       status: 'Draft', // O el estado inicial que desees
@@ -116,6 +99,8 @@ const GeneratePurchaseOrder = () => {
     if (createdOrder) {
       showSuccess('Orden de compra creada exitosamente.');
       clearCart();
+      setCompanyId('');
+      setCompanyName('');
       setSupplierId('');
       setSupplierName('');
       setExchangeRate(undefined);
@@ -133,13 +118,16 @@ const GeneratePurchaseOrder = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Eliminado el selector de empresa */}
-            {defaultCompanyId && companies && companies.length > 0 && (
-              <div>
-                <Label>Empresa de Origen</Label>
-                <Input value={companies.find(c => c.id === defaultCompanyId)?.name || 'Cargando...'} readOnly className="bg-gray-100" />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="company">Empresa de Origen</Label>
+              <SmartSearch
+                placeholder="Buscar empresa por RIF o nombre"
+                onSelect={handleCompanySelect}
+                fetchFunction={searchCompanies}
+                displayValue={companyName}
+              />
+              {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
+            </div>
             <div>
               <Label htmlFor="supplier">Proveedor</Label>
               <SmartSearch
@@ -247,7 +235,7 @@ const GeneratePurchaseOrder = () => {
           <div className="flex justify-end gap-2 mt-6">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" disabled={isSubmitting || !defaultCompanyId}>
+                <Button variant="secondary" disabled={isSubmitting || !companyId}>
                   Previsualizar PDF
                 </Button>
               </DialogTrigger>
@@ -258,7 +246,7 @@ const GeneratePurchaseOrder = () => {
                 <PurchaseOrderPreviewModal
                   orderData={{
                     supplier_id: supplierId,
-                    company_id: defaultCompanyId || '', // Pass the default company ID
+                    company_id: companyId || '', // Pass the selected company ID
                     currency,
                     exchange_rate: currency === 'VES' ? exchangeRate : null,
                     status: 'Draft',
@@ -270,7 +258,7 @@ const GeneratePurchaseOrder = () => {
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !defaultCompanyId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Orden de Compra'}
             </Button>
           </div>

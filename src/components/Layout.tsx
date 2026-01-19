@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList } from 'lucide-react'; // Added ClipboardList icon for quote requests
+import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2 } from 'lucide-react'; // Added Building2 icon for company management
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -13,11 +13,12 @@ const Layout = () => {
 
   const navItems = [
     { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
+    { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' }, // New nav item
     { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
     { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
     { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
     { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
-    { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' }, // New nav item
+    { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
     { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
     { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
   ];

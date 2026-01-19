@@ -89,8 +89,15 @@ interface QuoteRequestItem {
 interface Company { // Re-defining Company interface for clarity in data.ts
   id: string;
   name: string;
+  rif: string; // Added RIF
   logo_url?: string;
+  address?: string; // Added address
+  phone?: string; // Added phone
+  email?: string; // Added email
   fiscal_data?: any;
+  created_at?: string;
+  updated_at?: string;
+  user_id: string;
 }
 
 /**
@@ -753,4 +760,106 @@ export const getAllQuoteRequests = async (): Promise<QuoteRequestHeader[]> => {
     return [];
   }
   return data || [];
+};
+
+// --- Funciones CRUD para Empresas (Companies) ---
+
+/**
+ * Busca empresas por RIF o nombre.
+ * @param query Cadena de búsqueda.
+ * @returns Lista de empresas que coinciden.
+ */
+export const searchCompanies = async (query: string): Promise<Company[]> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('id, name, rif') // Solo necesitamos id, name y rif para el SmartSearch
+    .or(`rif.ilike.%${query}%,name.ilike.%${query}%`);
+
+  if (error) {
+    console.error('[searchCompanies] Error searching companies:', error);
+    showError('Error al buscar empresas.');
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * Obtiene todas las empresas.
+ * @returns Lista de todas las empresas.
+ */
+export const getAllCompanies = async (): Promise<Company[]> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*');
+
+  if (error) {
+    console.error('[getAllCompanies] Error fetching all companies:', error);
+    showError('Error al cargar las empresas.');
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * Crea una nueva empresa.
+ * @param company Datos de la nueva empresa.
+ * @returns La empresa creada o null si falla.
+ */
+export const createCompany = async (company: Omit<Company, 'id' | 'created_at' | 'updated_at' | 'fiscal_data'>): Promise<Company | null> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .insert(company)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[createCompany] Error creating company:', error);
+    showError('Error al crear la empresa.');
+    return null;
+  }
+  showSuccess('Empresa creada exitosamente.');
+  return data;
+};
+
+/**
+ * Actualiza una empresa existente.
+ * @param id ID de la empresa a actualizar.
+ * @param updates Objeto con los campos a actualizar.
+ * @returns La empresa actualizada o null si falla.
+ */
+export const updateCompany = async (id: string, updates: Partial<Omit<Company, 'id' | 'created_at' | 'updated_at' | 'fiscal_data'>>): Promise<Company | null> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[updateCompany] Error updating company:', error);
+    showError('Error al actualizar la empresa.');
+    return null;
+  }
+  showSuccess('Empresa actualizada exitosamente.');
+  return data;
+};
+
+/**
+ * Elimina una empresa.
+ * @param id ID de la empresa a eliminar.
+ * @returns true si se eliminó exitosamente, false si falla.
+ */
+export const deleteCompany = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('companies')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[deleteCompany] Error deleting company:', error);
+    showError('Error al eliminar la empresa.');
+    return false;
+  }
+  showSuccess('Empresa eliminada exitosamente.');
+  return true;
 };
