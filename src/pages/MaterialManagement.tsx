@@ -181,10 +181,7 @@ const MaterialManagement = () => {
             <CardDescription>Administra la información de tus materiales.</CardDescription>
           </div>
           <div className="flex gap-2">
-            {/* Botón de Carga Masiva (placeholder por ahora) */}
-            <Button variant="outline" onClick={() => showError('Funcionalidad de Carga Masiva en desarrollo.')}>
-              Carga Masiva (Excel)
-            </Button>
+            {/* El botón de Carga Masiva (Excel) ha sido eliminado */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <DialogTrigger asChild>
                 <Button onClick={handleAddMaterial} className="bg-procarni-secondary hover:bg-green-700">
