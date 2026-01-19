@@ -27,18 +27,18 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null); // Ref for the input element
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Update internal state if displayValue changes from parent
   useEffect(() => {
-    if (displayValue && displayValue !== query) { // Only update if different to avoid loop
+    if (displayValue && displayValue !== query) {
       setQuery(displayValue);
       setSelectedItem({ id: 'initial-display', name: displayValue });
-    } else if (!displayValue && query) { // Clear if displayValue becomes empty
+    } else if (!displayValue && query) {
       setQuery('');
       setSelectedItem(null);
     }
-  }, [displayValue]); // Depend on displayValue
+  }, [displayValue]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
@@ -73,17 +73,16 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setQuery(newValue);
-    // If an item was previously selected and the user starts typing, clear the selection
     if (selectedItem && selectedItem.name !== newValue) {
       setSelectedItem(null);
-      onSelect(null); // Notify parent that selection is cleared
+      onSelect(null);
     }
-    // The popover will open via debouncedFetch if results are found
+    setOpen(true); // Ensure popover is open when typing
   };
 
   const handleSelect = (item: SearchResult) => {
     setSelectedItem(item);
-    setQuery(item.name); // Set query to selected item's name
+    setQuery(item.name);
     onSelect(item);
     setOpen(false);
     inputRef.current?.focus(); // Keep focus on the input after selection
@@ -98,23 +97,18 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {/* This div acts as the trigger, but the Input is separate and always editable */}
-        <div className="relative w-full">
-          <Input
-            ref={inputRef}
-            placeholder={placeholder}
-            value={query} // This is the input the user types into
-            onChange={handleInputChange}
-            onFocus={() => setOpen(true)} // Open popover when input is focused
-            onBlur={() => {
-              // Close popover after a short delay to allow click on CommandItem
-              setTimeout(() => setOpen(false), 150);
-            }}
-            className="w-full"
-          />
-          {/* Visually align the popover trigger with the input */}
-          <span className="absolute inset-0 cursor-text" aria-hidden="true" />
-        </div>
+        <Input
+          ref={inputRef}
+          placeholder={placeholder}
+          value={query} // Bind value directly to query state
+          onChange={handleInputChange}
+          onFocus={() => setOpen(true)} // Open popover when input is focused
+          onBlur={() => {
+            // Close popover after a short delay to allow click on CommandItem
+            setTimeout(() => setOpen(false), 150);
+          }}
+          className="w-full"
+        />
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
