@@ -770,10 +770,12 @@ export const getAllQuoteRequests = async (): Promise<QuoteRequestHeader[]> => {
  * @returns Lista de empresas que coinciden.
  */
 export const searchCompanies = async (query: string): Promise<Company[]> => {
+  // Codificar el query para manejar caracteres especiales en la URL
+  const encodedQuery = encodeURIComponent(query);
   const { data, error } = await supabase
     .from('companies')
     .select('id, name, rif') // Ahora 'rif' es una columna directa
-    .or(`rif.ilike.%${query}%,name.ilike.%${query}%`);
+    .or(`rif.ilike.%${encodedQuery}%,name.ilike.%${encodedQuery}%`);
 
   if (error) {
     console.error('[searchCompanies] Error searching companies:', error); // Log the full error object
