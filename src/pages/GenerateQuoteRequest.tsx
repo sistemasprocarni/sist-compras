@@ -57,9 +57,7 @@ const GenerateQuoteRequest = () => {
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
-      console.log('[GenerateQuoteRequest] Fetching companies...');
       if (!session || !session.supabase) {
-        console.log('[GenerateQuoteRequest] Session or supabase client not available.');
         return [];
       }
       const { data, error } = await session.supabase.from('companies').select('id, name');
@@ -68,17 +66,10 @@ const GenerateQuoteRequest = () => {
         showError('Error al cargar las empresas.');
         return [];
       }
-      console.log('[GenerateQuoteRequest] Companies fetched:', data);
       return data || [];
     },
     enabled: !!session && !isLoadingSession, // Habilitar la consulta solo cuando la sesión esté lista
   });
-
-  console.log('[GenerateQuoteRequest] Session:', session);
-  console.log('[GenerateQuoteRequest] isLoadingSession:', isLoadingSession);
-  console.log('[GenerateQuoteRequest] Companies:', companies);
-  console.log('[GenerateQuoteRequest] isLoadingCompanies:', isLoadingCompanies);
-  console.log('[GenerateQuoteRequest] Companies Error:', companiesError);
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);

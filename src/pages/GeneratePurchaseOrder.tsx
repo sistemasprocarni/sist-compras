@@ -41,9 +41,7 @@ const GeneratePurchaseOrder = () => {
   const { data: companies, isLoading: isLoadingCompanies, error: companiesError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
-      console.log('[GeneratePurchaseOrder] Fetching companies...');
       if (!session || !session.supabase) {
-        console.log('[GeneratePurchaseOrder] Session or supabase client not available.');
         return [];
       }
       const { data, error } = await session.supabase.from('companies').select('id, name');
@@ -52,17 +50,10 @@ const GeneratePurchaseOrder = () => {
         showError('Error al cargar las empresas.');
         return [];
       }
-      console.log('[GeneratePurchaseOrder] Companies fetched:', data);
       return data || [];
     },
     enabled: !!session && !isLoadingSession,
   });
-
-  console.log('[GeneratePurchaseOrder] Session:', session);
-  console.log('[GeneratePurchaseOrder] isLoadingSession:', isLoadingSession);
-  console.log('[GeneratePurchaseOrder] Companies:', companies);
-  console.log('[GeneratePurchaseOrder] isLoadingCompanies:', isLoadingCompanies);
-  console.log('[GeneratePurchaseOrder] Companies Error:', companiesError);
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
