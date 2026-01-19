@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,6 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   useEffect(() => {
     if (displayValue) {
       setQuery(displayValue);
-      // Create a placeholder item for display if displayValue is just a string
       setSelectedItem({ id: 'initial-display', name: displayValue });
     } else {
       setQuery('');
@@ -59,7 +58,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     }
     debounceTimeoutRef.current = setTimeout(() => {
       debouncedFetch(query);
-    }, 300) as unknown as number; // Debounce for 300ms
+    }, 300) as unknown as number;
 
     return () => {
       if (debounceTimeoutRef.current) {
@@ -71,17 +70,16 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setQuery(newValue);
-    // If an item was previously selected and the user starts typing, clear the selection
     if (selectedItem && selectedItem.name !== newValue) {
       setSelectedItem(null);
-      onSelect(null); // Notify parent that selection is cleared
+      onSelect(null);
     }
-    setOpen(true); // Ensure popover is open when typing
+    setOpen(true);
   };
 
   const handleSelect = (item: SearchResult) => {
     setSelectedItem(item);
-    setQuery(item.name); // Set query to selected item's name
+    setQuery(item.name);
     onSelect(item);
     setOpen(false);
   };
@@ -91,18 +89,14 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       <PopoverTrigger asChild>
         <Input
           placeholder={placeholder}
-          value={selectedItem ? selectedItem.name : query} // Display selected item name or current query
+          value={query} // Always bind to query for direct typing
           onChange={handleInputChange}
           className="w-full"
         />
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          <CommandInput
-            placeholder={placeholder}
-            value={query} // This CommandInput also uses the same query state for filtering
-            onValueChange={setQuery}
-          />
+          {/* Removed CommandInput here to use the PopoverTrigger's Input directly */}
           <CommandList>
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup>
