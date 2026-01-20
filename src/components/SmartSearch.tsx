@@ -55,7 +55,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    debounceTimeoutRefRef.current = setTimeout(() => {
+    debounceTimeoutRef.current = setTimeout(() => {
       debouncedFetch(query);
     }, 300) as unknown as number; // Debounce for 300ms
 
