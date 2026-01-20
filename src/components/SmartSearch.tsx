@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, Search } from 'lucide-react'; // Import Search icon
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'; // Removed PopoverTrigger, added PopoverAnchor
+import { Check, Search, Loader2 } from 'lucide-react'; // Import Loader2 icon
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
@@ -26,6 +26,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
+  const [loading, setLoading] = useState(false); // New loading state
   const debounceTimeoutRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,9 +44,10 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
       setResults([]);
-      setOpen(false); // Close popover if query is empty
+      setOpen(false);
       return;
     }
+    setLoading(true); // Set loading true before fetch
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
@@ -58,6 +60,8 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       console.error('Error fetching search results:', error);
       setResults([]);
       setOpen(false);
+    } finally {
+      setLoading(false); // Set loading false after fetch
     }
   }, [fetchFunction]);
 
@@ -91,7 +95,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     setQuery(item.name);
     onSelect(item);
     setOpen(false);
-    inputRef.current?.focus();
+    // Removed inputRef.current?.focus(); as per instruction
   };
 
   const filteredResults = results.filter(item =>
@@ -101,22 +105,26 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div className="relative w-full"> {/* Added wrapper div for icon positioning */}
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <PopoverAnchor asChild> {/* Use PopoverAnchor to wrap the input container */}
+        <div className="relative w-full">
+          {loading ? ( // Conditional rendering for loading spinner
+            <Loader2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          )}
           <Input
             ref={inputRef}
-            type="search" // Set type to search
+            type="search"
             placeholder={placeholder}
             value={query}
             onChange={handleInputChange}
-            onFocus={() => setOpen(true)}
-            className="w-full appearance-none bg-background pl-8 shadow-none" // Added styling classes
+            onFocus={() => setOpen(true)} // Open popover on focus
+            className="w-full appearance-none bg-background pl-8 shadow-none"
           />
         </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command onOpenAutoFocus={(e) => e.preventDefault()}>
+      </PopoverAnchor>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}> {/* Add onOpenAutoFocus to PopoverContent */}
+        <Command shouldFilter={false}> {/* Disable internal filtering */}
           <CommandList>
             {query.length > 0 && filteredResults.length === 0 ? (
               <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
