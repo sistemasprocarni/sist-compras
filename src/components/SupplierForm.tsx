@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { validateRif } from '@/utils/validators';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import SmartSearch from '@/components/SmartSearch';
-import { searchMaterials } from '@/integrations/supabase/data'; // Importar la función de búsqueda de materiales
+import { searchMaterials } from '@/integrations/supabase/data';
 
 // Define las opciones de términos de pago.
 const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
@@ -19,28 +19,28 @@ const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
 // Esquema de validación para un material suministrado por el proveedor
 const supplierMaterialSchema = z.object({
   material_id: z.string().min(1, { message: 'El material es requerido.' }),
-  material_name: z.string().min(1, { message: 'El nombre del material es requerido.' }), // Para mostrar en el SmartSearch
-  material_category: z.string().optional(), // Para mostrar automáticamente
+  material_name: z.string().min(1, { message: 'El nombre del material es requerido.' }),
+  material_category: z.string().optional(),
   specification: z.string().optional(),
 });
 
 // Esquema de validación con Zod para el formulario completo del proveedor
 const supplierFormSchema = z.object({
-  code: z.string().optional(), // El código es opcional y se autogenera, no se gestiona directamente en el formulario
+  code: z.string().optional(),
   rif: z.string().min(1, { message: 'El RIF es requerido.' }).refine((val) => validateRif(val) !== null, {
     message: 'Formato de RIF inválido. Ej: J123456789',
   }),
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   email: z.string().email({ message: 'Formato de email inválido.' }).optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
-  phone_2: z.string().optional().or(z.literal('')), // Nuevo campo
-  instagram: z.string().optional().or(z.literal('')), // Nuevo campo
-  address: z.string().optional().or(z.literal('')), // New: Address field
+  phone_2: z.string().optional().or(z.literal('')),
+  instagram: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Los términos de pago son requeridos y deben ser válidos.' }),
   custom_payment_terms: z.string().optional().nullable(),
-  credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }).optional(), // Hacer opcional para la validación condicional
+  credit_days: z.coerce.number().min(0, { message: 'Los días de crédito no pueden ser negativos.' }).optional(),
   status: z.enum(['Active', 'Inactive'], { message: 'El estado es requerido.' }),
-  materials: z.array(supplierMaterialSchema).optional(), // Lista de materiales suministrados
+  materials: z.array(supplierMaterialSchema).optional(),
 }).superRefine((data, ctx) => {
   if (data.payment_terms === 'Otro' && (!data.custom_payment_terms || data.custom_payment_terms.trim() === '')) {
     ctx.addIssue({
@@ -79,19 +79,19 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
-      code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
+      code: '',
       rif: '',
       name: '',
       email: '',
       phone: '',
-      phone_2: '', // Nuevo campo
-      instagram: '', // Nuevo campo
-      address: '', // New: Default for address
+      phone_2: '',
+      instagram: '',
+      address: '',
       payment_terms: PAYMENT_TERMS_OPTIONS[0],
       custom_payment_terms: null,
       credit_days: 0,
       status: 'Active',
-      materials: [], // Inicializar con un array vacío
+      materials: [],
     },
   });
 
@@ -118,7 +118,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
 
       if (!PAYMENT_TERMS_OPTIONS.includes(initialData.payment_terms) && initialData.payment_terms !== 'Otro') {
         paymentTermsValue = 'Otro';
-        customPaymentTermsValue = initialData.payment_terms; // Mueve el valor personalizado antiguo
+        customPaymentTermsValue = initialData.payment_terms;
       }
 
       form.reset({
@@ -129,14 +129,14 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       });
     } else {
       form.reset({
-        code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
+        code: '',
         rif: '',
         name: '',
         email: '',
         phone: '',
-        phone_2: '', // Nuevo campo
-        instagram: '', // Nuevo campo
-        address: '', // New: Default for address
+        phone_2: '',
+        instagram: '',
+        address: '',
         payment_terms: PAYMENT_TERMS_OPTIONS[0],
         custom_payment_terms: null,
         credit_days: 0,
@@ -154,7 +154,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
     form.setValue(`materials.${index}.material_id`, material.id);
     form.setValue(`materials.${index}.material_name`, material.name);
     form.setValue(`materials.${index}.material_category`, material.category);
-    form.trigger(`materials.${index}.material_id`); // Disparar validación para el campo material_id
+    form.trigger(`materials.${index}.material_id`);
   };
 
   const handleRemoveMaterial = (index: number) => {
@@ -174,14 +174,13 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
       ...data,
       rif: normalizedRif,
       custom_payment_terms: finalCustomPaymentTerms,
-      materials: data.materials, // Incluir los materiales en los datos enviados
+      materials: data.materials,
     });
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-        {/* El campo de código ha sido eliminado ya que se genera automáticamente */}
         <FormField
           control={form.control}
           name="rif"
@@ -310,7 +309,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
             )}
           />
         )}
-        {selectedPaymentTerms === 'Crédito' && ( // Condición para mostrar "Días de Crédito"
+        {selectedPaymentTerms === 'Crédito' && (
           <FormField
             control={form.control}
             name="credit_days"
