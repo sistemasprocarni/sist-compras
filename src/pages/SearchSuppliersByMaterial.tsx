@@ -3,30 +3,37 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
-import { searchSuppliersByMaterialNameQuery } from '@/integrations/supabase/data'; // Import the new function
+import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Phone, Instagram, Search } from 'lucide-react';
+import { Phone, Instagram } from 'lucide-react'; // Importar iconos
 
-// Updated SupplierResult interface to match the data returned by searchSuppliersByMaterialNameQuery
+interface Material {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+}
+
 interface SupplierResult {
   id: string;
   name: string;
   rif: string;
   email?: string;
   phone?: string;
-  phone_2?: string;
-  instagram?: string;
+  phone_2?: string; // Añadido
+  instagram?: string; // Añadido
   payment_terms: string;
   credit_days: number;
   status: string;
-  specification: string; // This will now come from the search result, indicating the matched material
+  specification: string;
 }
 
 const SearchSuppliersByMaterial = () => {
-  const [displayedSuppliers, setDisplayedSuppliers] = useState<SupplierResult[]>([]);
-  const [selectedSupplierFromSearch, setSelectedSupplierFromSearch] = useState<SupplierResult | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
+  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
 
   const formatPhoneNumberForWhatsApp = (phone: string) => {
     const digitsOnly = phone.replace(/\D/g, '');
@@ -36,14 +43,18 @@ const SearchSuppliersByMaterial = () => {
     return digitsOnly;
   };
 
-  const handleSupplierSelectedFromSearch = (supplier: SupplierResult | null) => {
-    setSelectedSupplierFromSearch(supplier);
-    if (supplier) {
-      // If a supplier is selected, display only that supplier in the accordion
-      setDisplayedSuppliers([supplier]);
-    } else {
-      // If selection is cleared, clear displayed suppliers
-      setDisplayedSuppliers([]);
+  const handleMaterialSelect = async (material: Material) => {
+    setSelectedMaterial(material);
+    setIsLoadingSuppliers(true);
+    setSuppliers([]);
+    try {
+      const fetchedSuppliers = await getSuppliersByMaterial(material.id);
+      setSuppliers(fetchedSuppliers);
+    } catch (error) {
+      console.error('Error fetching suppliers by material:', error);
+      showError('Error al cargar los proveedores para este material.');
+    } finally {
+      setIsLoadingSuppliers(false);
     }
   };
 
@@ -57,30 +68,32 @@ const SearchSuppliersByMaterial = () => {
         <CardContent>
           <div className="mb-6">
             <SmartSearch
-              placeholder="Buscar proveedor por material o código de material"
-              onSelect={handleSupplierSelectedFromSearch}
-              fetchFunction={searchSuppliersByMaterialNameQuery}
-              displayValue={selectedSupplierFromSearch?.name || ''}
-              leftIcon={<Search />}
-              inputClassName="appearance-none bg-background shadow-none"
+              placeholder="Buscar material por nombre o código"
+              onSelect={handleMaterialSelect}
+              fetchFunction={searchMaterials}
+              displayValue={selectedMaterial?.name || ''}
             />
-            {selectedSupplierFromSearch && (
+            {selectedMaterial && (
               <p className="text-sm text-muted-foreground mt-2">
-                Proveedor seleccionado: <span className="font-semibold">{selectedSupplierFromSearch.name}</span>
-                {selectedSupplierFromSearch.specification && ` - Material: ${selectedSupplierFromSearch.specification}`}
+                Material seleccionado: <span className="font-semibold">{selectedMaterial.name} ({selectedMaterial.code})</span>
+                {selectedMaterial.category && ` - Categoría: ${selectedMaterial.category}`}
               </p>
             )}
           </div>
 
-          {selectedSupplierFromSearch && displayedSuppliers.length === 0 && (
+          {isLoadingSuppliers && (
+            <div className="text-center text-muted-foreground">Cargando proveedores...</div>
+          )}
+
+          {!isLoadingSuppliers && selectedMaterial && suppliers.length === 0 && (
             <div className="text-center text-muted-foreground">No se encontraron proveedores para este material.</div>
           )}
 
-          {displayedSuppliers.length > 0 && (
+          {!isLoadingSuppliers && suppliers.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Resultados de la búsqueda</h3>
+              <h3 className="text-lg font-semibold mb-4">Proveedores que ofrecen "{selectedMaterial?.name}"</h3>
               <Accordion type="single" collapsible className="w-full">
-                {displayedSuppliers.map((supplier) => (
+                {suppliers.map((supplier) => (
                   <AccordionItem key={supplier.id} value={supplier.id}>
                     <AccordionTrigger className="text-left">
                       <div className="flex flex-col items-start">
@@ -117,7 +130,8 @@ const SearchSuppliersByMaterial = () => {
                         </p>
                         <p><strong>Términos de Pago:</strong> {supplier.payment_terms}</p>
                         <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
-                        <p><strong>Material Coincidente:</strong> {supplier.specification || 'N/A'}</p>
+                        <p><strong>Estado:</strong> {supplier.status}</p>
+                        <p><strong>Especificación del Material:</strong> {supplier.specification || 'N/A'}</p>
                       </div>
                       <div className="mt-4 flex justify-end">
                         <Button asChild variant="outline" className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white">
