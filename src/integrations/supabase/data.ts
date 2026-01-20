@@ -85,5 +85,4 @@
 
     return updatedSupplier;
   },
-
-// ... resto del código ...
+};
