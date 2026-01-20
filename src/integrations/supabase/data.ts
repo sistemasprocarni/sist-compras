@@ -100,7 +100,6 @@ interface Company {
 }
 
 interface SupplierMaterialPayload {
-  id?: string; // Añadido: ID opcional para materiales existentes
   material_id: string;
   specification?: string;
 }

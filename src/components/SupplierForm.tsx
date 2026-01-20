@@ -18,7 +18,6 @@ const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
 
 // Esquema de validación para un material suministrado por el proveedor
 const supplierMaterialSchema = z.object({
-  id: z.string().optional(), // Añadido: ID opcional para materiales existentes
   material_id: z.string().min(1, { message: 'El material es requerido.' }),
   material_name: z.string().min(1, { message: 'El nombre del material es requerido.' }),
   material_category: z.string().optional(),
@@ -70,14 +69,7 @@ interface MaterialSearchResult {
 }
 
 interface SupplierFormProps {
-  initialData?: SupplierFormValues & {
-    id?: string;
-    materials?: Array<{
-      id: string;
-      specification?: string;
-      materials: MaterialSearchResult
-    }>
-  };
+  initialData?: SupplierFormValues & { id?: string; materials?: Array<{ id: string; specification?: string; materials: MaterialSearchResult }> };
   onSubmit: (data: SupplierFormValues) => void;
   onCancel: () => void;
   isSubmitting: boolean;
@@ -114,7 +106,6 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ initialData, onSubmit, onCa
   React.useEffect(() => {
     if (initialData) {
       const mappedMaterials = initialData.materials?.map(sm => ({
-        id: sm.id, // Preservar el ID para materiales existentes
         material_id: sm.materials.id,
         material_name: sm.materials.name,
         material_category: sm.materials.category,
