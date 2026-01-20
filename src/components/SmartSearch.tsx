@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check } from 'lucide-react';
+import { Check, Search } from 'lucide-react'; // Import Search icon
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
@@ -102,17 +102,21 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Input
-          ref={inputRef}
-          placeholder={placeholder}
-          value={query}
-          onChange={handleInputChange}
-          onFocus={() => setOpen(true)}
-          className="w-full"
-        />
+        <div className="relative w-full"> {/* Added wrapper div for icon positioning */}
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="search" // Set type to search
+            placeholder={placeholder}
+            value={query}
+            onChange={handleInputChange}
+            onFocus={() => setOpen(true)}
+            className="w-full appearance-none bg-background pl-8 shadow-none" // Added styling classes
+          />
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command onOpenAutoFocus={(e) => e.preventDefault()}> {/* Added onOpenAutoFocus */}
+        <Command onOpenAutoFocus={(e) => e.preventDefault()}>
           <CommandList>
             {query.length > 0 && filteredResults.length === 0 ? (
               <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
