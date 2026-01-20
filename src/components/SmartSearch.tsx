@@ -118,6 +118,12 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
               e.stopPropagation();
               setOpen(true);
             }}
+            onKeyDown={(e) => {
+              // Permitir que las teclas de navegación y selección funcionen
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+                e.stopPropagation();
+              }
+            }}
             className="w-full appearance-none bg-background pl-8 shadow-none"
           />
         </div>
