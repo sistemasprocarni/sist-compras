@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram } from 'lucide-react'; // Importar iconos
+import { ArrowLeft, Phone, Instagram } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -77,7 +77,7 @@ const SupplierDetails = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <p><strong>Código:</strong> {supplier.code || 'N/A'}</p> {/* New: Display code */}
+            <p><strong>Código:</strong> {supplier.code || 'N/A'}</p>
             <p><strong>RIF:</strong> {supplier.rif}</p>
             <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
             <p>
@@ -129,7 +129,7 @@ const SupplierDetails = () => {
               <TableBody>
                 {supplier.materials.map((sm) => (
                   <TableRow key={sm.id}>
-                    <TableCell>{sm.materials.code}</TableCell>
+                    <TableCell>{sm.materials.code || 'N/A'}</TableCell>
                     <TableCell>{sm.materials.name}</TableCell>
                     <TableCell>{sm.materials.category || 'N/A'}</TableCell>
                     <TableCell>{sm.specification || 'N/A'}</TableCell>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -13,6 +13,7 @@ import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface Supplier {
   id: string;
@@ -67,6 +68,7 @@ const SupplierManagement = () => {
   const { session } = useSession();
   const userId = session?.user?.id;
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -142,6 +144,10 @@ const SupplierManagement = () => {
   const handleEditSupplier = (supplier: Supplier) => {
     setEditingSupplier(supplier);
     setIsFormOpen(true);
+  };
+
+  const handleViewSupplier = (supplierId: string) => {
+    navigate(`/suppliers/${supplierId}`);
   };
 
   const confirmDeleteSupplier = (id: string) => {
@@ -249,6 +255,13 @@ const SupplierManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier); }}
                         disabled={deleteMutation.isPending}
                       >
@@ -295,6 +308,13 @@ const SupplierManagement = () => {
                       <TableCell>{supplier.phone || 'N/A'}</TableCell>
                       <TableCell>{supplier.status}</TableCell>
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

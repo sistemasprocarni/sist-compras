@@ -111,10 +111,14 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
       }));
       setSelectedMaterials(formattedMaterials);
       form.setValue('materials', formattedMaterials);
+    } else {
+      setSelectedMaterials([]);
+      form.setValue('materials', []);
     }
   }, [initialData, form]);
 
   const handleAddMaterial = (material: { id: string; name: string; category?: string }) => {
+    // Verificar si el material ya está seleccionado
     if (selectedMaterials.some(m => m.material_id === material.id)) {
       showError('Este material ya está asociado al proveedor');
       return;
@@ -148,8 +152,8 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
 
   const filteredMaterials = allMaterials?.filter(material =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    material.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    (material.code && material.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (material.category && material.category.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
   return (
