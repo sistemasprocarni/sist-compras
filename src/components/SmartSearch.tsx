@@ -112,7 +112,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
         />
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
+        <Command onOpenAutoFocus={(e) => e.preventDefault()}> {/* Added onOpenAutoFocus */}
           <CommandList>
             {query.length > 0 && filteredResults.length === 0 ? (
               <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
