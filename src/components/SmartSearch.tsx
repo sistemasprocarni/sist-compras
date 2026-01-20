@@ -1,24 +1,22 @@
-"use client";
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
   id: string;
   name: string;
-  code?: string;
-  [key: string]: any;
+  [key: string]: any; // Allow other properties
 }
 
 interface SmartSearchProps {
   placeholder: string;
-  onSelect: (item: SearchResult | null) => void;
+  onSelect: (item: SearchResult) => void;
   fetchFunction: (query: string) => Promise<SearchResult[]>;
-  displayValue?: string;
+  displayValue?: string; // Optional prop to control the displayed value
 }
 
 const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue }) => {
@@ -27,40 +25,29 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const popoverTriggerRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizar el estado interno con displayValue
+  // Update internal state if displayValue changes from parent
   useEffect(() => {
-    if (displayValue !== query) {
-      setQuery(displayValue || '');
-      if (!displayValue || (selectedItem && selectedItem.name !== displayValue)) {
-        setSelectedItem(null);
-      }
+    if (displayValue) {
+      setQuery(displayValue);
+      setSelectedItem({ id: '', name: displayValue }); // Placeholder item for display
+    } else {
+      setQuery('');
+      setSelectedItem(null);
     }
-  }, [displayValue, query, selectedItem]);
-
-  // Enfocar el input cuando el popover se abra
-  useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [open]);
+  }, [displayValue]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
       setResults([]);
-      setOpen(false);
       return;
     }
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
-      setOpen(data.length > 0);
     } catch (error) {
       console.error('Error fetching search results:', error);
       setResults([]);
-      setOpen(false);
     }
   }, [fetchFunction]);
 
@@ -70,7 +57,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     }
     debounceTimeoutRef.current = setTimeout(() => {
       debouncedFetch(query);
-    }, 300) as unknown as number;
+    }, 300) as unknown as number; // Debounce for 300ms
 
     return () => {
       if (debounceTimeoutRef.current) {
@@ -79,81 +66,52 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     };
   }, [query, debouncedFetch]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setQuery(newValue);
-    if (selectedItem && selectedItem.name !== newValue) {
-      setSelectedItem(null);
-      onSelect(null);
-    }
-    setOpen(true);
-  };
-
   const handleSelect = (item: SearchResult) => {
     setSelectedItem(item);
     setQuery(item.name);
     onSelect(item);
     setOpen(false);
-    inputRef.current?.focus();
   };
-
-  const filteredResults = results.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase()) ||
-    (item.code && item.code.toLowerCase().includes(query.toLowerCase()))
-  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div ref={popoverTriggerRef} className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            type="search"
-            placeholder={placeholder}
-            value={query}
-            onChange={handleInputChange}
-            onFocus={() => setOpen(true)}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen(true);
-            }}
-            onKeyDown={(e) => {
-              // Permitir que las teclas de navegación y selección funcionen
-              if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
-                e.stopPropagation();
-              }
-            }}
-            className="w-full appearance-none bg-background pl-8 shadow-none"
-          />
-        </div>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {selectedItem ? selectedItem.name : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
+          <CommandInput
+            placeholder={placeholder}
+            value={query}
+            onValueChange={setQuery}
+          />
           <CommandList>
-            {query.length > 0 && filteredResults.length === 0 ? (
-              <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
-            ) : query.length === 0 && results.length === 0 ? (
-              <CommandEmpty>Empieza a escribir para buscar.</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {filteredResults.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={item.name}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {item.name} {item.code && `(${item.code})`}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+            <CommandGroup>
+              {results.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.name}
+                  onSelect={() => handleSelect(item)}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {item.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
