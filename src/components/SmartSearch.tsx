@@ -4,21 +4,21 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, Search } from 'lucide-react'; // Import Search icon
+import { Check, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SearchResult {
   id: string;
   name: string;
-  code?: string; // Assuming code might be searchable
-  [key: string]: any; // Allow other properties
+  code?: string;
+  [key: string]: any;
 }
 
 interface SmartSearchProps {
   placeholder: string;
-  onSelect: (item: SearchResult | null) => void; // Allow null to indicate cleared selection
+  onSelect: (item: SearchResult | null) => void;
   fetchFunction: (query: string) => Promise<SearchResult[]>;
-  displayValue?: string; // Optional prop to control the displayed value
+  displayValue?: string;
 }
 
 const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue }) => {
@@ -28,8 +28,9 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popoverTriggerRef = useRef<HTMLDivElement>(null);
 
-  // Effect to synchronize internal query state with external displayValue prop
+  // Sincronizar el estado interno con displayValue
   useEffect(() => {
     if (displayValue !== query) {
       setQuery(displayValue || '');
@@ -39,21 +40,23 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     }
   }, [displayValue, query, selectedItem]);
 
+  // Enfocar el input cuando el popover se abra
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [open]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
       setResults([]);
-      setOpen(false); // Close popover if query is empty
+      setOpen(false);
       return;
     }
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
-      if (data.length > 0 || searchQuery.trim() !== '') {
-        setOpen(true);
-      } else {
-        setOpen(false);
-      }
+      setOpen(data.length > 0);
     } catch (error) {
       console.error('Error fetching search results:', error);
       setResults([]);
@@ -102,21 +105,25 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative w-full"> {/* Added wrapper div for icon positioning */}
+        <div ref={popoverTriggerRef} className="relative w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
-            type="search" // Set type to search
+            type="search"
             placeholder={placeholder}
             value={query}
             onChange={handleInputChange}
             onFocus={() => setOpen(true)}
-            className="w-full appearance-none bg-background pl-8 shadow-none" // Added styling classes
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(true);
+            }}
+            className="w-full appearance-none bg-background pl-8 shadow-none"
           />
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command onOpenAutoFocus={(e) => e.preventDefault()}>
+        <Command>
           <CommandList>
             {query.length > 0 && filteredResults.length === 0 ? (
               <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
