@@ -1,7 +1,7 @@
 "use client";
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner"; // Changed from react-hot-toast to sonner
+import { Toaster } from "react-hot-toast";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -17,18 +17,18 @@ import QuoteRequestDetails from "./pages/QuoteRequestDetails";
 import EditQuoteRequest from "./pages/EditQuoteRequest";
 import GeneratePurchaseOrder from "./pages/GeneratePurchaseOrder";
 import BulkUpload from "./pages/BulkUpload";
-import CompanyManagement from "./pages/CompanyManagement";
+import CompanyManagement from "./pages/CompanyManagement"; // Import CompanyManagement
 
 function App() {
   return (
     <Router>
-      <Toaster /> {/* Now using Toaster from sonner */}
+      <Toaster />
       <SessionContextProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Index />} />
-            <Route path="/company-management" element={<CompanyManagement />} />
+            <Route path="/company-management" element={<CompanyManagement />} /> {/* New route for Company Management */}
             <Route path="/search-suppliers-by-material" element={<SearchSuppliersByMaterial />} />
             <Route path="/supplier-management" element={<SupplierManagement />} />
             <Route path="/suppliers/:id" element={<SupplierDetails />} />
