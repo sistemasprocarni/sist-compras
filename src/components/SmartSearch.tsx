@@ -28,7 +28,6 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const popoverTriggerRef = useRef<HTMLDivElement>(null);
 
   // Sincronizar el estado interno con displayValue
   useEffect(() => {
@@ -39,13 +38,6 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       }
     }
   }, [displayValue, query, selectedItem]);
-
-  // Enfocar el input cuando el popover se abra
-  useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [open]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
@@ -103,61 +95,54 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div ref={popoverTriggerRef} className="relative w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            type="search"
-            placeholder={placeholder}
-            value={query}
-            onChange={handleInputChange}
-            onFocus={() => setOpen(true)}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen(true);
-            }}
-            onKeyDown={(e) => {
-              // Permitir que las teclas de navegación y selección funcionen
-              if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
-                e.stopPropagation();
-              }
-            }}
-            className="w-full appearance-none bg-background pl-8 shadow-none"
-          />
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandList>
-            {query.length > 0 && filteredResults.length === 0 ? (
-              <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
-            ) : query.length === 0 && results.length === 0 ? (
-              <CommandEmpty>Empieza a escribir para buscar.</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {filteredResults.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={item.name}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {item.name} {item.code && `(${item.code})`}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <div className="relative w-full">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <div className="relative w-full">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              type="search"
+              placeholder={placeholder}
+              value={query}
+              onChange={handleInputChange}
+              onFocus={() => setOpen(true)}
+              onClick={() => setOpen(true)}
+              className="w-full appearance-none bg-background pl-8 shadow-none"
+            />
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandList>
+              {query.length > 0 && filteredResults.length === 0 ? (
+                <CommandEmpty>No se encontraron resultados para "{query}".</CommandEmpty>
+              ) : query.length === 0 && results.length === 0 ? (
+                <CommandEmpty>Empieza a escribir para buscar.</CommandEmpty>
+              ) : (
+                <CommandGroup>
+                  {filteredResults.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      value={item.name}
+                      onSelect={() => handleSelect(item)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {item.name} {item.code && `(${item.code})`}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 };
 
