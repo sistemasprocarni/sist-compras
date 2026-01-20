@@ -29,29 +29,35 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const debounceTimeoutRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update internal state if displayValue changes from parent
+  // Effect to synchronize internal query state with external displayValue prop
   useEffect(() => {
-    if (displayValue && displayValue !== query) {
-      setQuery(displayValue);
-      setSelectedItem({ id: 'initial-display', name: displayValue });
-    } else if (!displayValue && query) {
-      setQuery('');
-      setSelectedItem(null);
+    if (displayValue !== query) {
+      setQuery(displayValue || '');
+      if (!displayValue || (selectedItem && selectedItem.name !== displayValue)) {
+        setSelectedItem(null);
+      }
     }
-  }, [displayValue]);
+  }, [displayValue, query, selectedItem]);
+
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
       setResults([]);
+      setOpen(false); // Close popover if query is empty
       return;
     }
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
-      setOpen(true); // Open popover if results are fetched
+      if (data.length > 0 || searchQuery.trim() !== '') {
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
     } catch (error) {
       console.error('Error fetching search results:', error);
       setResults([]);
+      setOpen(false);
     }
   }, [fetchFunction]);
 
@@ -77,7 +83,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       setSelectedItem(null);
       onSelect(null);
     }
-    setOpen(true); // Ensure popover is open when typing
+    setOpen(true);
   };
 
   const handleSelect = (item: SearchResult) => {
@@ -85,10 +91,9 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     setQuery(item.name);
     onSelect(item);
     setOpen(false);
-    inputRef.current?.focus(); // Keep focus on the input after selection
+    inputRef.current?.focus();
   };
 
-  // Filter results based on current query for display in CommandList
   const filteredResults = results.filter(item =>
     item.name.toLowerCase().includes(query.toLowerCase()) ||
     (item.code && item.code.toLowerCase().includes(query.toLowerCase()))
@@ -100,13 +105,9 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
         <Input
           ref={inputRef}
           placeholder={placeholder}
-          value={query} // Bind value directly to query state
+          value={query}
           onChange={handleInputChange}
-          onFocus={() => setOpen(true)} // Open popover when input is focused
-          onBlur={() => {
-            // Close popover after a short delay to allow click on CommandItem
-            setTimeout(() => setOpen(false), 150);
-          }}
+          onFocus={() => setOpen(true)}
           className="w-full"
         />
       </PopoverTrigger>
@@ -131,7 +132,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
                         selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {item.name}
+                    {item.name} {item.code && `(${item.code})`}
                   </CommandItem>
                 ))}
               </CommandGroup>
