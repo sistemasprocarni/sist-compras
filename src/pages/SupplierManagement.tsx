@@ -32,30 +32,30 @@ interface SupplierMaterial {
 interface Supplier {
   id: string;
   rif: string;
-  code?: string; // New: Add code field
+  code?: string;
   name: string;
   email?: string;
   phone?: string;
-  phone_2?: string; // Nuevo campo
-  instagram?: string; // Nuevo campo
-  address?: string; // New: Address field
+  phone_2?: string;
+  instagram?: string;
+  address?: string;
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
   status: string;
   user_id: string;
-  materials?: SupplierMaterial[]; // Incluir materiales para la edición
+  materials?: SupplierMaterial[];
 }
 
 interface SupplierFormValues {
-  code?: string; // New: Add code field
+  code?: string;
   rif: string;
   name: string;
   email?: string;
   phone?: string;
   phone_2?: string;
   instagram?: string;
-  address?: string; // New: Address field
+  address?: string;
   payment_terms: string;
   custom_payment_terms?: string | null;
   credit_days: number;
@@ -86,13 +86,23 @@ const SupplierManagement = () => {
     queryFn: getAllSuppliers,
   });
 
+  // Mantener el orden original de los proveedores
+  const [originalSuppliersOrder, setOriginalSuppliersOrder] = useState<string[]>([]);
+
+  // Guardar el orden original cuando se cargan los proveedores
+  React.useEffect(() => {
+    if (suppliers && suppliers.length > 0) {
+      setOriginalSuppliersOrder(suppliers.map(s => s.id));
+    }
+  }, [suppliers]);
+
   const filteredSuppliers = useMemo(() => {
     if (!suppliers) return [];
     if (!searchTerm) return suppliers;
 
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return suppliers.filter(supplier =>
-      (supplier.code && supplier.code.toLowerCase().includes(lowerCaseSearchTerm)) || // New: Search by code
+      (supplier.code && supplier.code.toLowerCase().includes(lowerCaseSearchTerm)) ||
       supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       supplier.rif.toLowerCase().includes(lowerCaseSearchTerm) ||
       (supplier.address && supplier.address.toLowerCase().includes(lowerCaseSearchTerm))
@@ -186,10 +196,8 @@ const SupplierManagement = () => {
   };
 
   const formatPhoneNumberForWhatsApp = (phone: string) => {
-    // Elimina cualquier caracter que no sea un dígito y añade el prefijo internacional si no lo tiene
     const digitsOnly = phone.replace(/\D/g, '');
-    // Asume que si no empieza con +, es un número local y le añade el prefijo de Venezuela
-    if (!digitsOnly.startsWith('58')) { // Asumiendo que los números locales son de Venezuela
+    if (!digitsOnly.startsWith('58')) {
       return `58${digitsOnly}`;
     }
     return digitsOnly;
