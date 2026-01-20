@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // Revert to PopoverTrigger, removed PopoverAnchor
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'; // Removed PopoverTrigger, added PopoverAnchor
 import { Check, Search, Loader2 } from 'lucide-react'; // Import Loader2 icon
 import { cn } from '@/lib/utils';
 
@@ -105,13 +105,13 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div className="relative w-full"> {/* This div is the visual container */}
-        {loading ? ( // Conditional rendering for loading spinner
-          <Loader2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
-        ) : (
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        )}
-        <PopoverTrigger asChild> {/* PopoverTrigger now wraps only the Input */}
+      <PopoverAnchor asChild> {/* Use PopoverAnchor to wrap the input container */}
+        <div className="relative w-full">
+          {loading ? ( // Conditional rendering for loading spinner
+            <Loader2 className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          )}
           <Input
             ref={inputRef}
             type="search"
@@ -121,8 +121,8 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
             onFocus={() => setOpen(true)} // Open popover on focus
             className="w-full appearance-none bg-background pl-8 shadow-none"
           />
-        </PopoverTrigger>
-      </div>
+        </div>
+      </PopoverAnchor>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}> {/* Add onOpenAutoFocus to PopoverContent */}
         <Command shouldFilter={false}> {/* Disable internal filtering */}
           <CommandList>
