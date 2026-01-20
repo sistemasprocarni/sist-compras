@@ -100,18 +100,18 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen} onOpenAutoFocus={(e) => e.preventDefault()}> {/* Added onOpenAutoFocus to Popover */}
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative w-full">
+        <div className="relative w-full"> {/* Added wrapper div for icon positioning */}
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
-            type="search"
+            type="search" // Set type to search
             placeholder={placeholder}
             value={query}
             onChange={handleInputChange}
             onFocus={() => setOpen(true)}
-            className="w-full appearance-none bg-background pl-8 shadow-none"
+            className="w-full appearance-none bg-background pl-8 shadow-none" // Added styling classes
           />
         </div>
       </PopoverTrigger>
