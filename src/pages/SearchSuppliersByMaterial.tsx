@@ -1,152 +1,172 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { MadeWithDyad } from '@/components/made-with-dyad';
-import SmartSearch from '@/components/SmartSearch';
-import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase/data';
-import { showError } from '@/utils/toast';
-import { Link } from 'react-router-dom';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Instagram } from 'lucide-react'; // Importar iconos
+import { supabase } from '@/integrations/supabase/client';
+import SimpleSearch from '@/components/SimpleSearch';
+import { ShoppingCart, PlusCircle, Search } from 'lucide-react';
+import { useShoppingCart } from '@/context/ShoppingCartContext';
+import { toast } from 'sonner';
 
 interface Material {
   id: string;
   name: string;
-  code: string;
-  category?: string;
+  code?: string;
 }
 
-interface SupplierResult {
+interface Supplier {
   id: string;
   name: string;
   rif: string;
   email?: string;
   phone?: string;
-  phone_2?: string; // Añadido
-  instagram?: string; // Añadido
   payment_terms: string;
-  credit_days: number;
+  credit_days?: number;
   status: string;
-  specification: string;
+  code?: string;
 }
 
-const SearchSuppliersByMaterial = () => {
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
-  const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
-  const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+interface SupplierMaterial {
+  id: string;
+  supplier_id: string;
+  material_id: string;
+  specification?: string;
+  supplier: Supplier;
+  material: Material;
+}
 
-  const formatPhoneNumberForWhatsApp = (phone: string) => {
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (!digitsOnly.startsWith('58')) {
-      return `58${digitsOnly}`;
+const SearchSuppliersByMaterial: React.FC = () => {
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [suppliers, setSuppliers] = useState<SupplierMaterial[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { addToCart } = useShoppingCart();
+
+  const fetchMaterials = async (query: string): Promise<Material[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .ilike('name', `%${query}%`)
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+      return [];
     }
-    return digitsOnly;
   };
 
-  const handleMaterialSelect = async (material: Material) => {
-    setSelectedMaterial(material);
-    setIsLoadingSuppliers(true);
-    setSuppliers([]);
+  const fetchSuppliersByMaterial = async (materialId: string) => {
+    setLoading(true);
     try {
-      const fetchedSuppliers = await getSuppliersByMaterial(material.id);
-      setSuppliers(fetchedSuppliers);
+      const { data, error } = await supabase
+        .from('supplier_materials')
+        .select(`
+          *,
+          supplier:suppliers(*),
+          material:materials(*)
+        `)
+        .eq('material_id', materialId);
+
+      if (error) throw error;
+      setSuppliers(data || []);
     } catch (error) {
-      console.error('Error fetching suppliers by material:', error);
-      showError('Error al cargar los proveedores para este material.');
+      console.error('Error fetching suppliers:', error);
+      toast.error('Error al cargar los proveedores');
     } finally {
-      setIsLoadingSuppliers(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (selectedMaterial) {
+      fetchSuppliersByMaterial(selectedMaterial.id);
+    }
+  }, [selectedMaterial]);
+
+  const handleAddToCart = (supplierMaterial: SupplierMaterial) => {
+    addToCart({
+      id: supplierMaterial.id,
+      supplierId: supplierMaterial.supplier_id,
+      materialId: supplierMaterial.material_id,
+      materialName: supplierMaterial.material.name,
+      supplierName: supplierMaterial.supplier.name,
+      specification: supplierMaterial.specification || '',
+      quantity: 1,
+      unitPrice: 0,
+      currency: 'USD',
+      exchangeRate: 1,
+    });
+    toast.success('Añadido al carrito');
   };
 
   return (
     <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Buscar Proveedores por Material</h1>
+
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary">Buscar Proveedores por Material</CardTitle>
-          <CardDescription>Encuentra proveedores que ofrecen un material específico.</CardDescription>
+          <CardTitle>Seleccionar Material</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <SmartSearch
-              placeholder="Buscar material por nombre o código"
-              onSelect={handleMaterialSelect}
-              fetchFunction={searchMaterials}
-              displayValue={selectedMaterial?.name || ''}
+          <div className="space-y-4">
+            <SimpleSearch
+              placeholder="Buscar material..."
+              onSelect={(material) => setSelectedMaterial(material)}
+              fetchFunction={fetchMaterials}
+              displayValue={selectedMaterial?.name}
             />
-            {selectedMaterial && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Material seleccionado: <span className="font-semibold">{selectedMaterial.name} ({selectedMaterial.code})</span>
-                {selectedMaterial.category && ` - Categoría: ${selectedMaterial.category}`}
-              </p>
-            )}
           </div>
-
-          {isLoadingSuppliers && (
-            <div className="text-center text-muted-foreground">Cargando proveedores...</div>
-          )}
-
-          {!isLoadingSuppliers && selectedMaterial && suppliers.length === 0 && (
-            <div className="text-center text-muted-foreground">No se encontraron proveedores para este material.</div>
-          )}
-
-          {!isLoadingSuppliers && suppliers.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Proveedores que ofrecen "{selectedMaterial?.name}"</h3>
-              <Accordion type="single" collapsible className="w-full">
-                {suppliers.map((supplier) => (
-                  <AccordionItem key={supplier.id} value={supplier.id}>
-                    <AccordionTrigger className="text-left">
-                      <div className="flex flex-col items-start">
-                        <span className="font-bold">{supplier.name}</span>
-                        <span className="text-sm text-muted-foreground">RIF: {supplier.rif}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 bg-muted/20 rounded-b-md">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        <p><strong>Email:</strong> {supplier.email || 'N/A'}</p>
-                        <p>
-                          <strong>Teléfono Principal:</strong>{' '}
-                          {supplier.phone ? (
-                            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                              {supplier.phone} <Phone className="ml-1 h-3 w-3" />
-                            </a>
-                          ) : 'N/A'}
-                        </p>
-                        <p>
-                          <strong>Teléfono Secundario:</strong>{' '}
-                          {supplier.phone_2 ? (
-                            <a href={`https://wa.me/${formatPhoneNumberForWhatsApp(supplier.phone_2)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                              {supplier.phone_2} <Phone className="ml-1 h-3 w-3" />
-                            </a>
-                          ) : 'N/A'}
-                        </p>
-                        <p>
-                          <strong>Instagram:</strong>{' '}
-                          {supplier.instagram ? (
-                            <a href={`https://instagram.com/${supplier.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
-                              {supplier.instagram} <Instagram className="ml-1 h-3 w-3" />
-                            </a>
-                          ) : 'N/A'}
-                        </p>
-                        <p><strong>Términos de Pago:</strong> {supplier.payment_terms}</p>
-                        <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
-                        <p><strong>Estado:</strong> {supplier.status}</p>
-                        <p><strong>Especificación del Material:</strong> {supplier.specification || 'N/A'}</p>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button asChild variant="outline" className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white">
-                          <Link to={`/suppliers/${supplier.id}`}>Ver Detalles Completos</Link>
-                        </Button>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          )}
         </CardContent>
       </Card>
-      <MadeWithDyad />
+
+      {selectedMaterial && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Proveedores para {selectedMaterial.name}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">Cargando...</div>
+            ) : suppliers.length > 0 ? (
+              <div className="space-y-4">
+                {suppliers.map((supplierMaterial) => (
+                  <Card key={supplierMaterial.id} className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{supplierMaterial.supplier.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {supplierMaterial.supplier.rif} | {supplierMaterial.supplier.payment_terms}
+                        </p>
+                        {supplierMaterial.specification && (
+                          <p className="text-sm mt-1">
+                            Especificación: {supplierMaterial.specification}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddToCart(supplierMaterial)}
+                        className="ml-4"
+                      >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Añadir al carrito
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No se encontraron proveedores para este material.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
