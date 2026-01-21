@@ -172,7 +172,6 @@ const EditQuoteRequest = () => {
       company_id: companyId, // Use the selected company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
-      status: initialRequest.status, // Keep original status or allow editing
       created_by: userEmail || 'unknown',
       user_id: userId,
     };

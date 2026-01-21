@@ -52,7 +52,6 @@ const QuoteRequestManagement = () => {
     return quoteRequests.filter(request =>
       request.suppliers.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       request.companies.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.status.toLowerCase().includes(lowerCaseSearchTerm) ||
       request.currency.toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [quoteRequests, searchTerm]);
@@ -144,7 +143,6 @@ const QuoteRequestManagement = () => {
                     <div className="text-sm space-y-1">
                       <p><strong>Moneda:</strong> {request.currency}</p>
                       {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
-                      <p><strong>Estado:</strong> {request.status}</p>
                       <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
@@ -170,7 +168,6 @@ const QuoteRequestManagement = () => {
                       <TableHead>Empresa</TableHead>
                       <TableHead>Moneda</TableHead>
                       <TableHead>Tasa de Cambio</TableHead>
-                      <TableHead>Estado</TableHead>
                       <TableHead>Fecha Creación</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -182,7 +179,6 @@ const QuoteRequestManagement = () => {
                         <TableCell>{request.companies.name}</TableCell>
                         <TableCell>{request.currency}</TableCell>
                         <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                        <TableCell>{request.status}</TableCell>
                         <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>

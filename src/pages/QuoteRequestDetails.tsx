@@ -143,7 +143,6 @@ const QuoteRequestDetails = () => {
             <p><strong>Empresa:</strong> {request.companies?.name || 'N/A'}</p>
             <p><strong>Moneda:</strong> {request.currency}</p>
             {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
-            <p><strong>Estado:</strong> {request.status}</p>
             <p><strong>Fecha de Creación:</strong> {new Date(request.created_at).toLocaleDateString()} {new Date(request.created_at).toLocaleTimeString()}</p>
             <p><strong>Creado por:</strong> {request.created_by || 'N/A'}</p>
           </div>

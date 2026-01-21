@@ -113,7 +113,6 @@ const GenerateQuoteRequest = () => {
       company_id: companyId, // Use the selected company ID
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
-      status: 'Draft',
       created_by: userEmail || 'unknown',
       user_id: userId,
     };

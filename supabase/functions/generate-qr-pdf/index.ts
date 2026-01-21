@@ -41,7 +41,7 @@ serve(async (req) => {
       .select(`
         *,
         suppliers (name, rif, email, phone, phone_2, instagram, address),
-        companies (name, logo_url, fiscal_data)
+        companies (name, logo_url, fiscal_data, phone, email)
       `)
       .eq('id', requestId)
       .single();
@@ -140,9 +140,16 @@ serve(async (req) => {
     drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
-    drawText(`Empresa: ${request.companies?.name || 'N/A'}`, margin, y, { font: boldFont });
+    // --- Información de la Empresa Origen ---
+    drawText('DATOS DE LA EMPRESA ORIGEN:', margin, y, { font: boldFont });
     y -= lineHeight;
-    drawText(`RIF Empresa: ${request.companies?.fiscal_data?.rif || 'N/A'}`, margin, y);
+    drawText(`Nombre: ${request.companies?.name || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`RIF: ${request.companies?.fiscal_data?.rif || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Email: ${request.companies?.email || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
     // --- Detalles del Proveedor ---
@@ -151,10 +158,6 @@ serve(async (req) => {
     drawText(`Nombre: ${request.suppliers?.name || 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`RIF: ${request.suppliers?.rif || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Email: ${request.suppliers?.email || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Teléfono: ${request.suppliers?.phone || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
     // --- Detalles de la Solicitud ---
@@ -166,7 +169,6 @@ serve(async (req) => {
       drawText(`Tasa de Cambio: ${request.exchange_rate.toFixed(2)}`, margin, y);
       y -= lineHeight;
     }
-    drawText(`Estado: ${request.status}`, margin, y);
     y -= lineHeight * 2;
 
     // --- Tabla de Ítems Solicitados ---
