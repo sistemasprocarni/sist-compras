@@ -69,8 +69,8 @@ serve(async (req) => {
 
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
-
+    let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
+    
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -94,16 +94,49 @@ serve(async (req) => {
       });
     };
 
+    // Table column configuration
+    const tableX = margin;
+    const tableWidth = width - 2 * margin;
+    const colWidths = [tableWidth * 0.25, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.3, tableWidth * 0.15];
+    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción', 'Exento IVA'];
+
+    // Function to draw table headers
+    const drawTableHeader = () => {
+      let currentX = tableX;
+      page.drawRectangle({
+        x: tableX,
+        y: y - lineHeight,
+        width: tableWidth,
+        height: lineHeight,
+        color: tableHeaderBgColor,
+        borderColor: borderColor,
+        borderWidth: 1,
+      });
+      for (let i = 0; i < colHeaders.length; i++) {
+        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
+        currentX += colWidths[i];
+      }
+      y -= lineHeight;
+    };
+
+    // Function to check for page breaks and add new page if necessary
+    const checkPageBreak = (requiredSpace: number) => {
+      if (y - requiredSpace < margin) { // If not enough space for next content block
+        page = pdfDoc.addPage();
+        y = height - margin;
+        drawTableHeader(); // Redraw headers on new page
+      }
+    };
+
     // --- Header ---
     if (request.companies?.logo_url) {
-      // Placeholder for logo, actual image loading is more complex in Deno/pdf-lib
       drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
     }
 
-    drawText('SOLICITUD DE COTIZACIÓN', width / 2, y, { font: boldFont, size: 18, x: width / 2 - boldFont.widthOfText('SOLICITUD DE COTIZACIÓN', { size: 18 }) / 2 });
+    drawText('SOLICITUD DE COTIZACIÓN', width / 2 - boldFont.widthOfText('SOLICITUD DE COTIZACIÓN', { size: 18 }) / 2, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
     drawText(`Nº: ${request.id.substring(0, 8)}`, width - margin - 100, y, { font: boldFont, size: 12 });
-    drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight, { font: font, size: 10 });
+    drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
     drawText(`Empresa: ${request.companies?.name || 'N/A'}`, margin, y, { font: boldFont });
@@ -136,32 +169,12 @@ serve(async (req) => {
     y -= lineHeight * 2;
 
     // --- Tabla de Ítems Solicitados ---
-    const tableStartY = y;
-    const tableX = margin;
-    const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.25, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.3, tableWidth * 0.15]; // Ajustado para nueva columna
-    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción', 'Exento IVA']; // Nueva columna
-
-    // Dibujar encabezados de tabla
-    let currentX = tableX;
-    page.drawRectangle({
-      x: tableX,
-      y: y - lineHeight,
-      width: tableWidth,
-      height: lineHeight,
-      color: tableHeaderBgColor,
-      borderColor: borderColor,
-      borderWidth: 1,
-    });
-    for (let i = 0; i < colHeaders.length; i++) {
-      drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
-      currentX += colWidths[i];
-    }
-    y -= lineHeight;
+    drawTableHeader(); // Draw initial table header
 
     // Dibujar filas de ítems
     for (const item of items) {
-      currentX = tableX;
+      checkPageBreak(lineHeight); // Check before drawing each row
+      let currentX = tableX;
       page.drawRectangle({
         x: tableX,
         y: y - lineHeight,
@@ -178,20 +191,23 @@ serve(async (req) => {
       currentX += colWidths[2];
       drawText(item.description || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
-      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2); // Mostrar valor
+      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       y -= lineHeight;
     }
     y -= lineHeight * 2; // Espacio después de la tabla
 
     // --- Footer ---
-    drawText(`Generado por: ${request.created_by || user.email}`, margin, margin + lineHeight * 2);
+    // Ensure footer is always at the bottom of the last page
+    const footerY = margin; // Fixed position from bottom
     page.drawLine({
-      start: { x: width / 2 - 100, y: margin + lineHeight },
-      end: { x: width / 2 + 100, y: margin + lineHeight },
+      start: { x: width / 2 - 100, y: footerY + lineHeight },
+      end: { x: width / 2 + 100, y: footerY + lineHeight },
       thickness: 1,
       color: rgb(0, 0, 0),
     });
-    drawText('Firma Autorizada', width / 2 - 50, margin, { font: font, size: 9 });
+    drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
+    drawText(`Generado por: ${request.created_by || user.email}`, margin, footerY + lineHeight * 2);
+
 
     const pdfBytes = await pdfDoc.save();
 

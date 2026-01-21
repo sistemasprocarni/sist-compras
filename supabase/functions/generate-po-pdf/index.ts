@@ -1,5 +1,3 @@
-// supabase/functions/generate-po-pdf/index.ts
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { PDFDocument, rgb, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1';
@@ -159,7 +157,7 @@ serve(async (req) => {
 
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
+    let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -185,28 +183,49 @@ serve(async (req) => {
       });
     };
 
+    // Table column configuration
+    const tableX = margin;
+    const tableWidth = width - 2 * margin;
+    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.2];
+    const colHeaders = ['Material', 'Cantidad', 'P. Unitario', 'IVA (%)', 'Exento', 'Subtotal'];
+
+    // Function to draw table headers
+    const drawTableHeader = () => {
+      let currentX = tableX;
+      page.drawRectangle({
+        x: tableX,
+        y: y - lineHeight,
+        width: tableWidth,
+        height: lineHeight,
+        color: tableHeaderBgColor,
+        borderColor: borderColor,
+        borderWidth: 1,
+      });
+      for (let i = 0; i < colHeaders.length; i++) {
+        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
+        currentX += colWidths[i];
+      }
+      y -= lineHeight;
+    };
+
+    // Function to check for page breaks and add new page if necessary
+    const checkPageBreak = (requiredSpace: number) => {
+      if (y - requiredSpace < margin + lineHeight * 6) { // Leave space for totals and footer
+        page = pdfDoc.addPage();
+        y = height - margin;
+        drawTableHeader(); // Redraw headers on new page
+      }
+    };
+
     // --- Header ---
-    // Logo (placeholder, ya que la carga de imágenes desde URL en Deno y pdf-lib es más compleja)
-    // Si `order.companies?.logo_url` existe, necesitarías fetch la imagen como ArrayBuffer y luego embedPng/embedJpg
-    // Para este ejemplo, usaremos un texto placeholder para el logo.
     if (order.companies?.logo_url) {
-      // Ejemplo de cómo cargar una imagen (requiere fetch y manejo de ArrayBuffer)
-      // const logoResponse = await fetch(order.companies.logo_url);
-      // const logoBytes = await logoResponse.arrayBuffer();
-      // const logoImage = await pdfDoc.embedPng(logoBytes); // o embedJpg
-      // page.drawImage(logoImage, {
-      //   x: margin,
-      //   y: y - 50,
-      //   width: 100,
-      //   height: 50,
-      // });
       drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
     }
 
-    drawText('ORDEN DE COMPRA', width / 2, y, { font: boldFont, size: 18, x: width / 2 - boldFont.widthOfText('ORDEN DE COMPRA', { size: 18 }) / 2 });
+    drawText('ORDEN DE COMPRA', width / 2 - boldFont.widthOfText('ORDEN DE COMPRA', { size: 18 }) / 2, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
     drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 12 });
-    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight, { font: font, size: 10 });
+    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
     drawText(`Empresa: ${order.companies?.name || 'N/A'}`, margin, y, { font: boldFont });
@@ -241,32 +260,12 @@ serve(async (req) => {
     y -= lineHeight * 2;
 
     // --- Tabla de Ítems ---
-    const tableStartY = y;
-    const tableX = margin;
-    const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.2];
-    const colHeaders = ['Material', 'Cantidad', 'P. Unitario', 'IVA (%)', 'Exento', 'Subtotal'];
-
-    // Dibujar encabezados de tabla
-    let currentX = tableX;
-    page.drawRectangle({
-      x: tableX,
-      y: y - lineHeight,
-      width: tableWidth,
-      height: lineHeight,
-      color: tableHeaderBgColor,
-      borderColor: borderColor,
-      borderWidth: 1,
-    });
-    for (let i = 0; i < colHeaders.length; i++) {
-      drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
-      currentX += colWidths[i];
-    }
-    y -= lineHeight;
+    drawTableHeader(); // Draw initial table header
 
     // Dibujar filas de ítems
     for (const item of items) {
-      currentX = tableX;
+      checkPageBreak(lineHeight); // Check before drawing each row
+      let currentX = tableX;
       page.drawRectangle({
         x: tableX,
         y: y - lineHeight,
@@ -281,7 +280,7 @@ serve(async (req) => {
       currentX += colWidths[1];
       drawText(item.unit_price.toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
-      drawText(item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2); // Mostrar N/A si es exento
+      drawText(item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
       drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[4];
@@ -290,9 +289,12 @@ serve(async (req) => {
     }
     y -= lineHeight; // Espacio después de la tabla
 
-    // --- Totales ---
+    // --- Totals ---
     const calculatedTotals = calculateTotals(items);
     const totalSectionX = width - margin - 200; // Alineado a la derecha
+
+    // Check for page break before drawing totals
+    checkPageBreak(lineHeight * 5); // 3 lines for totals, 1 for amount in words, 1 for spacing
 
     drawText(`Base Imponible: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`, totalSectionX, y);
     y -= lineHeight;
@@ -307,14 +309,15 @@ serve(async (req) => {
     y -= lineHeight * 3;
 
     // --- Footer ---
-    drawText(`Generado por: ${order.created_by || user.email}`, margin, margin + lineHeight * 2);
+    const footerY = margin; // Fixed position from bottom
     page.drawLine({
-      start: { x: width / 2 - 100, y: margin + lineHeight },
-      end: { x: width / 2 + 100, y: margin + lineHeight },
+      start: { x: width / 2 - 100, y: footerY + lineHeight },
+      end: { x: width / 2 + 100, y: footerY + lineHeight },
       thickness: 1,
       color: rgb(0, 0, 0),
     });
-    drawText('Firma Autorizada', width / 2 - 50, margin, { font: font, size: 9 });
+    drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
+    drawText(`Generado por: ${order.created_by || user.email}`, margin, footerY + lineHeight * 2);
 
 
     const pdfBytes = await pdfDoc.save();

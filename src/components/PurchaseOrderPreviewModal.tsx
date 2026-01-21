@@ -31,6 +31,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [tempOrderId, setTempOrderId] = useState<string | null>(null); // Store the temporary order ID
 
   const generatePdf = async () => {
     if (!session) {
@@ -64,6 +65,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       }
 
       const orderId = newOrder.id;
+      setTempOrderId(orderId); // Store the temporary order ID
 
       // Insert items for the temporary order
       if (itemsData.length > 0) {
@@ -80,6 +82,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
           showError('Error al insertar ítems temporales para la previsualización.');
           // Attempt to clean up the temporary order
           await session.supabase.from('purchase_orders').delete().eq('id', orderId);
+          setTempOrderId(null); // Clear tempOrderId if cleanup fails
           return;
         }
       }
@@ -112,13 +115,13 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       // Clean up the temporary order and its items after preview
       // This logic needs to be careful not to delete a real order if the user proceeds to save it.
       // For now, we'll keep the cleanup simple, assuming it's always a temporary draft.
-      if (orderData.status === 'Draft') { // Only attempt cleanup if it was a draft for preview
+      if (tempOrderId) { // Only attempt cleanup if a temporary order was successfully created
         try {
           // Fetch the order again to ensure it's still a draft and belongs to the user
           const { data: orderToDelete, error: fetchCleanupError } = await session.supabase
             .from('purchase_orders')
             .select('id')
-            .eq('id', orderData.supplier_id) // This is incorrect, should be orderId
+            .eq('id', tempOrderId) // CORRECTED: Use tempOrderId here
             .eq('user_id', orderData.user_id)
             .eq('status', 'Draft')
             .single();
@@ -132,6 +135,8 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
           }
         } catch (cleanupError) {
           console.error('[PurchaseOrderPreviewModal] Error during cleanup of temporary order:', cleanupError);
+        } finally {
+          setTempOrderId(null); // Clear tempOrderId after cleanup attempt
         }
       }
     }
@@ -143,8 +148,16 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
+      // Ensure cleanup happens if component unmounts before PDF generation finishes
+      if (tempOrderId) {
+        // This part is tricky because `session` might not be available on unmount
+        // and we don't want to block unmount. A more robust solution might involve
+        // a server-side cleanup mechanism or a more complex client-side state.
+        // For now, rely on the `finally` block in `generatePdf` for most cases.
+        console.warn('[PurchaseOrderPreviewModal] Component unmounted with pending temporary order cleanup. Relying on finally block.');
+      }
     };
-  }, []);
+  }, []); // Empty dependency array to run once on mount
 
   return (
     <div className="flex flex-col h-full">
