@@ -1,0 +1,7 @@
+// src/integrations/supabase/services/index.ts
+
+export * from './supplierService';
+export * from './materialService';
+export * from './companyService';
+export * from './quoteRequestService';
+export * from './purchaseOrderService';
