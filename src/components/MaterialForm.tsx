@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch'; // Importar el componente Switch
 
 // Define las opciones de categoría.
 const MATERIAL_CATEGORIES = [
@@ -41,6 +42,7 @@ const materialFormSchema = z.object({
   name: z.string().min(1, { message: 'El nombre es requerido.' }),
   category: z.enum(MATERIAL_CATEGORIES as [string, ...string[]], { message: 'La categoría es requerida y debe ser válida.' }),
   unit: z.enum(MATERIAL_UNITS as [string, ...string[]], { message: 'La unidad es requerida y debe ser válida.' }),
+  is_exempt: z.boolean().default(false).optional(), // Nuevo campo para exención de IVA
 });
 
 type MaterialFormValues = z.infer<typeof materialFormSchema>;
@@ -60,6 +62,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
       name: '',
       category: MATERIAL_CATEGORIES[0],
       unit: MATERIAL_UNITS[0],
+      is_exempt: false, // Valor por defecto para el switch
     },
   });
 
@@ -73,6 +76,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
         name: '',
         category: MATERIAL_CATEGORIES[0],
         unit: MATERIAL_UNITS[0],
+        is_exempt: false,
       });
     }
   }, [initialData, form]);
@@ -135,6 +139,27 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
                 </SelectContent>
               </Select>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="is_exempt"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+                <FormLabel>Exento de IVA</FormLabel>
+                <FormDescription>
+                  Marcar si este material no debe incluir IVA en los cálculos de costos.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  aria-label="Material exento de IVA"
+                />
+              </FormControl>
             </FormItem>
           )}
         />

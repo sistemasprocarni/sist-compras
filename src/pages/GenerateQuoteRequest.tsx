@@ -25,6 +25,7 @@ interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para exención de IVA
 }
 
 interface MaterialSearchResult {
@@ -33,6 +34,7 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para exención de IVA
 }
 
 // Define las unidades de medida.
@@ -59,7 +61,7 @@ const GenerateQuoteRequest = () => {
   // The SmartSearch will handle fetching companies as needed.
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
+    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0], is_exempt: false }]);
   };
 
   const handleItemChange = (index: number, field: keyof QuoteRequestItem, value: any) => {
@@ -75,6 +77,7 @@ const GenerateQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
+    handleItemChange(index, 'is_exempt', material.is_exempt || false); // Asignar el valor de is_exempt
   };
 
   const handleCompanySelect = (company: Company) => {

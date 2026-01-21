@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { getQuoteRequestDetails, searchSuppliers, searchMaterials, updateQuoteRequest, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
+import { getQuoteRequestDetails, searchSuppliers, searchMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
@@ -27,6 +27,7 @@ interface QuoteRequestItemForm {
   quantity: number;
   description?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para exención de IVA
 }
 
 interface MaterialSearchResult {
@@ -35,6 +36,7 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para exención de IVA
 }
 
 // Define las unidades de medida.
@@ -81,6 +83,7 @@ const EditQuoteRequest = () => {
         quantity: item.quantity,
         description: item.description || '',
         unit: item.unit || MATERIAL_UNITS[0],
+        is_exempt: item.is_exempt || false, // Asignar el valor de is_exempt
       })));
     }
   }, [initialRequest]);
@@ -117,7 +120,7 @@ const EditQuoteRequest = () => {
   }
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
+    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0], is_exempt: false }]);
   };
 
   const handleItemChange = (index: number, field: keyof QuoteRequestItemForm, value: any) => {
@@ -133,6 +136,7 @@ const EditQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
+    handleItemChange(index, 'is_exempt', material.is_exempt || false); // Asignar el valor de is_exempt
   };
 
   const handleCompanySelect = (company: Company) => {

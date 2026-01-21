@@ -25,6 +25,7 @@ interface Material {
   name: string;
   category?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para indicar si el material está exento de IVA
   user_id: string;
 }
 
