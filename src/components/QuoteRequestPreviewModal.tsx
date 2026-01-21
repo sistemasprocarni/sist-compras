@@ -50,6 +50,17 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
     }
   };
 
+  const handleDownload = () => {
+    if (!pdfUrl) return;
+
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `solicitud_cotizacion_${requestId.substring(0, 8)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   useEffect(() => {
     generatePdf();
     return () => {
@@ -74,8 +85,13 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
           No se pudo generar la previsualización del PDF.
         </div>
       )}
-      <div className="flex justify-end mt-4">
-        <Button onClick={onClose} variant="outline">Cerrar</Button>
+      <div className="flex justify-end gap-2 mt-4">
+        <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
+          Descargar PDF
+        </Button>
+        <Button onClick={onClose} variant="outline">
+          Cerrar
+        </Button>
       </div>
     </div>
   );
