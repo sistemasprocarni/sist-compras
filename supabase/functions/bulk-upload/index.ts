@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5'; // Library to parse Excel files
 
 const corsHeaders = {
@@ -28,7 +28,7 @@ const MATERIAL_UNITS = [
 ];
 
 // Definir la constante PAYMENT_TERMS_OPTIONS aquí para que esté disponible en la función Edge
-const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito']; // Actualizado: Solo Contado y Crédito
+const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro']; // Reintroducido 'Otro'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -95,12 +95,12 @@ serve(async (req) => {
         const rif = validateRif(rowData['RIF']);
         const name = rowData['Nombre'];
         const email = rowData['Email'];
-        const phone = rowData['Teléfono Principal']; // Ahora obligatorio
+        const phone = rowData['Teléfono Principal'];
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
         const address = rowData['Dirección'];
         let payment_terms = rowData['Términos de Pago'];
-        let custom_payment_terms = rowData['Términos de Pago Personalizados']; // Se mantiene para compatibilidad, pero se ignorará si no es 'Otro'
+        let custom_payment_terms = rowData['Términos de Pago Personalizados'];
         let credit_days = rowData['Días de Crédito'];
         let status = rowData['Estado'];
 
@@ -128,7 +128,22 @@ serve(async (req) => {
         // Validar y normalizar payment_terms
         if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
           // Si el término de pago no es válido o está vacío, se establece por defecto a 'Contado'
-          payment_terms = 'Contado';
+          // Si es un valor no reconocido, se asume 'Otro' y se usa como custom_payment_terms
+          if (payment_terms && typeof payment_terms === 'string' && payment_terms.trim() !== '') {
+            custom_payment_terms = payment_terms;
+            payment_terms = 'Otro';
+          } else {
+            payment_terms = 'Contado';
+          }
+        }
+
+        // Lógica para custom_payment_terms si payment_terms es 'Otro'
+        if (payment_terms === 'Otro' && (!custom_payment_terms || String(custom_payment_terms).trim() === '')) {
+          failureCount++;
+          errors.push({ row: rowNum, data: rowData, reason: 'Términos de Pago Personalizados requeridos si el tipo es "Otro".' });
+          continue;
+        } else if (payment_terms !== 'Otro') {
+          custom_payment_terms = null; // Si no es 'Otro', custom_payment_terms debe ser nulo
         }
 
         // Lógica para credit_days basada en payment_terms
@@ -143,8 +158,6 @@ serve(async (req) => {
           credit_days = 0; // Si no es crédito, los días de crédito son 0
         }
         
-        custom_payment_terms = null; // Siempre nulo, ya que 'Otro' no es una opción válida
-
         if (!status || !['Active', 'Inactive'].includes(status)) {
           status = 'Active';
         }
@@ -158,7 +171,7 @@ serve(async (req) => {
           instagram: instagram || null,
           address: address || null,
           payment_terms: payment_terms,
-          custom_payment_terms: custom_payment_terms, // Siempre nulo
+          custom_payment_terms: custom_payment_terms || null,
           credit_days: credit_days,
           status: status,
           user_id: user.id,

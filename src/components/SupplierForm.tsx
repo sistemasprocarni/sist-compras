@@ -28,9 +28,29 @@ const supplierFormSchema = z.object({
   phone_2: z.string().optional().or(z.literal('')),
   instagram: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
-  payment_terms: z.enum(['Contado', 'Crédito'], { message: 'Términos de pago son requeridos y deben ser Contado o Crédito.' }), // Opciones limitadas
-  custom_payment_terms: z.string().optional().nullable(), // Se mantiene en el esquema pero no se usará en el UI
-  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional(), // Opcional, se valida condicionalmente
+  payment_terms: z.enum(['Contado', 'Crédito', 'Otro'], { message: 'Términos de pago son requeridos y deben ser Contado, Crédito u Otro.' }), // Opciones limitadas
+  custom_payment_terms: z.string().optional().nullable().refine((val, ctx) => {
+    const paymentTerms = ctx.parent.payment_terms;
+    if (paymentTerms === 'Otro' && (!val || val.trim() === '')) {
+      return ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Términos de pago personalizados son requeridos si el tipo es "Otro".',
+        path: ['custom_payment_terms'],
+      });
+    }
+    return true;
+  }),
+  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional().refine((val, ctx) => {
+    const paymentTerms = ctx.parent.payment_terms;
+    if (paymentTerms === 'Crédito' && (val === undefined || val === null)) {
+      return ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Días de crédito son requeridos para términos de "Crédito".',
+        path: ['credit_days'],
+      });
+    }
+    return true;
+  }),
   status: z.string().min(1, 'Estado es requerido'),
   materials: z.array(
     z.object({
@@ -55,7 +75,7 @@ interface SupplierFormProps {
     phone_2?: string;
     instagram?: string;
     address?: string;
-    payment_terms: 'Contado' | 'Crédito' | 'Otro'; // Mantener 'Otro' para compatibilidad con datos existentes
+    payment_terms: 'Contado' | 'Crédito' | 'Otro';
     custom_payment_terms?: string | null;
     credit_days: number;
     status: string;
@@ -113,9 +133,6 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         specification: mat.specification || '',
       })) || [];
 
-      // Asegurarse de que payment_terms sea 'Contado' o 'Crédito' para el formulario
-      const terms = initialData.payment_terms === 'Otro' ? 'Contado' : initialData.payment_terms;
-
       form.reset({
         rif: initialData.rif || '',
         name: initialData.name || '',
@@ -124,7 +141,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         phone_2: initialData.phone_2 || '',
         instagram: initialData.instagram || '',
         address: initialData.address || '',
-        payment_terms: terms,
+        payment_terms: initialData.payment_terms,
         custom_payment_terms: initialData.custom_payment_terms || '',
         credit_days: initialData.credit_days || 0,
         status: initialData.status || 'Activo',
@@ -193,11 +210,12 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
     }
 
     // Asegurarse de que credit_days sea 0 si no es 'Crédito'
+    // Asegurarse de que custom_payment_terms sea null si no es 'Otro'
     const finalData = {
       ...data,
       rif: normalizedRif,
       credit_days: data.payment_terms === 'Crédito' ? data.credit_days : 0,
-      custom_payment_terms: null, // Siempre nulo ya que 'Otro' no es una opción
+      custom_payment_terms: data.payment_terms === 'Otro' ? data.custom_payment_terms : null,
     };
     onSubmit(finalData);
   };
@@ -312,6 +330,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
                   <SelectContent>
                     <SelectItem value="Contado">Contado</SelectItem>
                     <SelectItem value="Crédito">Crédito</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -332,6 +351,21 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
                       {...field}
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+          {currentPaymentTerms === 'Otro' && (
+            <FormField
+              control={form.control}
+              name="custom_payment_terms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Términos de Pago Personalizados</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Describa los términos de pago" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
