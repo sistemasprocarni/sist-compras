@@ -139,8 +139,8 @@ serve(async (req) => {
     const tableStartY = y;
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.4];
-    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción'];
+    const colWidths = [tableWidth * 0.25, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.3, tableWidth * 0.15]; // Ajustado para nueva columna
+    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción', 'Exento IVA']; // Nueva columna
 
     // Dibujar encabezados de tabla
     let currentX = tableX;
@@ -177,6 +177,8 @@ serve(async (req) => {
       drawText(item.unit || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
       drawText(item.description || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      currentX += colWidths[3];
+      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2); // Mostrar valor
       y -= lineHeight;
     }
     y -= lineHeight * 2; // Espacio después de la tabla

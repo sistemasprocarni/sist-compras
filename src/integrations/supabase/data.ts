@@ -80,6 +80,7 @@ interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
+  is_exempt?: boolean; // Añadido: Campo para indicar si el material está exento de IVA
 }
 
 interface PurchaseOrderItem {
@@ -89,7 +90,7 @@ interface PurchaseOrderItem {
   quantity: number;
   unit_price: number;
   tax_rate?: number;
-  is_exempt?: boolean;
+  is_exempt?: boolean; // Añadido: Campo para indicar si el material está exento de IVA
 }
 
 // Servicios modulares
@@ -466,6 +467,7 @@ const QuoteRequestService = {
         quantity: item.quantity,
         description: item.description,
         unit: item.unit,
+        is_exempt: item.is_exempt, // Incluir is_exempt
       }));
 
       const { error: itemsError } = await supabase
@@ -516,6 +518,7 @@ const QuoteRequestService = {
         quantity: item.quantity,
         description: item.description,
         unit: item.unit,
+        is_exempt: item.is_exempt, // Incluir is_exempt
       }));
 
       const { error: itemsError } = await supabase
@@ -596,7 +599,7 @@ const PurchaseOrderService = {
         quantity: item.quantity,
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
-        is_exempt: item.is_exempt,
+        is_exempt: item.is_exempt, // Incluir is_exempt
       }));
 
       const { error: itemsError } = await supabase

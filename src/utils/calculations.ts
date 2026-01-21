@@ -12,17 +12,16 @@ export const calculateTotals = (items: Array<{ quantity: number; unit_price: num
 
   items.forEach(item => {
     const itemTotal = item.quantity * item.unit_price;
-    if (item.is_exempt) {
-      baseImponible += itemTotal;
-    } else {
+    baseImponible += itemTotal; // La base imponible siempre incluye el valor del ítem
+
+    if (!item.is_exempt) { // Solo aplica IVA si el ítem NO está exento
       const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
-      baseImponible += itemTotal;
       montoIVA += itemTotal * taxRate;
     }
     total += itemTotal;
   });
 
-  total += montoIVA; // Add IVA to the total
+  total += montoIVA; // Sumar el IVA al total final
 
   return {
     baseImponible: parseFloat(baseImponible.toFixed(2)),

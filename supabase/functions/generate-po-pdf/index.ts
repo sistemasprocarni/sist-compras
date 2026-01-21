@@ -17,17 +17,16 @@ const calculateTotals = (items: Array<{ quantity: number; unit_price: number; ta
 
   items.forEach(item => {
     const itemTotal = item.quantity * item.unit_price;
-    if (item.is_exempt) {
-      baseImponible += itemTotal;
-    } else {
+    baseImponible += itemTotal; // La base imponible siempre incluye el valor del ítem
+
+    if (!item.is_exempt) { // Solo aplica IVA si el ítem NO está exento
       const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
-      baseImponible += itemTotal;
       montoIVA += itemTotal * taxRate;
     }
     total += itemTotal;
   });
 
-  total += montoIVA;
+  total += montoIVA; // Sumar el IVA al total final
 
   return {
     baseImponible: parseFloat(baseImponible.toFixed(2)),
@@ -282,7 +281,7 @@ serve(async (req) => {
       currentX += colWidths[1];
       drawText(item.unit_price.toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
-      drawText(`${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+      drawText(item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2); // Mostrar N/A si es exento
       currentX += colWidths[3];
       drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[4];

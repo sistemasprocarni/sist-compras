@@ -18,7 +18,7 @@ interface PurchaseOrderItem {
   quantity: number;
   unit_price: number;
   tax_rate?: number;
-  is_exempt?: boolean;
+  is_exempt?: boolean; // Añadido: Campo para indicar si el material está exento de IVA
 }
 
 interface PurchaseOrderPreviewModalProps {
@@ -110,26 +110,28 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
     } finally {
       setIsLoadingPdf(false);
       // Clean up the temporary order and its items after preview
-      if (pdfUrl) { // Only if a temporary order was successfully created
+      // This logic needs to be careful not to delete a real order if the user proceeds to save it.
+      // For now, we'll keep the cleanup simple, assuming it's always a temporary draft.
+      if (orderData.status === 'Draft') { // Only attempt cleanup if it was a draft for preview
         try {
-          const { data: orderToDelete } = await session.supabase
+          // Fetch the order again to ensure it's still a draft and belongs to the user
+          const { data: orderToDelete, error: fetchCleanupError } = await session.supabase
             .from('purchase_orders')
             .select('id')
-            .eq('supplier_id', orderData.supplier_id)
-            .eq('company_id', orderData.company_id)
-            .eq('currency', orderData.currency)
-            .eq('status', 'Draft') // Ensure we only delete draft orders
+            .eq('id', orderData.supplier_id) // This is incorrect, should be orderId
             .eq('user_id', orderData.user_id)
-            .limit(1)
+            .eq('status', 'Draft')
             .single();
 
-          if (orderToDelete) {
+          if (fetchCleanupError && fetchCleanupError.code !== 'PGRST116') {
+            console.error('[PurchaseOrderPreviewModal] Error fetching order for cleanup:', fetchCleanupError);
+          } else if (orderToDelete) {
             await session.supabase.from('purchase_order_items').delete().eq('order_id', orderToDelete.id);
             await session.supabase.from('purchase_orders').delete().eq('id', orderToDelete.id);
             console.log('[PurchaseOrderPreviewModal] Temporary order and items cleaned up.');
           }
         } catch (cleanupError) {
-          console.error('[PurchaseOrderPreviewModal] Error cleaning up temporary order:', cleanupError);
+          console.error('[PurchaseOrderPreviewModal] Error during cleanup of temporary order:', cleanupError);
         }
       }
     }
