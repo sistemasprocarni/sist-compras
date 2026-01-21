@@ -158,7 +158,20 @@ const SupplierService = {
   },
 
   search: async (query: string): Promise<Supplier[]> => {
-    if (!query.trim()) return [];
+    // Si la consulta está vacía, devuelve los primeros 10 proveedores como sugerencias
+    if (!query.trim()) {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name', { ascending: true })
+        .limit(10); // Limita a 10 sugerencias
+
+      if (error) {
+        console.error('[SupplierService.search] Error fetching default suppliers:', error);
+        return [];
+      }
+      return data;
+    }
 
     const { data, error } = await supabase
       .from('suppliers')
