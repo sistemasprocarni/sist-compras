@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { UploadCloud, FileText, Download, Trash2, DatabaseBackup } from 'lucide-react';
+import { UploadCloud, FileText, Download, Trash2, DatabaseBackup, RefreshCw } from 'lucide-react';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import PinInputDialog from '@/components/PinInputDialog'; // Import the new PIN input dialog
+import PinInputDialog from '@/components/PinInputDialog';
+import ResetDataButton from '@/components/ResetDataButton'; // Import the new ResetDataButton component
 
 interface UploadResult {
   successCount: number;
@@ -302,7 +303,7 @@ const BulkUpload = () => {
             </>
           ) : type === 'material' ? (
             <>
-              `Código` (opcional, se autogenera si está vacío, ej: MT001), `Nombre` (requerido), `Categoría` (requerido, ej: SECA, FRESCA, etc.), `Unidad` (requerido, ej: KG, LT, UND)
+              `Código` (opcional, se autogenera si está vacío, ej: MT001), `Nombre` (requerido), `Categoría` (requerido, ej: SECA, FRESCA, etc.), `Unidad` (requerido, ej: KG, LT, UND), `Exento de IVA` (Sí/No)
             </>
           ) : (
             <>
@@ -344,7 +345,7 @@ const BulkUpload = () => {
       <Card className="mb-6 border-destructive">
         <CardHeader>
           <CardTitle className="text-destructive">Gestión Avanzada de Datos</CardTitle>
-          <CardDescription>Opciones para respaldar o eliminar datos existentes. Requiere PIN de seguridad.</CardDescription>
+          <CardDescription>Opciones para respaldar, eliminar o reiniciar datos existentes. Requiere PIN de seguridad.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Suppliers */}
@@ -403,6 +404,19 @@ const BulkUpload = () => {
               <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todos
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6 border-destructive">
+        <CardHeader>
+          <CardTitle className="text-destructive">Reinicio Completo de Datos</CardTitle>
+          <CardDescription>
+            <strong>¡ADVERTENCIA!</strong> Esto eliminará TODOS tus proveedores, materiales y relaciones,
+            y reiniciará los correlativos de los códigos a P001 y MT001.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResetDataButton />
         </CardContent>
       </Card>
 
