@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { UploadCloud, FileText, Download } from 'lucide-react';
+import { UploadCloud, FileText, Download, Trash2, DatabaseBackup } from 'lucide-react';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import DialogTitle and DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import PinInputDialog from '@/components/PinInputDialog'; // Import the new PIN input dialog
 
 interface UploadResult {
   successCount: number;
@@ -24,6 +25,12 @@ const BulkUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+
+  // State for PIN dialog
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [pinActionType, setPinActionType] = useState<'backup' | 'delete' | null>(null);
+  const [pinDataType, setPinDataType] = useState<'supplier' | 'material' | 'supplier_material_relation' | null>(null);
+  const [isConfirmingPin, setIsConfirmingPin] = useState(false);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'supplier' | 'material' | 'supplier_material_relation') => {
     if (event.target.files && event.target.files[0]) {
@@ -98,34 +105,37 @@ const BulkUpload = () => {
     }
   };
 
-  const handleDownloadTemplate = async (type: 'supplier' | 'material' | 'supplier_material_relation') => {
+  const handleDownloadTemplate = async (type: 'supplier' | 'material' | 'supplier_material_relation', mode: 'template' | 'backup', pin?: string) => {
     if (!session) {
-      showError('No hay sesión activa. Por favor, inicia sesión para descargar la plantilla.');
+      showError('No hay sesión activa. Por favor, inicia sesión para descargar.');
       return;
     }
 
     setDownloadingTemplate(true);
-    const loadingToastId = showLoading(`Generando plantilla de ${type === 'supplier' ? 'proveedores' : (type === 'material' ? 'materiales' : 'relaciones proveedor-material')}...`);
+    const loadingToastId = showLoading(`Generando ${mode === 'template' ? 'plantilla' : 'respaldo'} de ${type === 'supplier' ? 'proveedores' : (type === 'material' ? 'materiales' : 'relaciones proveedor-material')}...`);
 
     try {
-      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-template`, {
+      const functionName = mode === 'template' ? 'generate-template' : 'export-data';
+      const body = mode === 'template' ? JSON.stringify({ type }) : JSON.stringify({ type, pin });
+
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/${functionName}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ type }),
+        body: body,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al generar la plantilla.');
+        throw new Error(errorData.error || `Error al generar ${mode === 'template' ? 'la plantilla' : 'el respaldo'}.`);
       }
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get('Content-Disposition');
       const fileNameMatch = contentDisposition && contentDisposition.match(/filename="([^"]+)"/);
-      const fileName = fileNameMatch ? fileNameMatch[1] : `template_${type}.xlsx`;
+      const fileName = fileNameMatch ? fileNameMatch[1] : `${mode === 'template' ? 'plantilla' : 'respaldo'}_${type}.xlsx`;
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -136,14 +146,77 @@ const BulkUpload = () => {
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      dismissToast(loadingToastId); // Dismiss the loading toast
-      showSuccess('Plantilla descargada exitosamente.');
+      dismissToast(loadingToastId);
+      showSuccess(`${mode === 'template' ? 'Plantilla' : 'Respaldo'} descargado exitosamente.`);
     } catch (error: any) {
-      console.error('[BulkUpload] Error downloading template:', error);
-      dismissToast(loadingToastId); // Dismiss the loading toast even on error
-      showError(error.message || 'Error desconocido al descargar la plantilla.');
+      console.error('[BulkUpload] Error downloading data:', error);
+      dismissToast(loadingToastId);
+      showError(error.message || `Error desconocido al descargar ${mode === 'template' ? 'la plantilla' : 'el respaldo'}.`);
     } finally {
       setDownloadingTemplate(false);
+      setIsConfirmingPin(false);
+      setIsPinDialogOpen(false);
+    }
+  };
+
+  const handleDeleteAll = async (type: 'supplier' | 'material' | 'supplier_material_relation', pin: string) => {
+    if (!session) {
+      showError('No hay sesión activa. Por favor, inicia sesión para eliminar datos.');
+      return;
+    }
+
+    setIsConfirmingPin(true);
+    const loadingToastId = showLoading(`Eliminando todos los ${type === 'supplier' ? 'proveedores' : (type === 'material' ? 'materiales' : 'relaciones proveedor-material')}...`);
+
+    try {
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/delete-all-data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type, pin }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error al eliminar todos los ${type === 'supplier' ? 'proveedores' : (type === 'material' ? 'materiales' : 'relaciones proveedor-material')}.`);
+      }
+
+      const result = await response.json();
+      dismissToast(loadingToastId);
+      showSuccess(result.message);
+
+      // Optionally, invalidate queries to refresh data in other components
+      // queryClient.invalidateQueries({ queryKey: [type === 'supplier' ? 'suppliers' : (type === 'material' ? 'materials' : 'supplierMaterials')] });
+
+    } catch (error: any) {
+      console.error('[BulkUpload] Error deleting all data:', error);
+      dismissToast(loadingToastId);
+      showError(error.message || 'Error desconocido al eliminar datos.');
+    } finally {
+      setIsConfirmingPin(false);
+      setIsPinDialogOpen(false);
+    }
+  };
+
+  const openPinDialogForBackup = (type: 'supplier' | 'material' | 'supplier_material_relation') => {
+    setPinActionType('backup');
+    setPinDataType(type);
+    setIsPinDialogOpen(true);
+  };
+
+  const openPinDialogForDelete = (type: 'supplier' | 'material' | 'supplier_material_relation') => {
+    setPinActionType('delete');
+    setPinDataType(type);
+    setIsPinDialogOpen(true);
+  };
+
+  const handlePinConfirm = (pin: string) => {
+    if (pinActionType === 'backup' && pinDataType) {
+      handleDownloadTemplate(pinDataType, 'backup', pin);
+    } else if (pinActionType === 'delete' && pinDataType) {
+      handleDeleteAll(pinDataType, pin);
     }
   };
 
@@ -176,7 +249,7 @@ const BulkUpload = () => {
         <Dialog open={!!uploadResult} onOpenChange={() => setUploadResult(null)}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Resultados de la Carga Masiva</DialogTitle> {/* Added DialogTitle */}
+              <DialogTitle>Resultados de la Carga Masiva</DialogTitle>
               <DialogDescription>
                 {uploadResult.successCount} registros procesados exitosamente, {uploadResult.failureCount} con errores.
               </DialogDescription>
@@ -214,7 +287,7 @@ const BulkUpload = () => {
           variant="outline"
           size="sm"
           className="mt-2"
-          onClick={() => handleDownloadTemplate(type)}
+          onClick={() => handleDownloadTemplate(type, 'template')}
           disabled={downloadingTemplate}
         >
           <Download className="mr-2 h-4 w-4" />
@@ -267,7 +340,87 @@ const BulkUpload = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Card className="mb-6 border-destructive">
+        <CardHeader>
+          <CardTitle className="text-destructive">Gestión Avanzada de Datos</CardTitle>
+          <CardDescription>Opciones para respaldar o eliminar datos existentes. Requiere PIN de seguridad.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Suppliers */}
+          <div className="flex flex-col gap-2 p-4 border rounded-md">
+            <h4 className="font-semibold">Proveedores</h4>
+            <Button
+              variant="outline"
+              onClick={() => openPinDialogForBackup('supplier')}
+              disabled={downloadingTemplate}
+            >
+              <DatabaseBackup className="mr-2 h-4 w-4" /> Descargar Respaldo
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => openPinDialogForDelete('supplier')}
+              disabled={isConfirmingPin}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todos
+            </Button>
+          </div>
+
+          {/* Materials */}
+          <div className="flex flex-col gap-2 p-4 border rounded-md">
+            <h4 className="font-semibold">Materiales</h4>
+            <Button
+              variant="outline"
+              onClick={() => openPinDialogForBackup('material')}
+              disabled={downloadingTemplate}
+            >
+              <DatabaseBackup className="mr-2 h-4 w-4" /> Descargar Respaldo
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => openPinDialogForDelete('material')}
+              disabled={isConfirmingPin}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todos
+            </Button>
+          </div>
+
+          {/* Relations */}
+          <div className="flex flex-col gap-2 p-4 border rounded-md">
+            <h4 className="font-semibold">Relaciones P-M</h4>
+            <Button
+              variant="outline"
+              onClick={() => openPinDialogForBackup('supplier_material_relation')}
+              disabled={downloadingTemplate}
+            >
+              <DatabaseBackup className="mr-2 h-4 w-4" /> Descargar Respaldo
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => openPinDialogForDelete('supplier_material_relation')}
+              disabled={isConfirmingPin}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todos
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <MadeWithDyad />
+
+      <PinInputDialog
+        isOpen={isPinDialogOpen}
+        onClose={() => setIsPinDialogOpen(false)}
+        onConfirm={handlePinConfirm}
+        title={pinActionType === 'backup' ? 'Confirmar Descarga de Respaldo' : 'Confirmar Eliminación de Datos'}
+        description={
+          pinActionType === 'backup'
+            ? `Introduce el PIN de 6 dígitos para descargar el respaldo de todos los ${pinDataType === 'supplier' ? 'proveedores' : (pinDataType === 'material' ? 'materiales' : 'relaciones proveedor-material')} de tu cuenta.`
+            : `Esta acción es irreversible. Introduce el PIN de 6 dígitos para eliminar permanentemente todos los ${pinDataType === 'supplier' ? 'proveedores' : (pinDataType === 'material' ? 'materiales' : 'relaciones proveedor-material')} de tu cuenta.`
+        }
+        confirmText={pinActionType === 'backup' ? 'Descargar' : 'Eliminar'}
+        isConfirming={isConfirmingPin}
+      />
     </div>
   );
 };
