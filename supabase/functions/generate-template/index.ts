@@ -47,7 +47,7 @@ serve(async (req) => {
         fileName = 'plantilla_proveedores.xlsx';
         break;
       case 'material':
-        headers = ['Código', 'Nombre', 'Categoría', 'Unidad'];
+        headers = ['Código', 'Nombre', 'Categoría', 'Unidad', 'Exento de IVA']; // Added 'Exento de IVA'
         fileName = 'plantilla_materiales.xlsx';
         break;
       case 'supplier_material_relation':
