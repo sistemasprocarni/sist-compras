@@ -160,17 +160,6 @@ serve(async (req) => {
     drawText(`RIF: ${request.suppliers?.rif || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
-    // --- Detalles de la Solicitud ---
-    drawText('DETALLES DE LA SOLICITUD:', margin, y, { font: boldFont });
-    y -= lineHeight;
-    drawText(`Moneda: ${request.currency}`, margin, y);
-    y -= lineHeight;
-    if (request.exchange_rate) {
-      drawText(`Tasa de Cambio: ${request.exchange_rate.toFixed(2)}`, margin, y);
-      y -= lineHeight;
-    }
-    y -= lineHeight * 2;
-
     // --- Tabla de Ítems Solicitados ---
     drawTableHeader(); // Draw initial table header
 
