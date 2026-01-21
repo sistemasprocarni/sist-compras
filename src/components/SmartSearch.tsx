@@ -24,7 +24,6 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
-  const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
   const debounceTimeoutRef = useRef<number | null>(null);
 
   // Update internal state if displayValue changes from parent
@@ -41,20 +40,11 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     if (searchQuery.trim() === '') {
       setResults([]);
-      // Fetch suggestions when query is empty
-      try {
-        const data = await fetchFunction('');
-        setSuggestions(data.slice(0, 5)); // Show top 5 suggestions
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
-        setSuggestions([]);
-      }
       return;
     }
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
-      setSuggestions([]); // Clear suggestions when there's a query
     } catch (error) {
       console.error('Error fetching search results:', error);
       setResults([]);
@@ -104,38 +94,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
             onValueChange={setQuery}
           />
           <CommandList>
-            <CommandEmpty>
-              {query.trim() === '' ? (
-                suggestions.length > 0 ? (
-                  <div className="py-2 px-4 text-sm text-muted-foreground">
-                    Sugerencias:
-                  </div>
-                ) : (
-                  'No se encontraron resultados.'
-                )
-              ) : (
-                'No se encontraron resultados.'
-              )}
-            </CommandEmpty>
-            {query.trim() === '' && suggestions.length > 0 && (
-              <CommandGroup heading="Sugerencias">
-                {suggestions.map((item) => (
-                  <CommandItem
-                    key={item.id}
-                    value={item.name}
-                    onSelect={() => handleSelect(item)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {item.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup>
               {results.map((item) => (
                 <CommandItem
