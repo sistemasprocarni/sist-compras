@@ -29,6 +29,7 @@ const MATERIAL_CATEGORIES = [
   'FARMACIA',
   'MEDICION Y MANIPULACION',
   'ENCERADOS',
+  'PUBLICIDAD', // Nueva categoría
 ];
 
 // Define las unidades de medida.
