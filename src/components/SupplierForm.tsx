@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from '@hookform/react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -73,7 +73,6 @@ interface SupplierFormProps {
 }
 
 const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: SupplierFormProps) => {
-  const [selectedMaterials, setSelectedMaterials] = useState<SupplierFormValues['materials']>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: allMaterials, isLoading: isLoadingMaterials } = useQuery({
@@ -84,70 +83,96 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
-      code: initialData?.code || '',
-      rif: initialData?.rif || '',
-      name: initialData?.name || '',
-      email: initialData?.email || '',
-      phone: initialData?.phone || '',
-      phone_2: initialData?.phone_2 || '',
-      instagram: initialData?.instagram || '',
-      address: initialData?.address || '',
-      payment_terms: initialData?.payment_terms || 'Contado',
-      custom_payment_terms: initialData?.custom_payment_terms || '',
-      credit_days: initialData?.credit_days || 0,
-      status: initialData?.status || 'Activo',
+      code: '',
+      rif: '',
+      name: '',
+      email: '',
+      phone: '',
+      phone_2: '',
+      instagram: '',
+      address: '',
+      payment_terms: 'Contado',
+      custom_payment_terms: '',
+      credit_days: 0,
+      status: 'Activo',
       materials: [],
     },
   });
 
-  // Inicializar materiales seleccionados
+  const currentMaterialsInForm = form.watch('materials');
+
   useEffect(() => {
-    if (initialData?.materials) {
-      const formattedMaterials = initialData.materials.map(mat => ({
+    if (initialData) {
+      const formattedMaterials = initialData.materials?.map(mat => ({
         material_id: mat.material_id,
         material_name: mat.materials?.name || '',
         material_category: mat.materials?.category || '',
         specification: mat.specification || '',
-      }));
-      setSelectedMaterials(formattedMaterials);
-      form.setValue('materials', formattedMaterials);
+      })) || [];
+
+      form.reset({
+        code: initialData.code || '',
+        rif: initialData.rif || '',
+        name: initialData.name || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        phone_2: initialData.phone_2 || '',
+        instagram: initialData.instagram || '',
+        address: initialData.address || '',
+        payment_terms: initialData.payment_terms || 'Contado',
+        custom_payment_terms: initialData.custom_payment_terms || '',
+        credit_days: initialData.credit_days || 0,
+        status: initialData.status || 'Activo',
+        materials: formattedMaterials,
+      });
     } else {
-      setSelectedMaterials([]);
-      form.setValue('materials', []);
+      form.reset({
+        code: '',
+        rif: '',
+        name: '',
+        email: '',
+        phone: '',
+        phone_2: '',
+        instagram: '',
+        address: '',
+        payment_terms: 'Contado',
+        custom_payment_terms: '',
+        credit_days: 0,
+        status: 'Activo',
+        materials: [],
+      });
     }
   }, [initialData, form]);
 
   const handleAddMaterial = (material: { id: string; name: string; category?: string }) => {
-    // Verificar si el material ya está seleccionado
-    if (selectedMaterials.some(m => m.material_id === material.id)) {
+    const materialsArray = form.getValues('materials') || [];
+    if (materialsArray.some(m => m.material_id === material.id)) {
       showError('Este material ya está asociado al proveedor');
       return;
     }
 
-    const newMaterial = {
+    const newMaterialEntry = {
       material_id: material.id,
       material_name: material.name,
       material_category: material.category,
       specification: '',
     };
 
-    const updatedMaterials = [...selectedMaterials, newMaterial];
-    setSelectedMaterials(updatedMaterials);
-    form.setValue('materials', updatedMaterials);
+    form.setValue('materials', [...materialsArray, newMaterialEntry], { shouldDirty: true });
   };
 
   const handleRemoveMaterial = (materialId: string) => {
-    const updatedMaterials = selectedMaterials.filter(m => m.material_id !== materialId);
-    setSelectedMaterials(updatedMaterials);
-    form.setValue('materials', updatedMaterials);
+    const materialsArray = form.getValues('materials') || [];
+    const updatedMaterials = materialsArray.filter(m => m.material_id !== materialId);
+    form.setValue('materials', updatedMaterials, { shouldDirty: true });
   };
 
   const handleSpecificationChange = (materialId: string, specification: string) => {
-    const updatedMaterials = selectedMaterials.map(m =>
+    const materialsArray = form.getValues('materials') || [];
+    const updatedMaterials = materialsArray.map(m =>
       m.material_id === materialId ? { ...m, specification } : m
     );
-    setSelectedMaterials(updatedMaterials);
-    form.setValue('materials', updatedMaterials);
+    form.setValue('materials', updatedMaterials, { shouldDirty: true });
   };
 
   const filteredMaterials = allMaterials?.filter(material =>
@@ -387,9 +412,9 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
             )}
           </div>
 
-          {selectedMaterials.length > 0 ? (
+          {currentMaterialsInForm && currentMaterialsInForm.length > 0 ? (
             <div className="space-y-3">
-              {selectedMaterials.map((material) => (
+              {currentMaterialsInForm.map((material) => (
                 <div key={material.material_id} className="p-3 border rounded-md flex flex-col gap-2">
                   <div className="flex justify-between items-start">
                     <div>
