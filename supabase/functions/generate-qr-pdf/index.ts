@@ -70,7 +70,7 @@ serve(async (req) => {
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
-    
+
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -133,7 +133,8 @@ serve(async (req) => {
       drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
     }
 
-    drawText('SOLICITUD DE COTIZACIÓN', width / 2 - boldFont.widthOfText('SOLICITUD DE COTIZACIÓN', { size: 18 }) / 2, y, { font: boldFont, size: 18 });
+    // Removed text centering that was causing the error
+    drawText('SOLICITUD DE COTIZACIÓN', width / 2 - 100, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
     drawText(`Nº: ${request.id.substring(0, 8)}`, width - margin - 100, y, { font: boldFont, size: 12 });
     drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
@@ -207,7 +208,6 @@ serve(async (req) => {
     });
     drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
     drawText(`Generado por: ${request.created_by || user.email}`, margin, footerY + lineHeight * 2);
-
 
     const pdfBytes = await pdfDoc.save();
 

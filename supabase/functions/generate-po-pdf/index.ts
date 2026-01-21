@@ -96,7 +96,6 @@ const numberToWords = (amount: number, currency: 'VES' | 'USD'): string => {
   return `${texto} CON ${decimalTexto}/100`.trim();
 };
 
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -222,7 +221,8 @@ serve(async (req) => {
       drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
     }
 
-    drawText('ORDEN DE COMPRA', width / 2 - boldFont.widthOfText('ORDEN DE COMPRA', { size: 18 }) / 2, y, { font: boldFont, size: 18 });
+    // Removed text centering that was causing the error
+    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
     drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 12 });
     drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
@@ -318,7 +318,6 @@ serve(async (req) => {
     });
     drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
     drawText(`Generado por: ${order.created_by || user.email}`, margin, footerY + lineHeight * 2);
-
 
     const pdfBytes = await pdfDoc.save();
 
