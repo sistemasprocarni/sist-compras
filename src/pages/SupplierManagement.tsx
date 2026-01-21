@@ -5,15 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier } from '@/integrations/supabase/data';
+import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
+
+interface MaterialAssociation {
+  id?: string;
+  material_id: string;
+  specification?: string;
+  materials?: {
+    id: string;
+    name: string;
+    category?: string;
+  };
+}
 
 interface Supplier {
   id: string;
@@ -30,16 +41,7 @@ interface Supplier {
   credit_days: number;
   status: string;
   user_id: string;
-  materials?: Array<{
-    id?: string;
-    material_id: string;
-    specification?: string;
-    materials?: {
-      id: string;
-      name: string;
-      category?: string;
-    };
-  }>;
+  materials?: MaterialAssociation[]; // Ensure this is correctly typed
 }
 
 interface SupplierFormValues {
@@ -75,6 +77,7 @@ const SupplierManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDeleteId, setSupplierToDeleteId] = useState<string | null>(null);
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false); // New loading state for edit
 
   const { data: suppliers, isLoading, error } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
@@ -141,9 +144,21 @@ const SupplierManagement = () => {
     setIsFormOpen(true);
   };
 
-  const handleEditSupplier = (supplier: Supplier) => {
-    setEditingSupplier(supplier);
-    setIsFormOpen(true);
+  const handleEditSupplier = async (supplierId: string) => {
+    setIsLoadingEditData(true);
+    try {
+      const fullSupplierDetails = await getSupplierDetails(supplierId);
+      if (fullSupplierDetails) {
+        setEditingSupplier(fullSupplierDetails);
+        setIsFormOpen(true);
+      } else {
+        showError('No se pudieron cargar los detalles completos del proveedor.');
+      }
+    } catch (err: any) {
+      showError(`Error al cargar detalles del proveedor: ${err.message}`);
+    } finally {
+      setIsLoadingEditData(false);
+    }
   };
 
   const handleViewSupplier = (supplierId: string) => {
@@ -215,12 +230,19 @@ const SupplierManagement = () => {
               <DialogHeader>
                 <DialogTitle>{editingSupplier ? 'Editar Proveedor' : 'Añadir Nuevo Proveedor'}</DialogTitle>
               </DialogHeader>
-              <SupplierForm
-                initialData={editingSupplier || undefined}
-                onSubmit={handleSubmitForm}
-                onCancel={() => setIsFormOpen(false)}
-                isSubmitting={createMutation.isPending || updateMutation.isPending}
-              />
+              {isLoadingEditData ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-procarni-primary" />
+                  <span className="ml-2 text-muted-foreground">Cargando datos del proveedor...</span>
+                </div>
+              ) : (
+                <SupplierForm
+                  initialData={editingSupplier || undefined}
+                  onSubmit={handleSubmitForm}
+                  onCancel={() => setIsFormOpen(false)}
+                  isSubmitting={createMutation.isPending || updateMutation.isPending}
+                />
+              )}
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -262,10 +284,14 @@ const SupplierManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier); }}
-                        disabled={deleteMutation.isPending}
+                        onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
+                        disabled={deleteMutation.isPending || isLoadingEditData}
                       >
-                        <Edit className="h-4 w-4" />
+                        {isLoadingEditData && editingSupplier?.id === supplier.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Edit className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         variant="ghost"
@@ -318,10 +344,14 @@ const SupplierManagement = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier); }}
-                          disabled={deleteMutation.isPending}
+                          onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
+                          disabled={deleteMutation.isPending || isLoadingEditData}
                         >
-                          <Edit className="h-4 w-4" />
+                          {isLoadingEditData && editingSupplier?.id === supplier.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Edit className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
