@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
+import UserDropdown from './UserDropdown'; // Import the new UserDropdown component
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -49,6 +50,9 @@ const Layout = () => {
           ))}
         </nav>
       </div>
+      <div className="mt-auto p-4 border-t"> {/* New section for user dropdown */}
+        <UserDropdown />
+      </div>
       <MadeWithDyad />
     </div>
   );
@@ -83,6 +87,9 @@ const Layout = () => {
               </NavLink>
             ))}
           </nav>
+          <div className="mt-auto p-4 border-t"> {/* New section for user dropdown in mobile */}
+            <UserDropdown />
+          </div>
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
