@@ -214,6 +214,7 @@ serve(async (req) => {
         const name = rowData['Nombre'];
         const category = rowData['Categoría'];
         const unit = rowData['Unidad'];
+        const isExemptRaw = rowData['Exento de IVA']; // NEW: Read 'Exento de IVA'
 
         if (!name) {
           failureCount++;
@@ -231,10 +232,18 @@ serve(async (req) => {
           continue;
         }
 
+        // NEW: Process isExemptRaw to boolean
+        let is_exempt = false;
+        if (isExemptRaw !== undefined && isExemptRaw !== null) {
+          const lowerCaseExempt = String(isExemptRaw).toLowerCase().trim();
+          is_exempt = ['sí', 'si', 'true', '1'].includes(lowerCaseExempt);
+        }
+
         const materialData: any = {
           name: name,
           category: category,
           unit: unit,
+          is_exempt: is_exempt, // NEW: Add is_exempt to materialData
           user_id: user.id,
         };
 
