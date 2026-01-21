@@ -38,10 +38,6 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   }, [displayValue]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.trim() === '') {
-      setResults([]);
-      return;
-    }
     try {
       const data = await fetchFunction(searchQuery);
       setResults(data);
@@ -55,9 +51,11 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
+
+    // Always debounce the fetch, even for empty queries, to avoid rapid calls on mount/clear
     debounceTimeoutRef.current = setTimeout(() => {
       debouncedFetch(query);
-    }, 300) as unknown as number; // Debounce for 300ms
+    }, 300) as unknown as number;
 
     return () => {
       if (debounceTimeoutRef.current) {
