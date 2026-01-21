@@ -28,7 +28,7 @@ const MATERIAL_UNITS = [
 ];
 
 // Definir la constante PAYMENT_TERMS_OPTIONS aquí para que esté disponible en la función Edge
-const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito', 'Otro'];
+const PAYMENT_TERMS_OPTIONS = ['Contado', 'Crédito']; // Actualizado: Solo Contado y Crédito
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -95,12 +95,12 @@ serve(async (req) => {
         const rif = validateRif(rowData['RIF']);
         const name = rowData['Nombre'];
         const email = rowData['Email'];
-        const phone = rowData['Teléfono Principal'];
+        const phone = rowData['Teléfono Principal']; // Ahora obligatorio
         const phone_2 = rowData['Teléfono Secundario'];
         const instagram = rowData['Instagram'];
         const address = rowData['Dirección'];
         let payment_terms = rowData['Términos de Pago'];
-        let custom_payment_terms = rowData['Términos de Pago Personalizados'];
+        let custom_payment_terms = rowData['Términos de Pago Personalizados']; // Se mantiene para compatibilidad, pero se ignorará si no es 'Otro'
         let credit_days = rowData['Días de Crédito'];
         let status = rowData['Estado'];
 
@@ -114,24 +114,24 @@ serve(async (req) => {
           errors.push({ row: rowNum, data: rowData, reason: 'Nombre del proveedor faltante.' });
           continue;
         }
+        if (!phone) { // Validar Teléfono Principal
+          failureCount++;
+          errors.push({ row: rowNum, data: rowData, reason: 'Teléfono Principal del proveedor faltante.' });
+          continue;
+        }
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           failureCount++;
           errors.push({ row: rowNum, data: rowData, reason: 'Formato de Email inválido.' });
           continue;
         }
+        
+        // Validar y normalizar payment_terms
         if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
-          if (payment_terms && !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
-            custom_payment_terms = payment_terms;
-            payment_terms = 'Otro';
-          } else {
-            payment_terms = 'Contado';
-          }
+          // Si el término de pago no es válido o está vacío, se establece por defecto a 'Contado'
+          payment_terms = 'Contado';
         }
-        if (payment_terms === 'Otro' && (!custom_payment_terms || custom_payment_terms.trim() === '')) {
-          failureCount++;
-          errors.push({ row: rowNum, data: rowData, reason: 'Términos de Pago Personalizados requeridos si el tipo es "Otro".' });
-          continue;
-        }
+
+        // Lógica para credit_days basada en payment_terms
         if (payment_terms === 'Crédito') {
           if (credit_days === undefined || credit_days === null || isNaN(Number(credit_days)) || Number(credit_days) < 0) {
             failureCount++;
@@ -140,8 +140,11 @@ serve(async (req) => {
           }
           credit_days = Number(credit_days);
         } else {
-          credit_days = 0;
+          credit_days = 0; // Si no es crédito, los días de crédito son 0
         }
+        
+        custom_payment_terms = null; // Siempre nulo, ya que 'Otro' no es una opción válida
+
         if (!status || !['Active', 'Inactive'].includes(status)) {
           status = 'Active';
         }
@@ -155,7 +158,7 @@ serve(async (req) => {
           instagram: instagram || null,
           address: address || null,
           payment_terms: payment_terms,
-          custom_payment_terms: custom_payment_terms || null,
+          custom_payment_terms: custom_payment_terms, // Siempre nulo
           credit_days: credit_days,
           status: status,
           user_id: user.id,

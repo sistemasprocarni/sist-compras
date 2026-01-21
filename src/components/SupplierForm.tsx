@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form'; // Corregido: importación directa desde 'react-hook-form'
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -14,20 +14,23 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getAllMaterials } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
+import { validateRif } from '@/utils/validators'; // Importar el validador de RIF
 
 // Esquema de validación
 const supplierFormSchema = z.object({
-  code: z.string().optional(),
-  rif: z.string().min(1, 'RIF es requerido'),
+  // El código se autogenera y no se gestiona en el formulario, por lo que se elimina de aquí.
+  rif: z.string().min(1, 'RIF es requerido').refine((val) => validateRif(val) !== null, {
+    message: 'Formato de RIF inválido. Ej: J123456789',
+  }),
   name: z.string().min(1, 'Nombre es requerido'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  phone_2: z.string().optional(),
-  instagram: z.string().optional(),
-  address: z.string().optional(),
-  payment_terms: z.string().min(1, 'Términos de pago son requeridos'),
-  custom_payment_terms: z.string().optional(),
-  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo'),
+  phone: z.string().min(1, 'Teléfono principal es requerido'), // Ahora obligatorio
+  phone_2: z.string().optional().or(z.literal('')),
+  instagram: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  payment_terms: z.enum(['Contado', 'Crédito'], { message: 'Términos de pago son requeridos y deben ser Contado o Crédito.' }), // Opciones limitadas
+  custom_payment_terms: z.string().optional().nullable(), // Se mantiene en el esquema pero no se usará en el UI
+  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional(), // Opcional, se valida condicionalmente
   status: z.string().min(1, 'Estado es requerido'),
   materials: z.array(
     z.object({
@@ -52,7 +55,7 @@ interface SupplierFormProps {
     phone_2?: string;
     instagram?: string;
     address?: string;
-    payment_terms: string;
+    payment_terms: 'Contado' | 'Crédito' | 'Otro'; // Mantener 'Otro' para compatibilidad con datos existentes
     custom_payment_terms?: string | null;
     credit_days: number;
     status: string;
@@ -83,7 +86,6 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierFormSchema),
     defaultValues: {
-      code: '',
       rif: '',
       name: '',
       email: '',
@@ -100,6 +102,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
   });
 
   const currentMaterialsInForm = form.watch('materials');
+  const currentPaymentTerms = form.watch('payment_terms');
 
   useEffect(() => {
     if (initialData) {
@@ -110,8 +113,10 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         specification: mat.specification || '',
       })) || [];
 
+      // Asegurarse de que payment_terms sea 'Contado' o 'Crédito' para el formulario
+      const terms = initialData.payment_terms === 'Otro' ? 'Contado' : initialData.payment_terms;
+
       form.reset({
-        code: initialData.code || '',
         rif: initialData.rif || '',
         name: initialData.name || '',
         email: initialData.email || '',
@@ -119,7 +124,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         phone_2: initialData.phone_2 || '',
         instagram: initialData.instagram || '',
         address: initialData.address || '',
-        payment_terms: initialData.payment_terms || 'Contado',
+        payment_terms: terms,
         custom_payment_terms: initialData.custom_payment_terms || '',
         credit_days: initialData.credit_days || 0,
         status: initialData.status || 'Activo',
@@ -127,7 +132,6 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
       });
     } else {
       form.reset({
-        code: '',
         rif: '',
         name: '',
         email: '',
@@ -181,24 +185,28 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
     (material.category && material.category.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
+  const handleFormSubmit = (data: SupplierFormValues) => {
+    const normalizedRif = validateRif(data.rif);
+    if (!normalizedRif) {
+      form.setError('rif', { message: 'Formato de RIF inválido.' });
+      return;
+    }
+
+    // Asegurarse de que credit_days sea 0 si no es 'Crédito'
+    const finalData = {
+      ...data,
+      rif: normalizedRif,
+      credit_days: data.payment_terms === 'Crédito' ? data.credit_days : 0,
+      custom_payment_terms: null, // Siempre nulo ya que 'Otro' no es una opción
+    };
+    onSubmit(finalData);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Código</FormLabel>
-                <FormControl>
-                  <Input placeholder="Código del proveedor" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+        {/* El campo de código ha sido eliminado */}
+        <FormField
             control={form.control}
             name="rif"
             render={({ field }) => (
@@ -215,7 +223,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem>
                 <FormLabel>Nombre</FormLabel>
                 <FormControl>
                   <Input placeholder="Nombre del proveedor" {...field} />
@@ -280,7 +288,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
             control={form.control}
             name="address"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem>
                 <FormLabel>Dirección</FormLabel>
                 <FormControl>
                   <Textarea placeholder="Dirección del proveedor" {...field} />
@@ -303,49 +311,33 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="Contado">Contado</SelectItem>
-                    <SelectItem value="Crédito 15 días">Crédito 15 días</SelectItem>
-                    <SelectItem value="Crédito 30 días">Crédito 30 días</SelectItem>
-                    <SelectItem value="Crédito 60 días">Crédito 60 días</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
+                    <SelectItem value="Crédito">Crédito</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
-          {form.watch('payment_terms') === 'Otro' && (
+          {currentPaymentTerms === 'Crédito' && (
             <FormField
               control={form.control}
-              name="custom_payment_terms"
+              name="credit_days"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Especificar términos de pago</FormLabel>
+                <FormItem>
+                  <FormLabel>Días de Crédito</FormLabel>
                   <FormControl>
-                    <Input placeholder="Especifique los términos de pago" {...field} />
+                    <Input
+                      type="number"
+                      placeholder="Días de crédito"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           )}
-          <FormField
-            control={form.control}
-            name="credit_days"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Días de Crédito</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Días de crédito"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="status"
@@ -367,8 +359,6 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
               </FormItem>
             )}
           />
-        </div>
-
         {/* Sección de materiales asociados */}
         <div className="mt-6 p-4 border rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Materiales Asociados</h3>
