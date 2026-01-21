@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { getQuoteRequestDetails, searchSuppliers, searchMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
+import { getQuoteRequestDetails, searchSuppliers, searchMaterials, searchCompanies, updateQuoteRequest } from '@/integrations/supabase/data'; // Added updateQuoteRequest
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
