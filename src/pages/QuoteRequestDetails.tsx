@@ -114,7 +114,7 @@ const QuoteRequestDetails = () => {
                 <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl h-[90vh]">
+            <DialogContent className="max-w-5xl h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
               </DialogHeader>
