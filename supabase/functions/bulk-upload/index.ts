@@ -20,7 +20,7 @@ const MATERIAL_CATEGORIES = [
   'GASES Y COMBUSTIBLE', 'ELECTRICIDAD', 'REFRIGERACION', 'INSUMOS DE OFICINA',
   'INSUMOS INDUSTRIALES', 'MECANICA Y SELLOS', 'NEUMATICA', 'INSUMOS DE LIMPIEZA',
   'FUMICACION', 'EQUIPOS DE CARNICERIA', 'FARMACIA', 'MEDICION Y MANIPULACION',
-  'ENCERADOS',
+  'ENCERADOS', 'PUBLICIDAD', // Añadida la categoría PUBLICIDAD
 ];
 
 const MATERIAL_UNITS = [
@@ -124,7 +124,7 @@ serve(async (req) => {
           errors.push({ row: rowNum, data: rowData, reason: 'Formato de Email inválido.' });
           continue;
         }
-        
+
         // Validar y normalizar payment_terms
         if (!payment_terms || !PAYMENT_TERMS_OPTIONS.includes(payment_terms)) {
           // Si el término de pago no es válido o está vacío, se establece por defecto a 'Contado'
@@ -157,7 +157,7 @@ serve(async (req) => {
         } else {
           credit_days = 0; // Si no es crédito, los días de crédito son 0
         }
-        
+
         if (!status || !['Active', 'Inactive'].includes(status)) {
           status = 'Active';
         }
