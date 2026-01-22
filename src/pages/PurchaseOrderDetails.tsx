@@ -181,7 +181,7 @@ const PurchaseOrderDetails = () => {
             <p><strong>Empresa:</strong> {order.companies?.name || 'N/A'}</p>
             <p><strong>Moneda:</strong> {order.currency}</p>
             {order.exchange_rate && <p><strong>Tasa de Cambio:</strong> {order.exchange_rate.toFixed(2)}</p>}
-            <p><strong>Estado:</strong> {order.status}</p>
+            {/* <p><strong>Estado:</strong> {order.status}</p> <-- REMOVED STATUS */}
             <p><strong>Fecha de Creación:</strong> {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}</p>
             <p><strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
             <p><strong>Condición de Pago:</strong> {displayPaymentTerms()}</p>
