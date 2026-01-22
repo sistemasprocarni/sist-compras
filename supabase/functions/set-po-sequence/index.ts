@@ -62,6 +62,7 @@ serve(async (req) => {
     );
 
     // Call the set_purchase_order_sequence_start function
+    // If startNumber is 0, it will reset to the last existing order number + 1
     const { error } = await serviceRoleClient.rpc('set_purchase_order_sequence_start', { start_number: startNumber });
 
     if (error) {
