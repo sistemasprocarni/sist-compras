@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, ShoppingCart } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -57,6 +57,7 @@ interface QuoteRequestDetailsData {
 
 const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
@@ -69,6 +70,16 @@ const QuoteRequestDetails = () => {
     },
     enabled: !!id,
   });
+
+  const handleConvertToPurchaseOrder = () => {
+    if (!request) return;
+    // Navigate to the purchase order creation page with the quote request data
+    navigate('/generate-po', {
+      state: {
+        quoteRequest: request,
+      },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -138,6 +149,9 @@ const QuoteRequestDetails = () => {
             <Link to={`/quote-requests/edit/${request.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
             </Link>
+          </Button>
+          <Button onClick={handleConvertToPurchaseOrder} className="bg-blue-600 hover:bg-blue-700">
+            <ShoppingCart className="mr-2 h-4 w-4" /> Convertir a OC
           </Button>
         </div>
       </div>

@@ -21,6 +21,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Textarea } from '@/components/ui/textarea';
+import { useLocation } from 'react-router-dom'; // Import useLocation
 
 interface Company {
   id: string;
@@ -46,6 +47,7 @@ const MATERIAL_UNITS = [
 const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
+  const location = useLocation(); // Hook para obtener el estado de la navegación
 
   const [companyId, setCompanyId] = React.useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = React.useState<string>(''); // For SmartSearch display
@@ -66,6 +68,36 @@ const GeneratePurchaseOrder = () => {
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
+
+  // Check if there's a quote request in the location state
+  const quoteRequest = location.state?.quoteRequest;
+
+  // Effect to prefill form from quote request
+  React.useEffect(() => {
+    if (quoteRequest) {
+      setCompanyId(quoteRequest.company_id);
+      setCompanyName(quoteRequest.companies?.name || '');
+      setSupplierId(quoteRequest.supplier_id);
+      setSupplierName(quoteRequest.suppliers?.name || '');
+      setCurrency(quoteRequest.currency as 'USD' | 'VES');
+      setExchangeRate(quoteRequest.exchange_rate || undefined);
+      setObservations(`Generado desde Solicitud de Cotización: ${quoteRequest.id.substring(0, 8)}`);
+
+      // Clear existing items and add items from quote request
+      clearCart();
+      quoteRequest.quote_request_items.forEach((item: any) => {
+        addItem({
+          material_name: item.material_name,
+          supplier_code: '', // No supplier code in quote request
+          quantity: item.quantity,
+          unit_price: 0, // Price needs to be entered
+          tax_rate: 0.16,
+          is_exempt: false,
+          unit: item.unit || MATERIAL_UNITS[0],
+        });
+      });
+    }
+  }, [quoteRequest]);
 
   // Fetch supplier details to get default payment terms
   const { data: supplierDetails } = useQuery({
@@ -173,6 +205,8 @@ const GeneratePurchaseOrder = () => {
       custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
       credit_days: paymentTerms === 'Crédito' ? creditDays : 0,
       observations: observations || null,
+      // Link to quote request if it exists
+      quote_request_id: quoteRequest?.id || null,
     };
 
     const createdOrder = await createPurchaseOrder(orderData, items);

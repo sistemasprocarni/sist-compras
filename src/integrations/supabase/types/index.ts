@@ -70,6 +70,7 @@ export interface PurchaseOrder {
   custom_payment_terms?: string | null;
   credit_days?: number;
   observations?: string;
+  quote_request_id?: string; // New field
 }
 
 export interface SupplierMaterialPayload {
