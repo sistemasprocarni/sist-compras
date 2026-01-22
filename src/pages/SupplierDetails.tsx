@@ -1,9 +1,9 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const { data: supplier, isLoading, error } = useQuery({
     queryKey: ['supplierDetails', id],
@@ -29,6 +30,26 @@ const SupplierDetails = () => {
       return `58${digitsOnly}`;
     }
     return digitsOnly;
+  };
+
+  const handleGenerateSC = () => {
+    if (!supplier) return;
+    // Navigate to the quote request creation page with the supplier data
+    navigate('/generate-quote', {
+      state: {
+        supplier: supplier,
+      },
+    });
+  };
+
+  const handleGenerateOC = () => {
+    if (!supplier) return;
+    // Navigate to the purchase order creation page with the supplier data
+    navigate('/generate-po', {
+      state: {
+        supplier: supplier,
+      },
+    });
   };
 
   if (isLoading) {
@@ -64,11 +85,21 @@ const SupplierDetails = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <Button asChild variant="outline" className="mb-4">
-        <Link to="/supplier-management">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la gestión de proveedores
-        </Link>
-      </Button>
+      <div className="flex justify-between items-center mb-4">
+        <Button asChild variant="outline">
+          <Link to="/supplier-management">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la gestión de proveedores
+          </Link>
+        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleGenerateSC} className="bg-procarni-secondary hover:bg-green-700">
+            <PlusCircle className="mr-2 h-4 w-4" /> Generar SC
+          </Button>
+          <Button onClick={handleGenerateOC} className="bg-blue-600 hover:bg-blue-700">
+            <ShoppingCart className="mr-2 h-4 w-4" /> Generar OC
+          </Button>
+        </div>
+      </div>
 
       <Card className="mb-6">
         <CardHeader>
