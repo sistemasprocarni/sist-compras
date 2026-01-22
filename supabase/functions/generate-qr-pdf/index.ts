@@ -251,13 +251,16 @@ serve(async (req) => {
 
     console.log(`[generate-qr-pdf] Generated PDF with filename: ${filename}`);
 
-    return new Response(pdfBytes, {
+    // Force download with the correct filename
+    const response = new Response(pdfBytes, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
+
+    return response;
 
   } catch (error) {
     console.error('[generate-qr-pdf] Error:', error);
