@@ -71,6 +71,7 @@ const GeneratePurchaseOrder = () => {
   // Check if there's a quote request in the location state
   const quoteRequest = location.state?.quoteRequest;
   const supplierData = location.state?.supplier;
+  const materialData = location.state?.material; // New: Check for material data
 
   // Effect to prefill form from quote request
   React.useEffect(() => {
@@ -106,6 +107,22 @@ const GeneratePurchaseOrder = () => {
       setSupplierName(supplierData.name);
     }
   }, [supplierData]);
+
+  // Effect to prefill material if provided
+  React.useEffect(() => {
+    if (materialData) {
+      // Add the material as the first item
+      addItem({
+        material_name: materialData.name,
+        supplier_code: '',
+        quantity: 0,
+        unit_price: 0,
+        tax_rate: 0.16,
+        is_exempt: materialData.is_exempt || false,
+        unit: materialData.unit || MATERIAL_UNITS[0],
+      });
+    }
+  }, [materialData]);
 
   // Fetch supplier details to get default payment terms
   const { data: supplierDetails } = useQuery({
