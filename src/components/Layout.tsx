@@ -1,30 +1,17 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings } from 'lucide-react';
+import { Package2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDropdown from './UserDropdown';
+import SidebarNav from './SidebarNav'; // Import the new component
 
 const Layout = () => {
   const isMobile = useIsMobile();
-  
-  const navItems = [
-    { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
-    { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
-    { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
-    { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
-    { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
-    { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
-    { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
-    { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
-    { to: '/purchase-order-management', icon: <ListOrdered className="h-5 w-5" />, label: 'Gestión de Órdenes (OC)' },
-    { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
-    { to: '/settings', icon: <Settings className="h-5 w-5" />, label: 'Configuración' }, // Added Settings link
-  ];
 
   const Sidebar = () => (
     <div className="flex h-full max-h-screen flex-col gap-2">
@@ -34,23 +21,8 @@ const Layout = () => {
           <span className="">Portal de Compras</span>
         </NavLink>
       </div>
-      <div className="flex-1">
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${
-                  isActive ? 'bg-muted text-primary' : ''
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+      <div className="flex-1 overflow-y-auto">
+        <SidebarNav />
       </div>
       <div className="mt-auto p-4 border-t">
         <UserDropdown />
@@ -69,26 +41,9 @@ const Layout = () => {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col">
-          <nav className="grid gap-2 text-lg font-medium">
-            <NavLink to="/" className="flex items-center gap-2 text-lg font-semibold">
-              <Package2 className="h-6 w-6" />
-              <span className="sr-only">Portal de Compras</span>
-            </NavLink>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground ${
-                    isActive ? 'bg-muted text-foreground' : ''
-                  }`
-                }
-              >
-                {item.icon}
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="flex-1 overflow-y-auto">
+            <SidebarNav />
+          </div>
           <div className="mt-auto p-4 border-t">
             <UserDropdown />
           </div>
