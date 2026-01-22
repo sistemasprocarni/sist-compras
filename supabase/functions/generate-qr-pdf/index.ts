@@ -249,6 +249,8 @@ serve(async (req) => {
     const safeSupplierName = supplierName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
     const filename = `SC_${safeSupplierName}_${currentDate}.pdf`;
 
+    console.log(`[generate-qr-pdf] Generated PDF with filename: ${filename}`);
+
     return new Response(pdfBytes, {
       headers: {
         ...corsHeaders,
