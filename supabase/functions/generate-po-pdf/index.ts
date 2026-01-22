@@ -96,6 +96,27 @@ const numberToWords = (amount: number, currency: 'VES' | 'USD'): string => {
   return `${texto} CON ${decimalTexto}/100`.trim();
 };
 
+// Helper function for text wrapping (approximation based on character count)
+function wrapText(text: string, maxCharsPerLine: number): string[] {
+  if (!text) return [];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if ((currentLine + ' ' + word).length > maxCharsPerLine) {
+      lines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine += (currentLine === '' ? '' : ' ') + word;
+    }
+  }
+  if (currentLine !== '') {
+    lines.push(currentLine.trim());
+  }
+  return lines;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -295,12 +316,9 @@ serve(async (req) => {
     // --- Detalles de la Orden ---
     drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
-    drawText(`Moneda: ${order.currency}`, margin, y);
-    y -= lineHeight;
-    if (order.exchange_rate) {
-      drawText(`Tasa de Cambio: ${order.exchange_rate.toFixed(2)}`, margin, y);
-      y -= lineHeight;
-    }
+    
+    // Removed Moneda and Tasa de Cambio
+    
     drawText(`Estado: ${order.status}`, margin, y);
     y -= lineHeight;
     drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
@@ -314,14 +332,14 @@ serve(async (req) => {
       y -= lineHeight;
       
       const observationsText = order.observations;
-      const maxTextWidth = tableWidth;
+      const maxCharsPerLine = 100; // Approximation for font size 10
       
-      // Use the font object to split text into runs
-      const textRuns = page.setFont(font).splitTextIntoTextRuns(observationsText, { maxWidth: maxTextWidth, fontSize: fontSize });
+      // Use the manual wrapText function
+      const textRuns = wrapText(observationsText, maxCharsPerLine);
       
       for (const run of textRuns) {
         checkPageBreak(lineHeight);
-        drawText(run.text, margin, y);
+        drawText(run, margin, y);
         y -= lineHeight;
       }
       y -= lineHeight; // Extra space after observations
