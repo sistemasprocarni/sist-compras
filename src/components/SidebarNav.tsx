@@ -10,7 +10,6 @@ const navItems = [
     category: 'Gestión Principal',
     items: [
       { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
-      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
       { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
       { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
     ]
@@ -28,6 +27,7 @@ const navItems = [
   {
     category: 'Configuración',
     items: [
+      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
       { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
       { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' }, // Renamed from "Configuración"
     ]
