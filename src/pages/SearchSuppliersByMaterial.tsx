@@ -7,7 +7,7 @@ import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase
 import { showError } from '@/utils/toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Phone, Instagram, PlusCircle } from 'lucide-react'; // Importar iconos
+import { Phone, Instagram, PlusCircle, Eye } from 'lucide-react'; // Importar iconos
 
 interface Material {
   id: string;
@@ -71,6 +71,11 @@ const SearchSuppliersByMaterial = () => {
         material: selectedMaterial,
       },
     });
+  };
+
+  const handleViewSupplierDetails = (supplier: SupplierResult) => {
+    // Navigate to the supplier details page
+    navigate(`/suppliers/${supplier.id}`);
   };
 
   return (
@@ -148,13 +153,20 @@ const SearchSuppliersByMaterial = () => {
                         <p><strong>Estado:</strong> {supplier.status}</p>
                         <p><strong>Especificación del Material:</strong> {supplier.specification || 'N/A'}</p>
                       </div>
-                      <div className="mt-4 flex justify-end">
+                      <div className="mt-4 flex justify-end gap-2">
                         <Button 
                           variant="outline" 
                           className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white"
                           onClick={() => handleCreateQuoteRequest(supplier)}
                         >
                           <PlusCircle className="mr-2 h-4 w-4" /> Crear Solicitud de Cotización
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                          onClick={() => handleViewSupplierDetails(supplier)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" /> Ver Detalles
                         </Button>
                       </div>
                     </AccordionContent>
