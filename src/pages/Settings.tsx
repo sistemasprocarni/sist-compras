@@ -6,25 +6,26 @@ import { Button } from '@/components/ui/button';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import PinConfirmationDialog from '@/components/PinConfirmationDialog';
 
 const Settings = () => {
   const { session } = useSession();
   const [startingNumber, setStartingNumber] = useState<number>(0);
-  const [adminPin, setAdminPin] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  const handleSetSequence = async () => {
+  const handleUpdateSequenceClick = () => {
     if (!session) {
       showError('No hay sesión activa. Por favor, inicia sesión.');
       return;
     }
+    setIsPinDialogOpen(true);
+  };
 
-    if (!adminPin || adminPin.length !== 6) {
-      showError('Por favor, ingresa un PIN de 6 dígitos válido.');
-      return;
-    }
+  const handleConfirmSequenceUpdate = async (pin: string) => {
+    if (!session) return;
 
-    setIsLoading(true);
+    setIsConfirming(true);
     const toastId = showLoading('Actualizando secuencia de órdenes de compra...');
 
     try {
@@ -36,7 +37,7 @@ const Settings = () => {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ startNumber: startingNumber, pin: adminPin }),
+          body: JSON.stringify({ startNumber: startingNumber, pin }),
         }
       );
 
@@ -48,13 +49,13 @@ const Settings = () => {
       const result = await response.json();
       dismissToast(toastId);
       showSuccess(result.message || 'Secuencia actualizada exitosamente.');
-      setAdminPin(''); // Clear PIN after successful update
+      setIsPinDialogOpen(false);
     } catch (error: any) {
       console.error('[Settings] Error updating sequence:', error);
       dismissToast(toastId);
       showError(error.message || 'Error desconocido al actualizar la secuencia.');
     } finally {
-      setIsLoading(false);
+      setIsConfirming(false);
     }
   };
 
@@ -88,25 +89,14 @@ const Settings = () => {
                     placeholder="0 para reiniciar, o un número para iniciar desde allí"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="adminPin">PIN de Administrador (6 dígitos)</Label>
-                  <Input
-                    id="adminPin"
-                    type="password"
-                    maxLength={6}
-                    value={adminPin}
-                    onChange={(e) => setAdminPin(e.target.value)}
-                    placeholder="Ingresa el PIN para autorizar"
-                  />
-                </div>
               </div>
               <div className="flex justify-end mt-4">
                 <Button 
-                  onClick={handleSetSequence} 
-                  disabled={isLoading}
+                  onClick={handleUpdateSequenceClick} 
+                  disabled={isConfirming}
                   className="bg-procarni-secondary hover:bg-green-700"
                 >
-                  {isLoading ? 'Actualizando...' : 'Actualizar Secuencia'}
+                  {isConfirming ? 'Actualizando...' : 'Actualizar Secuencia'}
                 </Button>
               </div>
             </div>
@@ -114,6 +104,16 @@ const Settings = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      <PinConfirmationDialog
+        isOpen={isPinDialogOpen}
+        onClose={() => setIsPinDialogOpen(false)}
+        onConfirm={handleConfirmSequenceUpdate}
+        title="Confirmar Actualización de Secuencia"
+        description="Esta acción modificará la secuencia de órdenes de compra. Introduce el PIN de 6 dígitos para autorizar."
+        confirmText="Actualizar"
+        isConfirming={isConfirming}
+      />
     </div>
   );
 };
