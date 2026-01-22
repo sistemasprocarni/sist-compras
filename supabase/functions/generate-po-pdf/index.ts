@@ -163,7 +163,7 @@ serve(async (req) => {
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
     const { width, height } = page.getSize();
-    const margin = 50;
+    const margin = 30; // Reduced margin from 50 to 30
     let y = height - margin;
     const fontSize = 10;
     const lineHeight = fontSize * 1.2;
