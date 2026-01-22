@@ -10,11 +10,17 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 const Settings = () => {
   const { session } = useSession();
   const [startingNumber, setStartingNumber] = useState<number>(0);
+  const [adminPin, setAdminPin] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSetSequence = async () => {
     if (!session) {
       showError('No hay sesión activa. Por favor, inicia sesión.');
+      return;
+    }
+
+    if (!adminPin || adminPin.length !== 6) {
+      showError('Por favor, ingresa un PIN de 6 dígitos válido.');
       return;
     }
 
@@ -30,7 +36,7 @@ const Settings = () => {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ startNumber: startingNumber }),
+          body: JSON.stringify({ startNumber: startingNumber, pin: adminPin }),
         }
       );
 
@@ -42,6 +48,7 @@ const Settings = () => {
       const result = await response.json();
       dismissToast(toastId);
       showSuccess(result.message || 'Secuencia actualizada exitosamente.');
+      setAdminPin(''); // Clear PIN after successful update
     } catch (error: any) {
       console.error('[Settings] Error updating sequence:', error);
       dismissToast(toastId);
@@ -69,8 +76,8 @@ const Settings = () => {
                 Si ingresas 0, la secuencia se reiniciará y el próximo número será 1.
                 Si ingresas un número distinto de 0 (ej. 5), el próximo número será ese.
               </p>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="startingNumber">Número inicial</Label>
                   <Input
                     id="startingNumber"
@@ -81,15 +88,26 @@ const Settings = () => {
                     placeholder="0 para reiniciar, o un número para iniciar desde allí"
                   />
                 </div>
-                <div className="flex items-end">
-                  <Button 
-                    onClick={handleSetSequence} 
-                    disabled={isLoading}
-                    className="bg-procarni-secondary hover:bg-green-700"
-                  >
-                    {isLoading ? 'Actualizando...' : 'Actualizar Secuencia'}
-                  </Button>
+                <div>
+                  <Label htmlFor="adminPin">PIN de Administrador (6 dígitos)</Label>
+                  <Input
+                    id="adminPin"
+                    type="password"
+                    maxLength={6}
+                    value={adminPin}
+                    onChange={(e) => setAdminPin(e.target.value)}
+                    placeholder="Ingresa el PIN para autorizar"
+                  />
                 </div>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button 
+                  onClick={handleSetSequence} 
+                  disabled={isLoading}
+                  className="bg-procarni-secondary hover:bg-green-700"
+                >
+                  {isLoading ? 'Actualizando...' : 'Actualizar Secuencia'}
+                </Button>
               </div>
             </div>
           </div>
