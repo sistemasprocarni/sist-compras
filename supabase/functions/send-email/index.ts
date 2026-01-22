@@ -1,7 +1,5 @@
-// supabase/functions/send-email/index.ts
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from 'https://esm.sh/resend@1.1.0'; // Usando Resend para Deno
+import { Resend } from 'https://esm.sh/resend@1.1.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -17,6 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.warn('[send-email] Unauthorized: No Authorization header');
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
@@ -29,16 +28,20 @@ serve(async (req) => {
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
+      console.warn('[send-email] Unauthorized: Invalid user session');
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
     const { to, subject, body, attachmentBase64, attachmentFilename } = await req.json();
     console.log(`[send-email] Sending email to: ${to} from user: ${user.email}`);
 
+    // Check for Resend API key
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
-      console.error('[send-email] RESEND_API_KEY is not set.');
-      return new Response(JSON.stringify({ error: 'Resend API key not configured.' }), {
+      console.error('[send-email] RESEND_API_KEY is not set in environment variables.');
+      return new Response(JSON.stringify({ 
+        error: 'Resend API key not configured. Please set RESEND_API_KEY environment variable in Supabase.' 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -55,7 +58,7 @@ serve(async (req) => {
       : [];
 
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Reemplaza con tu dominio verificado en Resend
+      from: 'onboarding@resend.dev', // Replace with your verified domain in Resend
       to: to,
       subject: subject,
       html: body,
@@ -77,8 +80,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[send-email] Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('[send-email] General error:', error);
+    return new Response(JSON.stringify({ error: error.message || 'Error desconocido en la función Edge.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
