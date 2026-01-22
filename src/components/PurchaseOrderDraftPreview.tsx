@@ -33,6 +33,7 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [tempOrderId, setTempOrderId] = useState<string | null>(null);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const [successToastId, setSuccessToastId] = useState<string | null>(null); // New state for success toast ID
 
   const generatePdf = async () => {
     if (!session) {
@@ -108,12 +109,33 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      showLoading('PDF generado. Puedes previsualizarlo.', loadingToastId);
+      
+      // Dismiss loading toast and show success message
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+        setLoadingToastId(null);
+      }
+
+      // Show success toast that will auto-dismiss
+      const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
+      setSuccessToastId(successId);
+
+      // Auto-dismiss the success toast after 2 seconds
+      setTimeout(() => {
+        if (successId) {
+          dismissToast(successId);
+          setSuccessToastId(null);
+        }
+      }, 2000);
+
 
     } catch (error: any) {
       console.error('[PurchaseOrderDraftPreview] Error generating PDF:', error);
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+        setLoadingToastId(null);
+      }
       showError(error.message || 'Error desconocido al generar el PDF.');
-      dismissToast(loadingToastId);
       // If creation failed, ensure tempOrderId is null
       if (!tempOrderId) setTempOrderId(null);
     } finally {
@@ -156,6 +178,19 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
     document.body.removeChild(link);
   };
 
+  const handleClose = () => {
+    // Clear all toasts when closing the modal
+    if (loadingToastId) {
+      dismissToast(loadingToastId);
+      setLoadingToastId(null);
+    }
+    if (successToastId) {
+      dismissToast(successToastId);
+      setSuccessToastId(null);
+    }
+    onClose();
+  };
+
   useEffect(() => {
     generatePdf();
     return () => {
@@ -168,32 +203,41 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
       }
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
+      }
+      if (successToastId) {
+        dismissToast(successToastId);
+        setSuccessToastId(null);
       }
     };
   }, [orderData.supplier_id, orderData.company_id, orderData.currency, orderData.exchange_rate, itemsData.length]); // Re-run if core data changes
 
   return (
     <div className="flex flex-col h-full">
-      {isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          Cargando previsualización del PDF...
-        </div>
-      )}
-      {pdfUrl && !isLoadingPdf && (
-        <iframe src={pdfUrl} className="flex-1 w-full h-full border-none" title="PDF Preview"></iframe>
-      )}
-      {!pdfUrl && !isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-destructive">
-          No se pudo generar la previsualización del PDF.
-        </div>
-      )}
-      <div className="flex justify-end gap-2 mt-4">
+      {/* Moved buttons to the top for better visibility */}
+      <div className="flex justify-end gap-2 mb-4">
         <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
           Descargar PDF
         </Button>
-        <Button onClick={onClose} variant="outline">
+        <Button onClick={handleClose} variant="outline">
           Cerrar
         </Button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Cargando previsualización del PDF...
+          </div>
+        )}
+        {pdfUrl && !isLoadingPdf && (
+          <iframe src={pdfUrl} className="w-full h-full border-none" title="PDF Preview"></iframe>
+        )}
+        {!pdfUrl && !isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-destructive">
+            No se pudo generar la previsualización del PDF.
+          </div>
+        )}
       </div>
     </div>
   );
