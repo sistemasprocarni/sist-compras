@@ -1,10 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useSession } from '@/components/SessionContextProvider';
 import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
@@ -22,6 +18,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { Textarea } from '@/components/ui/textarea';
 import { useLocation } from 'react-router-dom'; // Import useLocation
+import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
+import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
 
 interface Company {
   id: string;
@@ -121,12 +119,6 @@ const GeneratePurchaseOrder = () => {
     }
   }, [supplierDetails]);
 
-  // New wrapper function for material search, filtered by selected supplier
-  const searchSupplierMaterials = async (query: string) => {
-    if (!supplierId) return [];
-    return searchMaterialsBySupplier(supplierId, query);
-  };
-
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     // Update material_name, unit, and is_exempt based on selected material
     updateItem(index, {
@@ -152,6 +144,11 @@ const GeneratePurchaseOrder = () => {
   const handleCompanySelect = (company: Company) => {
     setCompanyId(company.id);
     setCompanyName(company.name);
+  };
+
+  const handleSupplierSelect = (supplier: { id: string; name: string }) => {
+    setSupplierId(supplier.id);
+    setSupplierName(supplier.name);
   };
 
   const totals = calculateTotals(items);
@@ -237,232 +234,38 @@ const GeneratePurchaseOrder = () => {
           <CardDescription>Crea una nueva orden de compra para tus proveedores.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <Label htmlFor="company">Empresa de Origen</Label>
-              <SmartSearch
-                placeholder="Buscar empresa por RIF o nombre"
-                onSelect={handleCompanySelect}
-                fetchFunction={searchCompanies}
-                displayValue={companyName}
-              />
-              {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
-            </div>
-            <div>
-              <Label htmlFor="supplier">Proveedor</Label>
-              <SmartSearch
-                placeholder="Buscar proveedor por RIF o nombre"
-                onSelect={(supplier) => {
-                  setSupplierId(supplier.id);
-                  setSupplierName(supplier.name);
-                }}
-                fetchFunction={searchSuppliers}
-                displayValue={supplierName}
-              />
-              {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
-            </div>
-            <div>
-              <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !deliveryDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deliveryDate ? format(deliveryDate, "PPP") : <span>Selecciona una fecha</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={deliveryDate}
-                    onSelect={setDeliveryDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="currency">Moneda (USD/VES)</Label>
-              <Switch
-                id="currency"
-                checked={currency === 'VES'}
-                onCheckedChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
-              />
-              <span>{currency}</span>
-            </div>
-            {currency === 'VES' && (
-              <div>
-                <Label htmlFor="exchangeRate">Tasa de Cambio (USD a VES)</Label>
-                <Input
-                  id="exchangeRate"
-                  type="number"
-                  step="0.01"
-                  value={exchangeRate || ''}
-                  onChange={(e) => setExchangeRate(parseFloat(e.target.value))}
-                  placeholder="Ej: 36.50"
-                />
-              </div>
-            )}
-            <div>
-              <Label htmlFor="paymentTerms">Condición de Pago</Label>
-              <Select value={paymentTerms} onValueChange={(value: 'Contado' | 'Crédito' | 'Otro') => {
-                setPaymentTerms(value);
-                // Reset related fields if terms change
-                if (value !== 'Crédito') setCreditDays(0);
-                if (value !== 'Otro') setCustomPaymentTerms('');
-              }}>
-                <SelectTrigger id="paymentTerms">
-                  <SelectValue placeholder="Seleccione condición" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Contado">Contado</SelectItem>
-                  <SelectItem value="Crédito">Crédito</SelectItem>
-                  <SelectItem value="Otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {paymentTerms === 'Crédito' && (
-              <div>
-                <Label htmlFor="creditDays">Días de Crédito</Label>
-                <Input
-                  id="creditDays"
-                  type="number"
-                  value={creditDays}
-                  onChange={(e) => setCreditDays(parseInt(e.target.value) || 0)}
-                  min="0"
-                  placeholder="Ej: 30"
-                />
-              </div>
-            )}
-            {paymentTerms === 'Otro' && (
-              <div className="md:col-span-2">
-                <Label htmlFor="customPaymentTerms">Términos de Pago Personalizados</Label>
-                <Input
-                  id="customPaymentTerms"
-                  type="text"
-                  value={customPaymentTerms}
-                  onChange={(e) => setCustomPaymentTerms(e.target.value)}
-                  placeholder="Describa los términos de pago"
-                />
-              </div>
-            )}
-          </div>
+          <PurchaseOrderDetailsForm
+            companyId={companyId}
+            companyName={companyName}
+            supplierId={supplierId}
+            supplierName={supplierName}
+            currency={currency}
+            exchangeRate={exchangeRate}
+            deliveryDate={deliveryDate}
+            paymentTerms={paymentTerms}
+            customPaymentTerms={customPaymentTerms}
+            creditDays={creditDays}
+            observations={observations}
+            onCompanySelect={handleCompanySelect}
+            onSupplierSelect={handleSupplierSelect}
+            onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
+            onExchangeRateChange={setExchangeRate}
+            onDeliveryDateChange={setDeliveryDate}
+            onPaymentTermsChange={setPaymentTerms}
+            onCustomPaymentTermsChange={setCustomPaymentTerms}
+            onCreditDaysChange={setCreditDays}
+            onObservationsChange={setObservations}
+          />
 
-          <div className="mb-6">
-            <Label htmlFor="observations">Observaciones</Label>
-            <Textarea
-              id="observations"
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Añade cualquier observación relevante para esta orden de compra."
-              rows={3}
-            />
-          </div>
-
-          <h3 className="text-lg font-semibold mb-4">Ítems de la Orden</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Unidad</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
-                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
-                  <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
-                  <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Exento</th>
-                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {items.map((item, index) => {
-                  const subtotal = item.quantity * item.unit_price;
-                  const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
-
-                  return (
-                    <tr key={index}>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <SmartSearch
-                          placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
-                          onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                          fetchFunction={searchSupplierMaterials}
-                          displayValue={item.material_name}
-                          disabled={!supplierId}
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <Input
-                          type="text"
-                          value={item.supplier_code || ''}
-                          onChange={(e) => handleItemChange(index, 'supplier_code', e.target.value)}
-                          placeholder="Código Prov."
-                          className="h-8"
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
-                          min="0"
-                          className="h-8"
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Unidad" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {MATERIAL_UNITS.map(unitOption => (
-                              <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.unit_price}
-                          onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value))}
-                          min="0"
-                          className="h-8"
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
-                        {currency} {subtotal.toFixed(2)}
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-center text-sm">
-                        {currency} {itemIva.toFixed(2)}
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-center">
-                        <Switch
-                          checked={item.is_exempt}
-                          onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
-                          disabled={!item.material_name}
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-right">
-                        <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <Button variant="outline" onClick={handleAddItem} className="w-full mt-4">
-            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-          </Button>
+          <PurchaseOrderItemsTable
+            items={items}
+            supplierId={supplierId}
+            currency={currency}
+            onAddItem={handleAddItem}
+            onRemoveItem={handleRemoveItem}
+            onItemChange={handleItemChange}
+            onMaterialSelect={handleMaterialSelect}
+          />
 
           <div className="mt-8 border-t pt-4">
             <div className="flex justify-end items-center mb-2">

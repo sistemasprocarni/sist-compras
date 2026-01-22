@@ -79,7 +79,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
               const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
 
               return (
-                <tr key={item.id || index}>
+                <tr key={index}>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <SmartSearch
                       placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
