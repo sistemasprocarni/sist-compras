@@ -16,7 +16,7 @@ import { getAllMaterials } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { validateRif } from '@/utils/validators'; // Importar el validador de RIF
 
-// Esquema de validación
+// Esquema de validación - reestructurado para evitar problemas con ctx.parent
 const supplierFormSchema = z.object({
   // El código se autogenera y no se gestiona en el formulario, por lo que se elimina de aquí.
   rif: z.string().min(1, 'RIF es requerido').refine((val) => validateRif(val) !== null, {
@@ -29,30 +29,9 @@ const supplierFormSchema = z.object({
   instagram: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   payment_terms: z.enum(['Contado', 'Crédito', 'Otro'], { message: 'Términos de pago son requeridos y deben ser Contado, Crédito u Otro.' }), // Opciones limitadas
-  custom_payment_terms: z.string().optional().nullable().refine((val, ctx) => {
-    // Asegurarse de que ctx.parent esté definido antes de acceder a payment_terms
-    const paymentTerms = ctx.parent?.payment_terms;
-    if (paymentTerms === 'Otro' && (!val || val.trim() === '')) {
-      return ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Términos de pago personalizados son requeridos si el tipo es "Otro".',
-        path: ['custom_payment_terms'],
-      });
-    }
-    return true;
-  }),
-  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional().refine((val, ctx) => {
-    // Asegurarse de que ctx.parent esté definido antes de acceder a payment_terms
-    const paymentTerms = ctx.parent?.payment_terms;
-    if (paymentTerms === 'Crédito' && (val === undefined || val === null)) {
-      return ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Días de crédito son requeridos para términos de "Crédito".',
-        path: ['credit_days'],
-      });
-    }
-    return true;
-  }),
+  // Eliminamos las validaciones condicionales que dependen de ctx.parent
+  custom_payment_terms: z.string().optional().nullable(),
+  credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional(),
   status: z.string().min(1, 'Estado es requerido'),
   materials: z.array(
     z.object({
@@ -208,6 +187,17 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
     const normalizedRif = validateRif(data.rif);
     if (!normalizedRif) {
       form.setError('rif', { message: 'Formato de RIF inválido.' });
+      return;
+    }
+
+    // Validaciones manuales para campos condicionales
+    if (data.payment_terms === 'Otro' && (!data.custom_payment_terms || data.custom_payment_terms.trim() === '')) {
+      form.setError('custom_payment_terms', { message: 'Términos de pago personalizados son requeridos si el tipo es "Otro".' });
+      return;
+    }
+
+    if (data.payment_terms === 'Crédito' && (data.credit_days === undefined || data.credit_days === null || data.credit_days <= 0)) {
+      form.setError('credit_days', { message: 'Días de crédito son requeridos y deben ser mayores a 0 para términos de "Crédito".' });
       return;
     }
 
