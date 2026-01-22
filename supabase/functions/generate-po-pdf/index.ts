@@ -248,12 +248,12 @@ serve(async (req) => {
     const tableWidth = width - 2 * margin;
     // Updated column widths for better spacing
     const colWidths = [
-      tableWidth * 0.35,  // Material
+      tableWidth * 0.30,  // Material
       tableWidth * 0.10,  // Cantidad
       tableWidth * 0.10,  // Unidad
       tableWidth * 0.15,  // P. Unitario
       tableWidth * 0.15,  // IVA
-      tableWidth * 0.15   // Total
+      tableWidth * 0.20   // Total
     ];
     const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 

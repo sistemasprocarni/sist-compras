@@ -41,6 +41,7 @@ const PurchaseOrderService = {
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
+        unit: item.unit, // Added unit field
       }));
 
       const { error: itemsError } = await supabase
@@ -93,6 +94,7 @@ const PurchaseOrderService = {
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
+        unit: item.unit, // Added unit field
       }));
 
       const { error: itemsError } = await supabase

@@ -96,4 +96,5 @@ export interface PurchaseOrderItem {
   unit_price: number;
   tax_rate?: number;
   is_exempt?: boolean;
+  unit?: string; // Added unit field
 }

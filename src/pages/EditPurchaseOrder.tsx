@@ -36,6 +36,7 @@ interface PurchaseOrderItemForm {
   unit_price: number;
   tax_rate?: number;
   is_exempt?: boolean;
+  unit?: string; // Added unit field
 }
 
 interface MaterialSearchResult {
@@ -46,6 +47,11 @@ interface MaterialSearchResult {
   unit?: string;
   is_exempt?: boolean;
 }
+
+// Define las unidades de medida.
+const MATERIAL_UNITS = [
+  'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
+];
 
 const EditPurchaseOrder = () => {
   const { id } = useParams<{ id: string }>();
@@ -109,6 +115,7 @@ const EditPurchaseOrder = () => {
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
+        unit: item.unit || MATERIAL_UNITS[0], // Added unit field
       })));
     }
   }, [initialOrder]);
@@ -150,7 +157,7 @@ const EditPurchaseOrder = () => {
   }
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false }]);
+    setItems((prevItems) => [...prevItems, { material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0] }]);
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseOrderItemForm, value: any) => {
@@ -164,8 +171,9 @@ const EditPurchaseOrder = () => {
   };
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
-    // Update material_name and is_exempt based on selected material
+    // Update material_name, unit, and is_exempt based on selected material
     handleItemChange(index, 'material_name', material.name);
+    handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
   };
 
@@ -387,6 +395,7 @@ const EditPurchaseOrder = () => {
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Unidad</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
                   <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
                   <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
@@ -427,6 +436,18 @@ const EditPurchaseOrder = () => {
                           min="0"
                           className="h-8"
                         />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Unidad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MATERIAL_UNITS.map(unitOption => (
+                              <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         <Input
