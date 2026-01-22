@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createQuoteRequest, searchSuppliers, searchMaterials, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
-import { useQuery } from '@tanstack/react-query';
+import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchCompanies } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 
@@ -57,8 +56,11 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // No longer fetching all companies to auto-select the first one.
-  // The SmartSearch will handle fetching companies as needed.
+  // New wrapper function for material search, filtered by selected supplier
+  const searchSupplierMaterials = async (query: string) => {
+    if (!supplierId) return [];
+    return searchMaterialsBySupplier(supplierId, query);
+  };
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0], is_exempt: false }]);
@@ -196,10 +198,11 @@ const GenerateQuoteRequest = () => {
                 <div className="md:col-span-2">
                   <Label htmlFor={`material_name-${index}`}>Material</Label>
                   <SmartSearch
-                    placeholder="Buscar material por nombre o código"
+                    placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
                     onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                    fetchFunction={searchMaterials}
+                    fetchFunction={searchSupplierMaterials}
                     displayValue={item.material_name}
+                    disabled={!supplierId}
                   />
                 </div>
                 <div>
@@ -222,7 +225,7 @@ const GenerateQuoteRequest = () => {
                     rows={1}
                   />
                 </div>
-                <div>
+                <div className="flex flex-col space-y-2">
                   <Label htmlFor={`unit-${index}`}>Unidad</Label>
                   <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
                     <SelectTrigger id={`unit-${index}`}>
@@ -234,6 +237,15 @@ const GenerateQuoteRequest = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Switch
+                      id={`is_exempt-${index}`}
+                      checked={item.is_exempt}
+                      onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
+                      disabled={!item.material_name}
+                    />
+                    <Label htmlFor={`is_exempt-${index}`} className="text-xs">Exento IVA</Label>
+                  </div>
                 </div>
                 <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
                   <Trash2 className="h-4 w-4" />

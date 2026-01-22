@@ -10,8 +10,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers, searchCompanies } from '@/integrations/supabase/data'; // Added searchCompanies
-import { useQuery } from '@tanstack/react-query';
+import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPreviewModal from '@/components/PurchaseOrderPreviewModal';
@@ -21,6 +20,16 @@ interface Company {
   id: string;
   name: string;
   rif: string; // Added rif for SmartSearch
+}
+
+// Define MaterialSearchResult structure based on what searchMaterialsBySupplier returns
+interface MaterialSearchResult {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+  unit?: string;
+  is_exempt?: boolean;
 }
 
 const GeneratePurchaseOrder = () => {
@@ -39,8 +48,20 @@ const GeneratePurchaseOrder = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // No longer fetching all companies to auto-select the first one.
-  // The SmartSearch will handle fetching companies as needed.
+  // New wrapper function for material search, filtered by selected supplier
+  const searchSupplierMaterials = async (query: string) => {
+    if (!supplierId) return [];
+    return searchMaterialsBySupplier(supplierId, query);
+  };
+
+  const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
+    // Update material_name and is_exempt based on selected material
+    updateItem(index, {
+      material_name: material.name,
+      is_exempt: material.is_exempt || false,
+      // tax_rate remains 0.16 by default, calculation handles is_exempt
+    });
+  };
 
   const handleAddItem = () => {
     addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
@@ -171,11 +192,12 @@ const GeneratePurchaseOrder = () => {
               <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-md">
                 <div className="md:col-span-2">
                   <Label htmlFor={`material_name-${index}`}>Material</Label>
-                  <Input
-                    id={`material_name-${index}`}
-                    value={item.material_name}
-                    onChange={(e) => handleItemChange(index, 'material_name', e.target.value)}
-                    placeholder="Nombre del material"
+                  <SmartSearch
+                    placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+                    onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+                    fetchFunction={searchSupplierMaterials}
+                    displayValue={item.material_name}
+                    disabled={!supplierId}
                   />
                 </div>
                 <div>
@@ -204,6 +226,7 @@ const GeneratePurchaseOrder = () => {
                     id={`is_exempt-${index}`}
                     checked={item.is_exempt}
                     onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
+                    disabled={!item.material_name}
                   />
                   <Label htmlFor={`is_exempt-${index}`}>Exento IVA</Label>
                 </div>

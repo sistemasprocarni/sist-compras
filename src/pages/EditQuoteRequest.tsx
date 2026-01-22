@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { getQuoteRequestDetails, searchSuppliers, searchMaterials, searchCompanies, updateQuoteRequest } from '@/integrations/supabase/data'; // Added updateQuoteRequest
+import { getQuoteRequestDetails, searchSuppliers, searchMaterialsBySupplier, searchCompanies, updateQuoteRequest } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
@@ -87,6 +87,12 @@ const EditQuoteRequest = () => {
       })));
     }
   }, [initialRequest]);
+
+  // New wrapper function for material search, filtered by selected supplier
+  const searchSupplierMaterials = async (query: string) => {
+    if (!supplierId) return [];
+    return searchMaterialsBySupplier(supplierId, query);
+  };
 
   if (isLoadingRequest || isLoadingSession) {
     return (
@@ -256,10 +262,11 @@ const EditQuoteRequest = () => {
                 <div className="md:col-span-2">
                   <Label htmlFor={`material_name-${index}`}>Material</Label>
                   <SmartSearch
-                    placeholder="Buscar material por nombre o código"
+                    placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
                     onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                    fetchFunction={searchMaterials}
+                    fetchFunction={searchSupplierMaterials}
                     displayValue={item.material_name}
+                    disabled={!supplierId}
                   />
                 </div>
                 <div>
@@ -282,7 +289,7 @@ const EditQuoteRequest = () => {
                     rows={1}
                   />
                 </div>
-                <div>
+                <div className="flex flex-col space-y-2">
                   <Label htmlFor={`unit-${index}`}>Unidad</Label>
                   <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
                     <SelectTrigger id={`unit-${index}`}>
@@ -294,6 +301,15 @@ const EditQuoteRequest = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Switch
+                      id={`is_exempt-${index}`}
+                      checked={item.is_exempt}
+                      onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
+                      disabled={!item.material_name}
+                    />
+                    <Label htmlFor={`is_exempt-${index}`} className="text-xs">Exento IVA</Label>
+                  </div>
                 </div>
                 <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
                   <Trash2 className="h-4 w-4" />

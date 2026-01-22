@@ -17,9 +17,10 @@ interface SmartSearchProps {
   onSelect: (item: SearchResult) => void;
   fetchFunction: (query: string) => Promise<SearchResult[]>;
   displayValue?: string; // Optional prop to control the displayed value
+  disabled?: boolean; // New prop
 }
 
-const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue }) => {
+const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue, disabled = false }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -52,17 +53,21 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Always debounce the fetch, even for empty queries, to avoid rapid calls on mount/clear
-    debounceTimeoutRef.current = setTimeout(() => {
-      debouncedFetch(query);
-    }, 300) as unknown as number;
+    // Only fetch if not disabled and query is present (or if we want default suggestions)
+    if (!disabled) {
+      debounceTimeoutRef.current = setTimeout(() => {
+        debouncedFetch(query);
+      }, 300) as unknown as number;
+    } else {
+      setResults([]);
+    }
 
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [query, debouncedFetch]);
+  }, [query, debouncedFetch, disabled]);
 
   const handleSelect = (item: SearchResult) => {
     setSelectedItem(item);
@@ -72,13 +77,14 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={disabled}
         >
           {selectedItem ? selectedItem.name : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

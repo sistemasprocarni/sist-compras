@@ -46,6 +46,38 @@ export const getSuppliersByMaterial = async (materialId: string): Promise<any[]>
   }));
 };
 
+// NEW FUNCTION: Search materials associated with a specific supplier
+export const searchMaterialsBySupplier = async (supplierId: string, query: string): Promise<any[]> => {
+  if (!supplierId) {
+    return [];
+  }
+
+  let selectQuery = supabase
+    .from('supplier_materials')
+    .select('materials:material_id(id, name, code, category, unit, is_exempt)')
+    .eq('supplier_id', supplierId);
+
+  const { data: relations, error } = await selectQuery.limit(50);
+
+  if (error) {
+    console.error('[searchMaterialsBySupplier] Error:', error);
+    return [];
+  }
+
+  let materials = relations.map(sm => sm.materials).filter(m => m !== null);
+
+  // Client-side filtering based on query
+  if (query.trim()) {
+    const lowerCaseQuery = query.toLowerCase();
+    materials = materials.filter(m =>
+      m.name.toLowerCase().includes(lowerCaseQuery) ||
+      (m.code && m.code.toLowerCase().includes(lowerCaseQuery))
+    );
+  }
+
+  return materials.slice(0, 10);
+};
+
 // Exportaciones individuales para mantener compatibilidad
 export {
   getAllSuppliers,
