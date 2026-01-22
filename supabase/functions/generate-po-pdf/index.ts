@@ -117,6 +117,19 @@ function wrapText(text: string, maxCharsPerLine: number): string[] {
   return lines;
 }
 
+// NEW: Standardized sequence number formatter
+const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
+  if (!sequence) return 'N/A';
+  
+  const date = dateString ? new Date(dateString) : new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const seq = String(sequence).padStart(3, '0');
+  
+  return `OC-${year}-${month}-${seq}`;
+};
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -301,7 +314,11 @@ serve(async (req) => {
     // Draw document title centered (slightly smaller)
     drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16 });
     y -= lineHeight * 2;
-    drawText(`Nº: ${order.sequence_number || 'N/A'}`, width - margin - 100, y, { font: boldFont, size: 10 }); // Added || 'N/A'
+    
+    // Use the standardized format for the sequence number
+    const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
+    drawText(`Nº: ${formattedSequence}`, width - margin - 100, y, { font: boldFont, size: 10 }); 
+    
     drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
@@ -316,8 +333,6 @@ serve(async (req) => {
     // --- Detalles de la Orden ---
     drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
-    
-    // Removed Moneda and Tasa de Cambio
     
     drawText(`Estado: ${order.status}`, margin, y);
     y -= lineHeight;
