@@ -9,7 +9,7 @@ import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer'; // New import
+import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 
 interface PurchaseOrderItem {
@@ -135,7 +135,7 @@ const PurchaseOrderDetails = () => {
                 <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl h-[90vh]">
+            <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
               </DialogHeader>

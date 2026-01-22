@@ -14,6 +14,8 @@ import { getQuoteRequestDetails, searchSuppliers, searchMaterialsBySupplier, sea
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
 
 interface Company {
   id: string;
@@ -48,6 +50,7 @@ const EditQuoteRequest = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session, isLoadingSession } = useSession();
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
 
   const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
@@ -199,6 +202,22 @@ const EditQuoteRequest = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Detalles
           </Link>
         </Button>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button variant="secondary">
+              <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
+            </DialogHeader>
+            <QuoteRequestPreviewModal
+              requestId={id!}
+              onClose={() => setIsModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="mb-6">

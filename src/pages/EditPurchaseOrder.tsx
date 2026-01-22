@@ -15,7 +15,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { calculateTotals } from '@/utils/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview'; // Updated import
+import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
 
 interface Company {
   id: string;
@@ -366,7 +366,7 @@ const EditPurchaseOrder = () => {
                   Previsualizar PDF
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl h-[90vh]">
+              <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
                 </DialogHeader>

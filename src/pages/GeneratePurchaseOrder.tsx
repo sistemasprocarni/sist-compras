@@ -13,7 +13,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview'; // Updated import
+import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
 import SmartSearch from '@/components/SmartSearch';
 
 interface Company {
@@ -295,11 +295,11 @@ const GeneratePurchaseOrder = () => {
                   Previsualizar PDF
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl h-[90vh]">
+              <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
                 </DialogHeader>
-                <PurchaseOrderDraftPreview // Updated component name
+                <PurchaseOrderDraftPreview
                   orderData={{
                     supplier_id: supplierId,
                     company_id: companyId || '', // Pass the selected company ID

@@ -56,8 +56,8 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
 
       // Auto-dismiss the success toast after 2 seconds
       setTimeout(() => {
-        if (successToastId) {
-          dismissToast(successToastId);
+        if (successId) {
+          dismissToast(successId);
           setSuccessToastId(null);
         }
       }, 2000);
@@ -137,7 +137,6 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
             src={pdfUrl}
             className="w-full h-full border-none"
             title="PDF Preview"
-            style={{ minHeight: '600px' }}
           ></iframe>
         )}
         {!pdfUrl && !isLoadingPdf && (
