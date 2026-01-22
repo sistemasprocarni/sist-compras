@@ -12,6 +12,7 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
 
   const generatePdf = async () => {
     if (!session) {
@@ -20,7 +21,8 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
     }
 
     setIsLoadingPdf(true);
-    const loadingToastId = showLoading('Generando previsualización del PDF...');
+    const toastId = showLoading('Generando previsualización del PDF...');
+    setLoadingToastId(toastId);
 
     try {
       const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-qr-pdf`, {
@@ -40,11 +42,16 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      showLoading('PDF generado. Puedes previsualizarlo.', loadingToastId);
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
+      showLoading('PDF generado. Puedes previsualizarlo.', 2000);
     } catch (error: any) {
       console.error('[QuoteRequestPreviewModal] Error generating PDF:', error);
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
       showError(error.message || 'Error desconocido al generar el PDF.');
-      dismissToast(loadingToastId);
     } finally {
       setIsLoadingPdf(false);
     }
@@ -67,31 +74,42 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
     };
-  }, [requestId]); // Regenerar si el ID de la solicitud cambia
+  }, [requestId]);
 
   return (
     <div className="flex flex-col h-full">
-      {isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          Cargando previsualización del PDF...
-        </div>
-      )}
-      {pdfUrl && !isLoadingPdf && (
-        <iframe src={pdfUrl} className="flex-1 w-full h-full border-none" title="PDF Preview"></iframe>
-      )}
-      {!pdfUrl && !isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-destructive">
-          No se pudo generar la previsualización del PDF.
-        </div>
-      )}
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="flex justify-end gap-2 mb-4">
         <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
           Descargar PDF
         </Button>
         <Button onClick={onClose} variant="outline">
           Cerrar
         </Button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Cargando previsualización del PDF...
+          </div>
+        )}
+        {pdfUrl && !isLoadingPdf && (
+          <iframe
+            src={pdfUrl}
+            className="w-full h-full border-none"
+            title="PDF Preview"
+            style={{ minHeight: '600px' }}
+          ></iframe>
+        )}
+        {!pdfUrl && !isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-destructive">
+            No se pudo generar la previsualización del PDF.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [tempOrderId, setTempOrderId] = useState<string | null>(null);
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
 
   const generatePdf = async () => {
     if (!session) {
@@ -40,7 +41,8 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
     }
 
     setIsLoadingPdf(true);
-    const loadingToastId = showLoading('Generando previsualización del PDF...');
+    const toastId = showLoading('Generando previsualización del PDF...');
+    setLoadingToastId(toastId);
 
     try {
       // First, create the purchase order to get an ID
@@ -104,11 +106,16 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
-      showLoading('PDF generado. Puedes previsualizarlo.', loadingToastId);
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
+      showLoading('PDF generado. Puedes previsualizarlo.', 2000);
     } catch (error: any) {
       console.error('[PurchaseOrderPreviewModal] Error generating PDF:', error);
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
       showError(error.message || 'Error desconocido al generar el PDF.');
-      dismissToast(loadingToastId);
     } finally {
       setIsLoadingPdf(false);
       // Clean up the temporary order and its items after preview
@@ -158,31 +165,42 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       if (tempOrderId) {
         console.warn('[PurchaseOrderPreviewModal] Component unmounted with pending temporary order cleanup. Relying on finally block.');
       }
+      if (loadingToastId) {
+        dismissToast(loadingToastId);
+      }
     };
   }, []);
 
   return (
     <div className="flex flex-col h-full">
-      {isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          Cargando previsualización del PDF...
-        </div>
-      )}
-      {pdfUrl && !isLoadingPdf && (
-        <iframe src={pdfUrl} className="flex-1 w-full h-full border-none" title="PDF Preview"></iframe>
-      )}
-      {!pdfUrl && !isLoadingPdf && (
-        <div className="flex items-center justify-center h-full text-destructive">
-          No se pudo generar la previsualización del PDF.
-        </div>
-      )}
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="flex justify-end gap-2 mb-4">
         <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
           Descargar PDF
         </Button>
         <Button onClick={onClose} variant="outline">
           Cerrar
         </Button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Cargando previsualización del PDF...
+          </div>
+        )}
+        {pdfUrl && !isLoadingPdf && (
+          <iframe
+            src={pdfUrl}
+            className="w-full h-full border-none"
+            title="PDF Preview"
+            style={{ minHeight: '600px' }}
+          ></iframe>
+        )}
+        {!pdfUrl && !isLoadingPdf && (
+          <div className="flex items-center justify-center h-full text-destructive">
+            No se pudo generar la previsualización del PDF.
+          </div>
+        )}
       </div>
     </div>
   );
