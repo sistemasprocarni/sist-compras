@@ -13,6 +13,7 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const [successToastId, setSuccessToastId] = useState<string | null>(null);
 
   const generatePdf = async () => {
     if (!session) {
@@ -42,14 +43,30 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
+
+      // Dismiss loading toast and show success message
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
       }
-      showLoading('PDF generado. Puedes previsualizarlo.', 2000);
+
+      // Show success toast that will auto-dismiss
+      const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
+      setSuccessToastId(successId);
+
+      // Auto-dismiss the success toast after 2 seconds
+      setTimeout(() => {
+        if (successToastId) {
+          dismissToast(successToastId);
+          setSuccessToastId(null);
+        }
+      }, 2000);
+
     } catch (error: any) {
       console.error('[QuoteRequestPreviewModal] Error generating PDF:', error);
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
       }
       showError(error.message || 'Error desconocido al generar el PDF.');
     } finally {
@@ -76,6 +93,11 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       }
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
+      }
+      if (successToastId) {
+        dismissToast(successToastId);
+        setSuccessToastId(null);
       }
     };
   }, [requestId]);

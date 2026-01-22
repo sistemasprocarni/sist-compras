@@ -33,6 +33,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [tempOrderId, setTempOrderId] = useState<string | null>(null);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const [successToastId, setSuccessToastId] = useState<string | null>(null);
 
   const generatePdf = async () => {
     if (!session) {
@@ -106,14 +107,30 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
+
+      // Dismiss loading toast and show success message
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
       }
-      showLoading('PDF generado. Puedes previsualizarlo.', 2000);
+
+      // Show success toast that will auto-dismiss
+      const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
+      setSuccessToastId(successId);
+
+      // Auto-dismiss the success toast after 2 seconds
+      setTimeout(() => {
+        if (successToastId) {
+          dismissToast(successToastId);
+          setSuccessToastId(null);
+        }
+      }, 2000);
+
     } catch (error: any) {
       console.error('[PurchaseOrderPreviewModal] Error generating PDF:', error);
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
       }
       showError(error.message || 'Error desconocido al generar el PDF.');
     } finally {
@@ -167,6 +184,11 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
       }
       if (loadingToastId) {
         dismissToast(loadingToastId);
+        setLoadingToastId(null);
+      }
+      if (successToastId) {
+        dismissToast(successToastId);
+        setSuccessToastId(null);
       }
     };
   }, []);
