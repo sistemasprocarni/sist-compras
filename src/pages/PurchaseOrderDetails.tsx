@@ -9,7 +9,7 @@ import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import PurchaseOrderPreviewModal from '@/components/PurchaseOrderPreviewModal';
+import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer'; // New import
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 
 interface PurchaseOrderItem {
@@ -139,28 +139,8 @@ const PurchaseOrderDetails = () => {
               <DialogHeader>
                 <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
               </DialogHeader>
-              {/* Note: PurchaseOrderPreviewModal expects orderData and itemsData, 
-                  but since we are viewing an existing order, we pass the ID to a new component 
-                  or modify the existing one to handle existing IDs. 
-                  For simplicity, we'll use the existing modal structure but pass the necessary data. 
-                  Since the existing modal creates a temporary order, we need a dedicated PDF viewer 
-                  for existing orders, or adapt the modal. 
-                  
-                  For now, we pass the data needed for the modal to generate the PDF via the Edge function.
-                  The existing modal logic is designed for *new* orders (Draft status). 
-                  We will adapt the modal to handle existing IDs for previewing.
-              */}
-              <PurchaseOrderPreviewModal
-                orderData={{
-                  supplier_id: order.supplier_id,
-                  company_id: order.company_id,
-                  currency: order.currency,
-                  exchange_rate: order.exchange_rate,
-                  status: order.status,
-                  created_by: order.created_by,
-                  user_id: order.user_id,
-                }}
-                itemsData={order.purchase_order_items}
+              <PurchaseOrderPDFViewer
+                orderId={order.id}
                 onClose={() => setIsModalOpen(false)}
               />
             </DialogContent>

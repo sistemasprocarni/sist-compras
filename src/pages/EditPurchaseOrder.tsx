@@ -14,6 +14,8 @@ import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { calculateTotals } from '@/utils/calculations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview'; // Updated import
 
 interface Company {
   id: string;
@@ -53,6 +55,7 @@ const EditPurchaseOrder = () => {
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   const [items, setItems] = useState<PurchaseOrderItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
@@ -357,6 +360,31 @@ const EditPurchaseOrder = () => {
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary" disabled={isSubmitting || !companyId}>
+                  Previsualizar PDF
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl h-[90vh]">
+                <DialogHeader>
+                  <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
+                </DialogHeader>
+                <PurchaseOrderDraftPreview
+                  orderData={{
+                    supplier_id: supplierId,
+                    company_id: companyId,
+                    currency,
+                    exchange_rate: currency === 'VES' ? exchangeRate : null,
+                    status: initialOrder.status,
+                    created_by: userEmail || 'unknown',
+                    user_id: userId || '',
+                  }}
+                  itemsData={items}
+                  onClose={() => setIsModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
             <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
