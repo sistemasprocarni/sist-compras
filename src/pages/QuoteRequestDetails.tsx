@@ -3,15 +3,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
-import PDFDownloadButton from '@/components/PDFDownloadButton'; // New import
+import PDFDownloadButton from '@/components/PDFDownloadButton';
 import { format } from 'date-fns';
+import EmailSenderModal from '@/components/EmailSenderModal';
+import { useSession } from '@/components/SessionContextProvider';
 
 interface QuoteRequestItem {
   id: string;
@@ -58,7 +60,9 @@ interface QuoteRequestDetailsData {
 const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { session } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -73,11 +77,80 @@ const QuoteRequestDetails = () => {
 
   const handleConvertToPurchaseOrder = () => {
     if (!request) return;
-    // Navigate to the purchase order creation page with the quote request data
     navigate('/generate-po', {
       state: {
         quoteRequest: request,
       },
+    });
+  };
+
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+    if (!session?.user?.email || !request) return;
+
+    // 1. Generate PDF
+    const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-qr-pdf`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ requestId: request.id }),
+    });
+
+    if (!pdfResponse.ok) {
+      const errorData = await pdfResponse.json();
+      throw new Error(errorData.error || 'Error al generar el PDF.');
+    }
+
+    const pdfBlob = await pdfResponse.blob();
+    const pdfBase64 = await blobToBase64(pdfBlob);
+
+    // 2. Send Email
+    const emailBody = `
+      <h2>Solicitud de Cotización #${request.id.substring(0, 8)}</h2>
+      <p><strong>Empresa:</strong> ${request.companies?.name}</p>
+      <p><strong>Proveedor:</strong> ${request.suppliers?.name}</p>
+      <p><strong>Fecha:</strong> ${new Date(request.created_at).toLocaleDateString('es-VE')}</p>
+      ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
+      <p>Se adjunta el PDF con los detalles de la solicitud.</p>
+    `;
+
+    const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: request.suppliers?.email,
+        subject: `Solicitud de Cotización #${request.id.substring(0, 8)} - ${request.companies?.name}`,
+        body: emailBody,
+        attachmentBase64: pdfBase64,
+        attachmentFilename: `SC_${request.id.substring(0, 8)}.pdf`,
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.json();
+      throw new Error(errorData.error || 'Error al enviar el correo.');
+    }
+
+    // 3. Send WhatsApp (if requested)
+    if (sendWhatsApp && request.suppliers?.phone) {
+      const formattedPhone = request.suppliers.phone.replace(/\D/g, '');
+      const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
+      const whatsappMessage = `Hola, te he enviado por correo la Solicitud de Cotización #${request.id.substring(0, 8)} de ${request.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
+      const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
     });
   };
 
@@ -143,6 +216,13 @@ const QuoteRequestDetails = () => {
             endpoint="generate-qr-pdf"
             label="Descargar PDF"
           />
+          <Button
+            onClick={() => setIsEmailModalOpen(true)}
+            disabled={!request.suppliers?.email}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
+          </Button>
           <Button asChild className="bg-procarni-secondary hover:bg-green-700">
             <Link to={`/quote-requests/edit/${request.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
@@ -197,6 +277,16 @@ const QuoteRequestDetails = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      <EmailSenderModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        onSend={handleSendEmail}
+        recipientEmail={request.suppliers?.email || ''}
+        recipientPhone={request.suppliers?.phone}
+        documentType="Solicitud de Cotización"
+        documentId={request.id}
+      />
     </div>
   );
 };

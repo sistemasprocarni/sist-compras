@@ -3,16 +3,18 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
-import PDFDownloadButton from '@/components/PDFDownloadButton'; // New import
+import PDFDownloadButton from '@/components/PDFDownloadButton';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
+import EmailSenderModal from '@/components/EmailSenderModal';
+import { useSession } from '@/components/SessionContextProvider';
 
 interface PurchaseOrderItem {
   id: string;
@@ -74,7 +76,9 @@ const formatSequenceNumber = (sequence?: number, dateString?: string): string =>
 const PurchaseOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { session } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
@@ -107,12 +111,82 @@ const PurchaseOrderDetails = () => {
     return order?.payment_terms || 'N/A';
   };
 
-  // Function to generate the filename for the PDF download
   const generateFileName = () => {
     if (!order) return '';
     const sequence = formatSequenceNumber(order.sequence_number, order.created_at);
     const supplierName = order.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
     return `${sequence}_${supplierName}.pdf`;
+  };
+
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+    if (!session?.user?.email || !order) return;
+
+    // 1. Generate PDF
+    const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-po-pdf`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ orderId: order.id }),
+    });
+
+    if (!pdfResponse.ok) {
+      const errorData = await pdfResponse.json();
+      throw new Error(errorData.error || 'Error al generar el PDF.');
+    }
+
+    const pdfBlob = await pdfResponse.blob();
+    const pdfBase64 = await blobToBase64(pdfBlob);
+
+    // 2. Send Email
+    const emailBody = `
+      <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
+      <p><strong>Empresa:</strong> ${order.companies?.name}</p>
+      <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
+      <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
+      <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
+      ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
+      <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
+    `;
+
+    const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: order.suppliers?.email,
+        subject: `Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} - ${order.companies?.name}`,
+        body: emailBody,
+        attachmentBase64: pdfBase64,
+        attachmentFilename: generateFileName(),
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.json();
+      throw new Error(errorData.error || 'Error al enviar el correo.');
+    }
+
+    // 3. Send WhatsApp (if requested)
+    if (sendWhatsApp && order.suppliers?.phone) {
+      const formattedPhone = order.suppliers.phone.replace(/\D/g, '');
+      const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
+      const whatsappMessage = `Hola, te he enviado por correo la Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} de ${order.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
+      const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   if (isLoading) {
@@ -175,6 +249,13 @@ const PurchaseOrderDetails = () => {
             endpoint="generate-po-pdf"
             label="Descargar PDF"
           />
+          <Button
+            onClick={() => setIsEmailModalOpen(true)}
+            disabled={!order.suppliers?.email}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
+          </Button>
           <Button asChild className="bg-procarni-secondary hover:bg-green-700">
             <Link to={`/purchase-orders/edit/${order.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Orden
@@ -263,6 +344,16 @@ const PurchaseOrderDetails = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      <EmailSenderModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        onSend={handleSendEmail}
+        recipientEmail={order.suppliers?.email || ''}
+        recipientPhone={order.suppliers?.phone}
+        documentType="Orden de Compra"
+        documentId={order.id}
+      />
     </div>
   );
 };
