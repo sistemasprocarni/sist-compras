@@ -24,6 +24,7 @@ import {
   getQuoteRequestDetails,
   getAllPurchaseOrders,
   createPurchaseOrder,
+  updatePurchaseOrder, // Added updatePurchaseOrder
   deletePurchaseOrder,
   getPurchaseOrderDetails,
 } from './services';
@@ -103,6 +104,7 @@ export {
   getQuoteRequestDetails,
   getAllPurchaseOrders,
   createPurchaseOrder,
+  updatePurchaseOrder, // Exported
   deletePurchaseOrder,
   getPurchaseOrderDetails,
 };

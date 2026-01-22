@@ -20,7 +20,9 @@ import QuoteRequestManagement from "./pages/QuoteRequestManagement";
 import QuoteRequestDetails from "./pages/QuoteRequestDetails";
 import EditQuoteRequest from "./pages/EditQuoteRequest";
 import CompanyManagement from "./pages/CompanyManagement";
-import PurchaseOrderManagement from "./pages/PurchaseOrderManagement"; // New import
+import PurchaseOrderManagement from "./pages/PurchaseOrderManagement";
+import PurchaseOrderDetails from "./pages/PurchaseOrderDetails"; // New import
+import EditPurchaseOrder from "./pages/EditPurchaseOrder"; // New import
 
 const queryClient = new QueryClient();
 
@@ -47,7 +49,9 @@ const App = () => (
                 <Route path="/quote-requests/:id" element={<QuoteRequestDetails />} />
                 <Route path="/quote-requests/edit/:id" element={<EditQuoteRequest />} />
                 <Route path="/company-management" element={<CompanyManagement />} />
-                <Route path="/purchase-order-management" element={<PurchaseOrderManagement />} /> {/* New route */}
+                <Route path="/purchase-order-management" element={<PurchaseOrderManagement />} />
+                <Route path="/purchase-orders/:id" element={<PurchaseOrderDetails />} /> {/* New route */}
+                <Route path="/purchase-orders/edit/:id" element={<EditPurchaseOrder />} /> {/* New route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />

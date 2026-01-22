@@ -57,6 +57,58 @@ const PurchaseOrderService = {
     return newOrder;
   },
 
+  update: async (id: string, updates: Partial<Omit<PurchaseOrder, 'id' | 'created_at'>>, items: Omit<PurchaseOrderItem, 'id' | 'order_id'>[]): Promise<PurchaseOrder | null> => {
+    const { data: updatedOrder, error: orderError } = await supabase
+      .from('purchase_orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('[PurchaseOrderService.update] Error:', orderError);
+      showError('Error al actualizar la orden de compra.');
+      return null;
+    }
+
+    // 1. Eliminar ítems existentes
+    const { error: deleteError } = await supabase
+      .from('purchase_order_items')
+      .delete()
+      .eq('order_id', id);
+
+    if (deleteError) {
+      console.error('[PurchaseOrderService.update] Error al eliminar ítems antiguos:', deleteError);
+      showError('Error al actualizar los ítems de la orden.');
+      return null;
+    }
+
+    // 2. Insertar nuevos ítems
+    if (items && items.length > 0) {
+      const orderItems = items.map(item => ({
+        order_id: id,
+        material_name: item.material_name,
+        supplier_code: item.supplier_code,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_rate: item.tax_rate,
+        is_exempt: item.is_exempt,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('[PurchaseOrderService.update] Error al crear nuevos ítems:', itemsError);
+        showError('Error al actualizar los ítems de la orden.');
+        return null;
+      }
+    }
+
+    return updatedOrder;
+  },
+
   delete: async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('purchase_orders')
@@ -89,6 +141,7 @@ const PurchaseOrderService = {
 export const {
   getAll: getAllPurchaseOrders,
   create: createPurchaseOrder,
+  update: updatePurchaseOrder,
   delete: deletePurchaseOrder,
   getById: getPurchaseOrderDetails,
 } = PurchaseOrderService;
