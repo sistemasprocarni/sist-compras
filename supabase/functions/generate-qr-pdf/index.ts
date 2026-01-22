@@ -41,8 +41,8 @@ serve(async (req) => {
       .select(`
         *,
         suppliers (name, rif, email, phone, phone_2, instagram, address),
-        companies (name, logo_url, fiscal_data, phone, email)
-      `)
+        companies (name, logo_url, rif, address, phone, email)
+      `) // Added rif and address for companies
       .eq('id', requestId)
       .single();
 
@@ -97,7 +97,7 @@ serve(async (req) => {
     // Table column configuration
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.25, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.3, tableWidth * 0.15];
+    const colWidths = [tableWidth * 0.25, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.3, tableWidth * 0.25];
     const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción', 'Exento IVA'];
 
     // Function to draw table headers
@@ -128,8 +128,7 @@ serve(async (req) => {
       }
     };
 
-    // --- Header with Company Logo ---
-    // Try to fetch and embed the company logo if available
+    // --- Header with Company Logo and Info ---
     let companyLogoImage = null;
     if (request.companies?.logo_url) {
       try {
@@ -143,46 +142,41 @@ serve(async (req) => {
       }
     }
 
-    // Draw company logo or placeholder
-    if (companyLogoImage) {
-      const logoWidth = 50;
-      const logoHeight = 50;
-      const logoX = margin;
-      const logoY = y - logoHeight;
+    const logoWidth = 50;
+    const logoHeight = 50;
+    const companyInfoX = margin + logoWidth + 10;
 
+    if (companyLogoImage) {
       page.drawImage(companyLogoImage, {
-        x: logoX,
-        y: logoY,
+        x: margin,
+        y: y - logoHeight,
         width: logoWidth,
         height: logoHeight,
       });
-
-      // Draw company name next to logo
-      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
-      y -= logoHeight + lineHeight;
-    } else {
-      // Fallback: Draw company name as text
-      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14 });
-      y -= lineHeight * 2;
     }
 
-    // Draw document title centered
+    // Company Name
+    drawText(request.companies?.name || 'N/A', companyInfoX, y - (logoHeight / 2) + (fontSize / 2), { font: boldFont, size: 14 });
+    y -= lineHeight;
+
+    // Company RIF, Address, Phone, Email
+    drawText(`RIF: ${request.companies?.rif || 'N/A'}`, companyInfoX, y);
+    y -= lineHeight;
+    drawText(`Dirección: ${request.companies?.address || 'N/A'}`, companyInfoX, y);
+    y -= lineHeight;
+    drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, companyInfoX, y);
+    y -= lineHeight;
+    drawText(`Email: ${request.companies?.email || 'N/A'}`, companyInfoX, y);
+    y -= lineHeight * 2; // Extra space after company info
+
+    // --- Document Title and Request Details ---
     drawText('SOLICITUD DE COTIZACIÓN', width / 2 - 100, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
-    drawText(`Nº: ${request.id.substring(0, 8)}`, width - margin - 100, y, { font: boldFont, size: 12 });
-    drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
-    y -= lineHeight * 3;
 
-    // --- Información de la Empresa Origen ---
-    drawText('DATOS DE LA EMPRESA ORIGEN:', margin, y, { font: boldFont });
+    const requestDetailsX = width - margin - 150; // Align to right
+    drawText(`Nº: ${request.id.substring(0, 8)}`, requestDetailsX, y, { font: boldFont, size: 12 });
     y -= lineHeight;
-    drawText(`Nombre: ${request.companies?.name || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`RIF: ${request.companies?.fiscal_data?.rif || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Email: ${request.companies?.email || 'N/A'}`, margin, y);
+    drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, requestDetailsX, y);
     y -= lineHeight * 2;
 
     // --- Detalles del Proveedor ---
@@ -191,6 +185,16 @@ serve(async (req) => {
     drawText(`Nombre: ${request.suppliers?.name || 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`RIF: ${request.suppliers?.rif || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Email: ${request.suppliers?.email || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Teléfono Principal: ${request.suppliers?.phone || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Teléfono Secundario: ${request.suppliers?.phone_2 || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Instagram: ${request.suppliers?.instagram || 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Dirección: ${request.suppliers?.address || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
     // --- Tabla de Ítems Solicitados ---
