@@ -145,8 +145,8 @@ serve(async (req) => {
 
     // Draw company logo or placeholder
     if (companyLogoImage) {
-      const logoWidth = 100;
-      const logoHeight = 100;
+      const logoWidth = 50;
+      const logoHeight = 50;
       const logoX = margin;
       const logoY = y - logoHeight;
 
