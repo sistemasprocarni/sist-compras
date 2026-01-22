@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import SmartSearch from '@/components/SmartSearch';
 import { searchCompanies, searchSuppliers, getSupplierDetails } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button'; // Importar Button
 
 interface Company {
   id: string;
