@@ -10,7 +10,7 @@ import PinConfirmationDialog from '@/components/PinConfirmationDialog';
 
 const Settings = () => {
   const { session } = useSession();
-  const [startingNumber, setStartingNumber] = useState<number>(0);
+  const [startingNumber, setStartingNumber] = useState<number>(1);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -74,8 +74,8 @@ const Settings = () => {
               <h3 className="text-lg font-semibold mb-4">Secuencia de Órdenes de Compra</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configura el número inicial para la secuencia de órdenes de compra. 
-                Si ingresas 0, la secuencia se reiniciará y el próximo número será 1.
-                Si ingresas un número distinto de 0 (ej. 5), el próximo número será ese.
+                Si ingresas 1, la secuencia se reiniciará y el próximo número será 1.
+                Si ingresas un número mayor (ej. 5), el próximo número será ese.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -83,10 +83,10 @@ const Settings = () => {
                   <Input
                     id="startingNumber"
                     type="number"
-                    min="0"
+                    min="1"
                     value={startingNumber}
-                    onChange={(e) => setStartingNumber(parseInt(e.target.value) || 0)}
-                    placeholder="0 para reiniciar, o un número para iniciar desde allí"
+                    onChange={(e) => setStartingNumber(parseInt(e.target.value) || 1)}
+                    placeholder="1 para reiniciar, o un número mayor para iniciar desde allí"
                   />
                 </div>
               </div>
