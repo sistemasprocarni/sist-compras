@@ -1,28 +1,29 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered } from 'lucide-react'; // Added ListOrdered icon
+import { Package2, Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
-import UserDropdown from './UserDropdown'; // Import the new UserDropdown component
+import UserDropdown from './UserDropdown';
 
 const Layout = () => {
   const isMobile = useIsMobile();
-
+  
   const navItems = [
     { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
-    { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' }, // New nav item
+    { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
     { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
     { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
     { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
     { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
     { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
     { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
-    { to: '/purchase-order-management', icon: <ListOrdered className="h-5 w-5" />, label: 'Gestión de Órdenes (OC)' }, // New nav item
+    { to: '/purchase-order-management', icon: <ListOrdered className="h-5 w-5" />, label: 'Gestión de Órdenes (OC)' },
     { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
+    { to: '/settings', icon: <Settings className="h-5 w-5" />, label: 'Configuración' }, // Added Settings link
   ];
 
   const Sidebar = () => (
@@ -51,7 +52,7 @@ const Layout = () => {
           ))}
         </nav>
       </div>
-      <div className="mt-auto p-4 border-t"> {/* New section for user dropdown */}
+      <div className="mt-auto p-4 border-t">
         <UserDropdown />
       </div>
       <MadeWithDyad />
@@ -88,7 +89,7 @@ const Layout = () => {
               </NavLink>
             ))}
           </nav>
-          <div className="mt-auto p-4 border-t"> {/* New section for user dropdown in mobile */}
+          <div className="mt-auto p-4 border-t">
             <UserDropdown />
           </div>
         </SheetContent>
@@ -120,10 +121,7 @@ const Layout = () => {
   }
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      className="min-h-screen w-full rounded-lg border"
-    >
+    <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full rounded-lg border">
       <ResizablePanel defaultSize={15} minSize={10} maxSize={20}>
         <Sidebar />
       </ResizablePanel>
