@@ -169,6 +169,7 @@ serve(async (req) => {
     const lineHeight = fontSize * 1.2;
     const tableHeaderBgColor = rgb(0.9, 0.9, 0.9);
     const borderColor = rgb(0.8, 0.8, 0.8);
+    const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
 
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
@@ -201,7 +202,7 @@ serve(async (req) => {
         borderWidth: 1,
       });
       for (let i = 0; i < colHeaders.length; i++) {
-        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont });
+        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont, size: 12 });
         currentX += colWidths[i];
       }
       y -= lineHeight;
@@ -248,12 +249,12 @@ serve(async (req) => {
       // Draw company name (larger and bold)
       drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
 
-      // Draw company details (slightly smaller but clear)
+      // Draw company details (slightly smaller and lighter color)
       const detailsY = y - lineHeight;
-      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9 });
-      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9 });
-      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9 });
-      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9 });
+      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: companyDetailsColor });
+      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: companyDetailsColor });
+      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: companyDetailsColor });
+      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: companyDetailsColor });
 
       y -= logoHeight + lineHeight * 4;
     } else {
@@ -262,29 +263,23 @@ serve(async (req) => {
       y -= lineHeight * 2;
     }
 
-    // Draw document title centered
-    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 18 });
+    // Draw document title centered (slightly smaller)
+    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16 });
     y -= lineHeight * 2;
-    drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 12 });
+    drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 10 });
     drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
     // --- Detalles del Proveedor ---
-    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont });
+    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
     drawText(`Nombre: ${order.suppliers?.name || 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`RIF: ${order.suppliers?.rif || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Email: ${order.suppliers?.email || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Teléfono: ${order.suppliers?.phone || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Términos de Pago: ${order.suppliers?.payment_terms || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
     // --- Detalles de la Orden ---
-    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont });
+    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
     drawText(`Moneda: ${order.currency}`, margin, y);
     y -= lineHeight;
