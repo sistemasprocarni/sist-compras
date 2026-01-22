@@ -173,6 +173,19 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
     document.body.removeChild(link);
   };
 
+  const handleClose = () => {
+    // Clear all toasts when closing the modal
+    if (loadingToastId) {
+      dismissToast(loadingToastId);
+      setLoadingToastId(null);
+    }
+    if (successToastId) {
+      dismissToast(successToastId);
+      setSuccessToastId(null);
+    }
+    onClose();
+  };
+
   useEffect(() => {
     generatePdf();
     return () => {
@@ -199,7 +212,7 @@ const PurchaseOrderPreviewModal: React.FC<PurchaseOrderPreviewModalProps> = ({ o
         <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
           Descargar PDF
         </Button>
-        <Button onClick={onClose} variant="outline">
+        <Button onClick={handleClose} variant="outline">
           Cerrar
         </Button>
       </div>
