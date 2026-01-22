@@ -59,6 +59,7 @@ const GenerateQuoteRequest = () => {
 
   // Check if there's supplier data in the location state
   const supplierData = location.state?.supplier;
+  const materialData = location.state?.material;
 
   // Effect to prefill form from supplier data
   useEffect(() => {
@@ -67,6 +68,19 @@ const GenerateQuoteRequest = () => {
       setSupplierName(supplierData.name);
     }
   }, [supplierData]);
+
+  // Effect to prefill material if provided
+  useEffect(() => {
+    if (materialData) {
+      // Add the material as the first item
+      setItems([{
+        material_name: materialData.name,
+        quantity: 0,
+        description: '',
+        unit: materialData.unit || MATERIAL_UNITS[0],
+      }]);
+    }
+  }, [materialData]);
 
   // New wrapper function for material search, filtered by selected supplier
   const searchSupplierMaterials = async (query: string) => {
