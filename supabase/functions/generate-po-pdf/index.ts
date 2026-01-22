@@ -34,7 +34,7 @@ const calculateTotals = (items: Array<{ quantity: number; unit_price: number; ta
 };
 
 const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVNTA'];
 const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
 
@@ -174,7 +174,9 @@ serve(async (req) => {
 
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
-      page.drawText(text, {
+      // Ensure text is a string before drawing
+      const safeText = String(text || 'N/A'); 
+      page.drawText(safeText, {
         x,
         y: yPos,
         font: font,
@@ -267,7 +269,7 @@ serve(async (req) => {
     // Draw document title centered (slightly smaller)
     drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16 });
     y -= lineHeight * 2;
-    drawText(`Nº: ${order.sequence_number}`, width - margin - 100, y, { font: boldFont, size: 10 });
+    drawText(`Nº: ${order.sequence_number || 'N/A'}`, width - margin - 100, y, { font: boldFont, size: 10 }); // Added || 'N/A'
     drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
@@ -326,7 +328,9 @@ serve(async (req) => {
       drawText(unitPriceText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitPriceText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
 
-      const taxText = item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`;
+      // Ensure item.tax_rate is defined before accessing it
+      const taxRateValue = item.tax_rate !== undefined && item.tax_rate !== null ? item.tax_rate : 0.16;
+      const taxText = item.is_exempt ? 'N/A' : `${(taxRateValue * 100).toFixed(0)}%`;
       drawText(taxText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(taxText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
 
@@ -356,7 +360,7 @@ serve(async (req) => {
     drawText(montoIVAText, totalSectionX, y - lineHeight);
 
     const totalText = `TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`;
-    const totalTextWidth = font.widthOfTextAtSize(totalText, fontSize + 2);
+    const totalTextWidth = boldFont.widthOfTextAtSize(totalText, fontSize + 2); // Use boldFont for width calculation
     drawText(totalText, totalSectionX + 200 - totalTextWidth, y - lineHeight * 2, { font: boldFont, size: fontSize + 2 });
 
     y -= lineHeight * 3;
@@ -388,8 +392,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[generate-po-pdf] Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Improved error logging and response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during PDF generation.';
+    console.error('[generate-po-pdf] General Error:', errorMessage, error);
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
