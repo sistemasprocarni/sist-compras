@@ -129,7 +129,6 @@ const formatSequenceNumber = (sequence?: number, dateString?: string): string =>
   return `OC-${year}-${month}-${seq}`;
 };
 
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -208,7 +207,7 @@ serve(async (req) => {
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
     const { width, height } = page.getSize();
-    const margin = 30; // Reduced margin from 50 to 30
+    const margin = 30;
     let y = height - margin;
     const fontSize = 10;
     const lineHeight = fontSize * 1.2;
@@ -231,26 +230,50 @@ serve(async (req) => {
       });
     };
 
-    // Table column configuration
+    // Helper para dibujar rectángulo con borde
+    const drawBorderedRect = (x: number, y: number, width: number, height: number, options: any = {}) => {
+      page.drawRectangle({
+        x,
+        y,
+        width,
+        height,
+        borderColor: options.borderColor || borderColor,
+        borderWidth: options.borderWidth || 1,
+        color: options.color || rgb(1, 1, 1),
+      });
+    };
+
+    // Table column configuration - Improved layout
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.1, tableWidth * 0.1, tableWidth * 0.2];
-    const colHeaders = ['Material', 'Cantidad', 'P. Unitario', 'IVA (%)', 'Exento', 'Subtotal'];
+    // Updated column widths for better spacing
+    const colWidths = [
+      tableWidth * 0.35,  // Material
+      tableWidth * 0.10,  // Cantidad
+      tableWidth * 0.10,  // Unidad
+      tableWidth * 0.15,  // P. Unitario
+      tableWidth * 0.15,  // IVA
+      tableWidth * 0.15   // Total
+    ];
+    const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
-    // Function to draw table headers
+    // Function to draw table headers with improved styling
     const drawTableHeader = () => {
       let currentX = tableX;
-      page.drawRectangle({
-        x: tableX,
-        y: y - lineHeight,
-        width: tableWidth,
-        height: lineHeight,
+      
+      // Draw header background
+      drawBorderedRect(tableX, y - lineHeight, tableWidth, lineHeight, {
         color: tableHeaderBgColor,
         borderColor: borderColor,
-        borderWidth: 1,
+        borderWidth: 1
       });
+      
+      // Draw header text
       for (let i = 0; i < colHeaders.length; i++) {
-        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont, size: 12 });
+        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { 
+          font: boldFont, 
+          size: 10 
+        });
         currentX += colWidths[i];
       }
       y -= lineHeight;
@@ -334,9 +357,6 @@ serve(async (req) => {
     drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
     
-    // REMOVED: drawText(`Estado: ${order.status}`, margin, y);
-    // y -= lineHeight; // Adjust Y position since one line was removed
-    
     drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`Condición de Pago: ${formatPaymentTerms(order)}`, margin, y);
@@ -367,47 +387,53 @@ serve(async (req) => {
     // Dibujar filas de ítems con estilo mejorado
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      checkPageBreak(lineHeight); // Check before drawing each row
+      checkPageBreak(lineHeight + 10); // Check before drawing each row
 
       // Alternate row colors for better readability
       const rowColor = i % 2 === 0 ? rgb(1, 1, 1) : tableRowBgColor;
 
-      let currentX = tableX;
-      page.drawRectangle({
-        x: tableX,
-        y: y - lineHeight,
-        width: tableWidth,
-        height: lineHeight,
+      // Draw row background
+      drawBorderedRect(tableX, y - lineHeight, tableWidth, lineHeight, {
         color: rowColor,
         borderColor: borderColor,
-        borderWidth: 1,
+        borderWidth: 1
       });
 
+      // Calculate values
+      const subtotal = item.quantity * item.unit_price;
+      const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+      const totalItem = subtotal + itemIva;
+
+      let currentX = tableX;
+      
       // Draw item data with better alignment
+      // Descripción (Material name)
       drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[0];
 
-      // Right-align numeric values
+      // Cantidad
       const quantityText = item.quantity.toString();
       drawText(quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[1];
 
-      const unitPriceText = item.unit_price.toFixed(2);
-      drawText(unitPriceText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitPriceText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+      // Unidad (assuming unit is available, using a placeholder if not)
+      const unitText = item.unit || 'UND';
+      drawText(unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
 
-      // Ensure item.tax_rate is defined before accessing it
-      const taxRateValue = item.tax_rate !== undefined && item.tax_rate !== null ? item.tax_rate : 0.16;
-      const taxText = item.is_exempt ? 'N/A' : `${(taxRateValue * 100).toFixed(0)}%`;
-      drawText(taxText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(taxText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+      // P. Unitario
+      const unitPriceText = `${order.currency} ${item.unit_price.toFixed(2)}`;
+      drawText(unitPriceText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(unitPriceText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
 
-      const exemptText = item.is_exempt ? 'Sí' : 'No';
-      drawText(exemptText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(exemptText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+      // IVA
+      const ivaText = item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`;
+      drawText(ivaText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(ivaText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[4];
 
-      const subtotalText = (item.quantity * item.unit_price).toFixed(2);
-      drawText(subtotalText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(subtotalText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+      // Total
+      const totalItemText = `${order.currency} ${totalItem.toFixed(2)}`;
+      drawText(totalItemText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(totalItemText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
 
       y -= lineHeight;
     }
@@ -420,11 +446,11 @@ serve(async (req) => {
     // Check for page break before drawing totals
     checkPageBreak(lineHeight * 5); // 3 lines for totals, 1 for amount in words, 1 for spacing
 
-    // Draw totals with right alignment
-    const baseImponibleText = `Base Imponible: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`;
+    // Draw totals with right alignment and improved styling
+    const baseImponibleText = `Subtotal: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`;
     drawText(baseImponibleText, totalSectionX, y);
 
-    const montoIVAText = `Monto IVA: ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`;
+    const montoIVAText = `IVA (16%): ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`;
     drawText(montoIVAText, totalSectionX, y - lineHeight);
 
     const totalText = `TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`;
