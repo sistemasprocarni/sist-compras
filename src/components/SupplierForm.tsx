@@ -30,7 +30,8 @@ const supplierFormSchema = z.object({
   address: z.string().optional().or(z.literal('')),
   payment_terms: z.enum(['Contado', 'Crédito', 'Otro'], { message: 'Términos de pago son requeridos y deben ser Contado, Crédito u Otro.' }), // Opciones limitadas
   custom_payment_terms: z.string().optional().nullable().refine((val, ctx) => {
-    const paymentTerms = ctx.parent.payment_terms;
+    // Asegurarse de que ctx.parent esté definido antes de acceder a payment_terms
+    const paymentTerms = ctx.parent?.payment_terms;
     if (paymentTerms === 'Otro' && (!val || val.trim() === '')) {
       return ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -41,7 +42,8 @@ const supplierFormSchema = z.object({
     return true;
   }),
   credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional().refine((val, ctx) => {
-    const paymentTerms = ctx.parent.payment_terms;
+    // Asegurarse de que ctx.parent esté definido antes de acceder a payment_terms
+    const paymentTerms = ctx.parent?.payment_terms;
     if (paymentTerms === 'Crédito' && (val === undefined || val === null)) {
       return ctx.addIssue({
         code: z.ZodIssueCode.custom,
