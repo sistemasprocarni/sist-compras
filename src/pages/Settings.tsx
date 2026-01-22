@@ -7,9 +7,12 @@ import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast
 import { useSession } from '@/components/SessionContextProvider';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import PinConfirmationDialog from '@/components/PinConfirmationDialog';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const Settings = () => {
   const { session } = useSession();
+  const navigate = useNavigate();
   const [startingNumber, setStartingNumber] = useState<number>(1);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -61,6 +64,11 @@ const Settings = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Configuración del Sistema</CardTitle>

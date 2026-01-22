@@ -229,10 +229,8 @@ const EditPurchaseOrder = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <Button asChild variant="outline">
-          <Link to={`/purchase-orders/${id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Detalles
-          </Link>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useSession } from '@/components/SessionContextProvider';
 import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
-import { PlusCircle, Trash2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Textarea } from '@/components/ui/textarea';
-import { useLocation } from 'react-router-dom'; // Import useLocation
+import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
 
@@ -46,6 +46,7 @@ const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
   const location = useLocation(); // Hook para obtener el estado de la navegación
+  const navigate = useNavigate(); // Hook para navegar
 
   const [companyId, setCompanyId] = React.useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = React.useState<string>(''); // For SmartSearch display
@@ -69,6 +70,7 @@ const GeneratePurchaseOrder = () => {
 
   // Check if there's a quote request in the location state
   const quoteRequest = location.state?.quoteRequest;
+  const supplierData = location.state?.supplier;
 
   // Effect to prefill form from quote request
   React.useEffect(() => {
@@ -96,6 +98,14 @@ const GeneratePurchaseOrder = () => {
       });
     }
   }, [quoteRequest]);
+
+  // Effect to prefill form from supplier data
+  React.useEffect(() => {
+    if (supplierData) {
+      setSupplierId(supplierData.id);
+      setSupplierName(supplierData.name);
+    }
+  }, [supplierData]);
 
   // Fetch supplier details to get default payment terms
   const { data: supplierDetails } = useQuery({
@@ -228,6 +238,11 @@ const GeneratePurchaseOrder = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Orden de Compra (OC)</CardTitle>

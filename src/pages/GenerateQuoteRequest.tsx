@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchCompanies } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
-import { useLocation } from 'react-router-dom'; // Import useLocation
+import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
 
 interface Company {
   id: string;
@@ -45,6 +45,7 @@ const MATERIAL_UNITS = [
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
   const location = useLocation(); // Hook para obtener el estado de la navegación
+  const navigate = useNavigate(); // Hook para navegar
 
   const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
@@ -158,6 +159,11 @@ const GenerateQuoteRequest = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Solicitud de Cotización (SC)</CardTitle>

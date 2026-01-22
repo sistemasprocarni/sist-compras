@@ -86,10 +86,8 @@ const SupplierDetails = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <Button asChild variant="outline">
-          <Link to="/supplier-management">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a la gestión de proveedores
-          </Link>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         <div className="flex gap-2">
           <Button onClick={handleGenerateSC} className="bg-procarni-secondary hover:bg-green-700">

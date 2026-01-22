@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Filter, ArrowLeft } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllMaterials, createMaterial, updateMaterial, deleteMaterial } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -13,6 +13,7 @@ import MaterialForm from '@/components/MaterialForm';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate } from 'react-router-dom';
 
 interface Material {
   id: string;
@@ -50,6 +51,7 @@ const MaterialManagement = () => {
   const queryClient = useQueryClient();
   const { session } = useSession();
   const userId = session?.user?.id;
+  const navigate = useNavigate();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -176,6 +178,11 @@ const MaterialManagement = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
