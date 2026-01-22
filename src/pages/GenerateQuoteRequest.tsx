@@ -12,12 +12,12 @@ import { showError, showSuccess } from '@/utils/toast';
 import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchCompanies } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Company {
   id: string;
   name: string;
-  rif: string; // Added rif for SmartSearch
+  rif: string;
 }
 
 interface QuoteRequestItem {
@@ -25,7 +25,6 @@ interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
-  // is_exempt removed
 }
 
 interface MaterialSearchResult {
@@ -34,21 +33,20 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
-  is_exempt?: boolean; // Añadido: Campo para exención de IVA
+  is_exempt?: boolean;
 }
 
-// Define las unidades de medida.
 const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
 
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
-  const location = useLocation(); // Hook para obtener el estado de la navegación
-  const navigate = useNavigate(); // Hook para navegar
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
-  const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
+  const [companyId, setCompanyId] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
@@ -59,24 +57,16 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Check if there's supplier and material data in the location state
+  // Check if there's supplier data in the location state
   const supplierData = location.state?.supplier;
-  const materialData = location.state?.material;
 
-  // Effect to prefill form from supplier and material data
-  React.useEffect(() => {
-    if (supplierData && materialData) {
+  // Effect to prefill form from supplier data
+  useEffect(() => {
+    if (supplierData) {
       setSupplierId(supplierData.id);
       setSupplierName(supplierData.name);
-      // Add the material as the first item
-      setItems([{
-        material_name: materialData.name,
-        quantity: 1,
-        description: '',
-        unit: materialData.unit || MATERIAL_UNITS[0],
-      }]);
     }
-  }, [supplierData, materialData]);
+  }, [supplierData]);
 
   // New wrapper function for material search, filtered by selected supplier
   const searchSupplierMaterials = async (query: string) => {
@@ -101,7 +91,6 @@ const GenerateQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    // is_exempt is no longer handled here
   };
 
   const handleCompanySelect = (company: Company) => {
@@ -134,7 +123,7 @@ const GenerateQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: companyId, // Use the selected company ID
+      company_id: companyId,
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
       created_by: userEmail || 'unknown',
