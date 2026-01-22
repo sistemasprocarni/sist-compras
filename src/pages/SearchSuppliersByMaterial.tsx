@@ -5,9 +5,9 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Phone, Instagram } from 'lucide-react'; // Importar iconos
+import { Phone, Instagram, PlusCircle } from 'lucide-react'; // Importar iconos
 
 interface Material {
   id: string;
@@ -31,6 +31,7 @@ interface SupplierResult {
 }
 
 const SearchSuppliersByMaterial = () => {
+  const navigate = useNavigate();
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
@@ -56,6 +57,20 @@ const SearchSuppliersByMaterial = () => {
     } finally {
       setIsLoadingSuppliers(false);
     }
+  };
+
+  const handleCreateQuoteRequest = (supplier: SupplierResult) => {
+    if (!selectedMaterial) {
+      showError('No se ha seleccionado un material.');
+      return;
+    }
+    // Navigate to the quote request creation page with the supplier and material data
+    navigate('/generate-quote', {
+      state: {
+        supplier: supplier,
+        material: selectedMaterial,
+      },
+    });
   };
 
   return (
@@ -134,8 +149,12 @@ const SearchSuppliersByMaterial = () => {
                         <p><strong>Especificación del Material:</strong> {supplier.specification || 'N/A'}</p>
                       </div>
                       <div className="mt-4 flex justify-end">
-                        <Button asChild variant="outline" className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white">
-                          <Link to={`/suppliers/${supplier.id}`}>Ver Detalles Completos</Link>
+                        <Button 
+                          variant="outline" 
+                          className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white"
+                          onClick={() => handleCreateQuoteRequest(supplier)}
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" /> Crear Solicitud de Cotización
                         </Button>
                       </div>
                     </AccordionContent>

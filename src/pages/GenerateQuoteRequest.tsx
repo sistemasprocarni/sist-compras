@@ -12,6 +12,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchCompanies } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
+import { useLocation } from 'react-router-dom'; // Import useLocation
 
 interface Company {
   id: string;
@@ -43,6 +44,7 @@ const MATERIAL_UNITS = [
 
 const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
+  const location = useLocation(); // Hook para obtener el estado de la navegación
 
   const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
@@ -55,6 +57,25 @@ const GenerateQuoteRequest = () => {
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
+
+  // Check if there's supplier and material data in the location state
+  const supplierData = location.state?.supplier;
+  const materialData = location.state?.material;
+
+  // Effect to prefill form from supplier and material data
+  React.useEffect(() => {
+    if (supplierData && materialData) {
+      setSupplierId(supplierData.id);
+      setSupplierName(supplierData.name);
+      // Add the material as the first item
+      setItems([{
+        material_name: materialData.name,
+        quantity: 1,
+        description: '',
+        unit: materialData.unit || MATERIAL_UNITS[0],
+      }]);
+    }
+  }, [supplierData, materialData]);
 
   // New wrapper function for material search, filtered by selected supplier
   const searchSupplierMaterials = async (query: string) => {
