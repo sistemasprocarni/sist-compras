@@ -7,7 +7,8 @@ import { useSession } from '@/components/SessionContextProvider';
 interface PDFDownloadButtonProps {
   requestId?: string; // For quote requests
   orderId?: string; // For purchase orders
-  fileName: string;
+  fileName?: string; // Optional static filename
+  fileNameGenerator?: () => string; // Optional function to generate filename dynamically
   endpoint: string; // e.g., 'generate-qr-pdf' or 'generate-po-pdf'
   label?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined;
@@ -17,6 +18,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
   requestId,
   orderId,
   fileName,
+  fileNameGenerator,
   endpoint,
   label = 'Descargar PDF',
   variant = 'outline',
@@ -33,6 +35,16 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
     const id = requestId || orderId;
     if (!id) {
       showError('No se encontró el ID del documento.');
+      return;
+    }
+
+    // Determine the filename to use
+    let finalFileName = fileName;
+    if (fileNameGenerator) {
+      finalFileName = fileNameGenerator();
+    }
+    if (!finalFileName) {
+      showError('No se pudo determinar el nombre del archivo.');
       return;
     }
 
@@ -58,7 +70,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = fileName;
+      a.download = finalFileName;
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -106,6 +106,14 @@ const PurchaseOrderDetails = () => {
     return order?.payment_terms || 'N/A';
   };
 
+  // Function to generate the filename for the PDF download
+  const generateFileName = () => {
+    if (!order) return '';
+    const sequence = formatSequenceNumber(order.sequence_number, order.created_at);
+    const supplierName = order.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
+    return `${sequence}_${supplierName}.pdf`;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
@@ -137,8 +145,6 @@ const PurchaseOrderDetails = () => {
     );
   }
 
-  const fileName = `OC_${formatSequenceNumber(order.sequence_number, order.created_at)}.pdf`;
-
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -166,7 +172,7 @@ const PurchaseOrderDetails = () => {
           </Dialog>
           <PDFDownloadButton
             orderId={order.id}
-            fileName={fileName}
+            fileNameGenerator={generateFileName}
             endpoint="generate-po-pdf"
             label="Descargar PDF"
           />
