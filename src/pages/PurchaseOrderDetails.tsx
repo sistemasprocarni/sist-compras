@@ -10,7 +10,7 @@ import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
-import PDFDownloadButton from '@/components/PDFDownloadButton';
+import PDFDownloadButton from '@/components/PDFDownloadButton'; // New import
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 
@@ -22,7 +22,6 @@ interface PurchaseOrderItem {
   unit_price: number;
   tax_rate: number;
   is_exempt: boolean;
-  unit?: string; // Added unit field
 }
 
 interface SupplierDetails {
@@ -218,7 +217,6 @@ const PurchaseOrderDetails = () => {
                     <TableHead>Material</TableHead>
                     <TableHead>Cód. Prov.</TableHead>
                     <TableHead>Cantidad</TableHead>
-                    <TableHead>Unidad</TableHead>
                     <TableHead>P. Unitario ({order.currency})</TableHead>
                     <TableHead>Subtotal ({order.currency})</TableHead>
                     <TableHead>IVA ({order.currency})</TableHead>
@@ -234,7 +232,6 @@ const PurchaseOrderDetails = () => {
                         <TableCell>{item.material_name}</TableCell>
                         <TableCell>{item.supplier_code || 'N/A'}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.unit || 'N/A'}</TableCell>
                         <TableCell>{item.unit_price.toFixed(2)}</TableCell>
                         <TableCell>{subtotal.toFixed(2)}</TableCell>
                         <TableCell>{itemIva.toFixed(2)}</TableCell>
