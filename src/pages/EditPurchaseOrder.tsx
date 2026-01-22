@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { getPurchaseOrderDetails, searchSuppliers, searchMaterialsBySupplier, searchCompanies, updatePurchaseOrder } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +17,10 @@ import SmartSearch from '@/components/SmartSearch';
 import { calculateTotals } from '@/utils/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
+import { format, parseISO } from "date-fns"; // Import parseISO
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface Company {
   id: string;
@@ -53,6 +58,14 @@ const EditPurchaseOrder = () => {
   const [supplierName, setSupplierName] = useState<string>('');
   const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
+  
+  // New states
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>(undefined);
+  const [paymentTerms, setPaymentTerms] = useState<'Contado' | 'Crédito' | 'Otro'>('Contado');
+  const [customPaymentTerms, setCustomPaymentTerms] = useState<string>('');
+  const [creditDays, setCreditDays] = useState<number>(0);
+  const [observations, setObservations] = useState<string>('');
+
   const [items, setItems] = useState<PurchaseOrderItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
@@ -76,6 +89,18 @@ const EditPurchaseOrder = () => {
       setSupplierName(initialOrder.suppliers?.name || '');
       setCurrency(initialOrder.currency as 'USD' | 'VES');
       setExchangeRate(initialOrder.exchange_rate || undefined);
+      
+      // Populate new fields
+      if (initialOrder.delivery_date) {
+        setDeliveryDate(parseISO(initialOrder.delivery_date));
+      } else {
+        setDeliveryDate(undefined);
+      }
+      setPaymentTerms((initialOrder.payment_terms as 'Contado' | 'Crédito' | 'Otro') || 'Contado');
+      setCustomPaymentTerms(initialOrder.custom_payment_terms || '');
+      setCreditDays(initialOrder.credit_days || 0);
+      setObservations(initialOrder.observations || '');
+
       setItems(initialOrder.purchase_order_items.map(item => ({
         id: item.id,
         material_name: item.material_name,
@@ -172,6 +197,18 @@ const EditPurchaseOrder = () => {
       showError('Por favor, añade al menos un ítem válido con cantidad y precio mayores a cero.');
       return;
     }
+    if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {
+      showError('Debe especificar los términos de pago personalizados.');
+      return;
+    }
+    if (paymentTerms === 'Crédito' && (creditDays === undefined || creditDays <= 0)) {
+      showError('Debe especificar los días de crédito.');
+      return;
+    }
+    if (!deliveryDate) {
+      showError('Debe seleccionar una fecha de entrega.');
+      return;
+    }
 
     setIsSubmitting(true);
     const orderData = {
@@ -182,6 +219,12 @@ const EditPurchaseOrder = () => {
       status: initialOrder.status, // Keep existing status
       created_by: userEmail || 'unknown',
       user_id: userId,
+      // New fields
+      delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
+      payment_terms: paymentTerms,
+      custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
+      credit_days: paymentTerms === 'Crédito' ? creditDays : 0,
+      observations: observations || null,
     };
 
     const updatedOrder = await updatePurchaseOrder(id!, orderData, items);
@@ -209,7 +252,7 @@ const EditPurchaseOrder = () => {
           <CardDescription>Modifica los detalles de esta orden de compra.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <Label htmlFor="company">Empresa de Origen</Label>
               <SmartSearch
@@ -233,6 +276,31 @@ const EditPurchaseOrder = () => {
               />
               {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
             </div>
+            <div>
+              <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !deliveryDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deliveryDate ? format(deliveryDate, "PPP") : <span>Selecciona una fecha</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={deliveryDate}
+                    onSelect={setDeliveryDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
             <div className="flex items-center space-x-2">
               <Label htmlFor="currency">Moneda (USD/VES)</Label>
               <Switch
@@ -255,6 +323,60 @@ const EditPurchaseOrder = () => {
                 />
               </div>
             )}
+            <div>
+              <Label htmlFor="paymentTerms">Condición de Pago</Label>
+              <Select value={paymentTerms} onValueChange={(value: 'Contado' | 'Crédito' | 'Otro') => {
+                setPaymentTerms(value);
+                // Reset related fields if terms change
+                if (value !== 'Crédito') setCreditDays(0);
+                if (value !== 'Otro') setCustomPaymentTerms('');
+              }}>
+                <SelectTrigger id="paymentTerms">
+                  <SelectValue placeholder="Seleccione condición" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Contado">Contado</SelectItem>
+                  <SelectItem value="Crédito">Crédito</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {paymentTerms === 'Crédito' && (
+              <div>
+                <Label htmlFor="creditDays">Días de Crédito</Label>
+                <Input
+                  id="creditDays"
+                  type="number"
+                  value={creditDays}
+                  onChange={(e) => setCreditDays(parseInt(e.target.value) || 0)}
+                  min="0"
+                  placeholder="Ej: 30"
+                />
+              </div>
+            )}
+            {paymentTerms === 'Otro' && (
+              <div className="md:col-span-2">
+                <Label htmlFor="customPaymentTerms">Términos de Pago Personalizados</Label>
+                <Input
+                  id="customPaymentTerms"
+                  type="text"
+                  value={customPaymentTerms}
+                  onChange={(e) => setCustomPaymentTerms(e.target.value)}
+                  placeholder="Describa los términos de pago"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <Label htmlFor="observations">Observaciones</Label>
+            <Textarea
+              id="observations"
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
+              placeholder="Añade cualquier observación relevante para esta orden de compra."
+              rows={3}
+            />
           </div>
 
           <h3 className="text-lg font-semibold mb-4">Ítems de la Orden</h3>
@@ -379,13 +501,19 @@ const EditPurchaseOrder = () => {
                     status: initialOrder.status,
                     created_by: userEmail || 'unknown',
                     user_id: userId || '',
+                    // Pass new fields for preview
+                    delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
+                    payment_terms: paymentTerms,
+                    custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
+                    credit_days: paymentTerms === 'Crédito' ? creditDays : 0,
+                    observations: observations || null,
                   }}
                   itemsData={items}
                   onClose={() => setIsModalOpen(false)}
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !deliveryDate} className="bg-procarni-secondary hover:bg-green-700">
               {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
           </div>

@@ -64,6 +64,12 @@ export interface PurchaseOrder {
   created_at: string;
   created_by?: string;
   user_id: string;
+  // New fields
+  delivery_date?: string;
+  payment_terms?: string;
+  custom_payment_terms?: string | null;
+  credit_days?: number;
+  observations?: string;
 }
 
 export interface SupplierMaterialPayload {

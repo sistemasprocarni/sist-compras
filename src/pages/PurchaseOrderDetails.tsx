@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
+import { format } from 'date-fns';
 
 interface PurchaseOrderItem {
   id: string;
@@ -51,6 +52,12 @@ interface PurchaseOrderDetailsData {
   created_by?: string;
   user_id: string;
   purchase_order_items: PurchaseOrderItem[];
+  // New fields
+  delivery_date?: string;
+  payment_terms?: string;
+  custom_payment_terms?: string | null;
+  credit_days?: number;
+  observations?: string;
 }
 
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
@@ -88,6 +95,16 @@ const PurchaseOrderDetails = () => {
 
   const totals = calculateTotals(itemsForCalculation);
   const amountInWords = order ? numberToWords(totals.total, order.currency) : '';
+
+  const displayPaymentTerms = () => {
+    if (order?.payment_terms === 'Otro' && order.custom_payment_terms) {
+      return order.custom_payment_terms;
+    }
+    if (order?.payment_terms === 'Crédito' && order.credit_days) {
+      return `Crédito (${order.credit_days} días)`;
+    }
+    return order?.payment_terms || 'N/A';
+  };
 
   if (isLoading) {
     return (
@@ -159,15 +176,24 @@ const PurchaseOrderDetails = () => {
           <CardDescription>Detalles completos de la orden de compra.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
             <p><strong>Proveedor:</strong> {order.suppliers?.name || 'N/A'}</p>
             <p><strong>Empresa:</strong> {order.companies?.name || 'N/A'}</p>
             <p><strong>Moneda:</strong> {order.currency}</p>
             {order.exchange_rate && <p><strong>Tasa de Cambio:</strong> {order.exchange_rate.toFixed(2)}</p>}
             <p><strong>Estado:</strong> {order.status}</p>
             <p><strong>Fecha de Creación:</strong> {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}</p>
+            <p><strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
+            <p><strong>Condición de Pago:</strong> {displayPaymentTerms()}</p>
             <p><strong>Creado por:</strong> {order.created_by || 'N/A'}</p>
           </div>
+
+          {order.observations && (
+            <div className="mb-6 p-3 border rounded-md bg-muted/50">
+              <p className="font-semibold text-sm mb-1">Observaciones:</p>
+              <p className="text-sm whitespace-pre-wrap">{order.observations}</p>
+            </div>
+          )}
 
           <h3 className="text-lg font-semibold mt-8 mb-4">Ítems de la Orden</h3>
           {order.purchase_order_items && order.purchase_order_items.length > 0 ? (

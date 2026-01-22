@@ -154,6 +154,17 @@ serve(async (req) => {
       });
     }
 
+    // Helper function to format payment terms
+    const formatPaymentTerms = (order: any) => {
+      if (order.payment_terms === 'Otro' && order.custom_payment_terms) {
+        return order.custom_payment_terms;
+      }
+      if (order.payment_terms === 'Crédito' && order.credit_days) {
+        return `Crédito (${order.credit_days} días)`;
+      }
+      return order.payment_terms || 'Contado';
+    };
+
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
@@ -291,7 +302,30 @@ serve(async (req) => {
       y -= lineHeight;
     }
     drawText(`Estado: ${order.status}`, margin, y);
+    y -= lineHeight;
+    drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
+    y -= lineHeight;
+    drawText(`Condición de Pago: ${formatPaymentTerms(order)}`, margin, y);
     y -= lineHeight * 2;
+
+    // --- Observaciones ---
+    if (order.observations) {
+      drawText('OBSERVACIONES:', margin, y, { font: boldFont, size: 12 });
+      y -= lineHeight;
+      
+      const observationsText = order.observations;
+      const maxTextWidth = tableWidth;
+      
+      // Use the font object to split text into runs
+      const textRuns = page.setFont(font).splitTextIntoTextRuns(observationsText, { maxWidth: maxTextWidth, fontSize: fontSize });
+      
+      for (const run of textRuns) {
+        checkPageBreak(lineHeight);
+        drawText(run.text, margin, y);
+        y -= lineHeight;
+      }
+      y -= lineHeight; // Extra space after observations
+    }
 
     // --- Tabla de Ítems (Enhanced Styling) ---
     drawTableHeader(); // Draw initial table header

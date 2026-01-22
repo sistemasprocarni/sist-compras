@@ -11,6 +11,12 @@ interface PurchaseOrderHeader {
   status?: string;
   created_by?: string;
   user_id: string;
+  // New fields
+  delivery_date?: string;
+  payment_terms?: string;
+  custom_payment_terms?: string | null;
+  credit_days?: number;
+  observations?: string;
 }
 
 interface PurchaseOrderItem {
@@ -60,6 +66,12 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
             status: 'Draft',
             created_by: orderData.created_by,
             user_id: orderData.user_id,
+            // New fields
+            delivery_date: orderData.delivery_date,
+            payment_terms: orderData.payment_terms,
+            custom_payment_terms: orderData.custom_payment_terms,
+            credit_days: orderData.credit_days,
+            observations: orderData.observations,
           })
           .select('id')
           .single();
@@ -210,7 +222,7 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
         setSuccessToastId(null);
       }
     };
-  }, [orderData.supplier_id, orderData.company_id, orderData.currency, orderData.exchange_rate, itemsData.length]); // Re-run if core data changes
+  }, [orderData.supplier_id, orderData.company_id, orderData.currency, orderData.exchange_rate, orderData.delivery_date, orderData.payment_terms, orderData.custom_payment_terms, orderData.credit_days, orderData.observations, itemsData.length]); // Re-run if core data changes
 
   return (
     <div className="flex flex-col h-full">
