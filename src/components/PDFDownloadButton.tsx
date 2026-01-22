@@ -1,0 +1,91 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+import { showError, showLoading, dismissToast } from '@/utils/toast';
+import { useSession } from '@/components/SessionContextProvider';
+
+interface PDFDownloadButtonProps {
+  requestId?: string; // For quote requests
+  orderId?: string; // For purchase orders
+  fileName: string;
+  endpoint: string; // e.g., 'generate-qr-pdf' or 'generate-po-pdf'
+  label?: string;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined;
+}
+
+const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
+  requestId,
+  orderId,
+  fileName,
+  endpoint,
+  label = 'Descargar PDF',
+  variant = 'outline',
+}) => {
+  const { session } = useSession();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!session) {
+      showError('No hay sesión activa para descargar el PDF.');
+      return;
+    }
+
+    const id = requestId || orderId;
+    if (!id) {
+      showError('No se encontró el ID del documento.');
+      return;
+    }
+
+    setIsDownloading(true);
+    const toastId = showLoading('Generando PDF para descarga...');
+
+    try {
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requestId: requestId, orderId: orderId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al generar el PDF.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      dismissToast(toastId);
+      showSuccess('PDF descargado exitosamente.');
+    } catch (error: any) {
+      console.error('[PDFDownloadButton] Error downloading PDF:', error);
+      dismissToast(toastId);
+      showError(error.message || 'Error desconocido al descargar el PDF.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleDownload}
+      disabled={isDownloading}
+      variant={variant}
+      className="flex items-center gap-2"
+    >
+      <Download className="h-4 w-4" />
+      {isDownloading ? 'Descargando...' : label}
+    </Button>
+  );
+};
+
+export default PDFDownloadButton;

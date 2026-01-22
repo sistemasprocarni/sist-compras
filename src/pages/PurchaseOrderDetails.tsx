@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
+import PDFDownloadButton from '@/components/PDFDownloadButton'; // New import
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 
@@ -52,7 +53,6 @@ interface PurchaseOrderDetailsData {
   created_by?: string;
   user_id: string;
   purchase_order_items: PurchaseOrderItem[];
-  // New fields
   delivery_date?: string;
   payment_terms?: string;
   custom_payment_terms?: string | null;
@@ -137,6 +137,8 @@ const PurchaseOrderDetails = () => {
     );
   }
 
+  const fileName = `OC_${formatSequenceNumber(order.sequence_number, order.created_at)}.pdf`;
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -162,6 +164,12 @@ const PurchaseOrderDetails = () => {
               />
             </DialogContent>
           </Dialog>
+          <PDFDownloadButton
+            orderId={order.id}
+            fileName={fileName}
+            endpoint="generate-po-pdf"
+            label="Descargar PDF"
+          />
           <Button asChild className="bg-procarni-secondary hover:bg-green-700">
             <Link to={`/purchase-orders/edit/${order.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Orden
@@ -181,7 +189,6 @@ const PurchaseOrderDetails = () => {
             <p><strong>Empresa:</strong> {order.companies?.name || 'N/A'}</p>
             <p><strong>Moneda:</strong> {order.currency}</p>
             {order.exchange_rate && <p><strong>Tasa de Cambio:</strong> {order.exchange_rate.toFixed(2)}</p>}
-            {/* <p><strong>Estado:</strong> {order.status}</p> <-- REMOVED STATUS */}
             <p><strong>Fecha de Creación:</strong> {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}</p>
             <p><strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
             <p><strong>Condición de Pago:</strong> {displayPaymentTerms()}</p>

@@ -1,15 +1,17 @@
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText } from 'lucide-react'; // Import FileText icon
+import { ArrowLeft, Edit, FileText, Download } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'; // Import Dialog components
-import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal'; // Import new modal component
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
+import PDFDownloadButton from '@/components/PDFDownloadButton'; // New import
+import { format } from 'date-fns';
 
 interface QuoteRequestItem {
   id: string;
@@ -17,7 +19,7 @@ interface QuoteRequestItem {
   description?: string;
   unit?: string;
   quantity: number;
-  is_exempt?: boolean; // Mantener en la interfaz de datos para la consulta, pero no mostrar en la tabla
+  is_exempt?: boolean;
 }
 
 interface SupplierDetails {
@@ -55,7 +57,7 @@ interface QuoteRequestDetailsData {
 
 const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -99,6 +101,8 @@ const QuoteRequestDetails = () => {
     );
   }
 
+  const fileName = `SC_${request.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_${format(new Date(request.created_at), 'dd-MM-yyyy')}.pdf`;
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -124,6 +128,12 @@ const QuoteRequestDetails = () => {
               />
             </DialogContent>
           </Dialog>
+          <PDFDownloadButton
+            requestId={request.id}
+            fileName={fileName}
+            endpoint="generate-qr-pdf"
+            label="Descargar PDF"
+          />
           <Button asChild className="bg-procarni-secondary hover:bg-green-700">
             <Link to={`/quote-requests/edit/${request.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
