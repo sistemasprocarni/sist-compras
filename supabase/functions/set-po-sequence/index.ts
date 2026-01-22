@@ -35,8 +35,25 @@ serve(async (req) => {
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
-    const { startNumber } = await req.json();
+    const { startNumber, pin } = await req.json();
     console.log(`[set-po-sequence] Setting sequence start number to: ${startNumber} by user: ${user.email}`);
+
+    // --- PIN Validation ---
+    const adminPin = Deno.env.get('ADMIN_PIN');
+    if (!adminPin) {
+      console.error('[set-po-sequence] ADMIN_PIN environment variable is not set.');
+      return new Response(JSON.stringify({ error: 'PIN de administración no configurado en el servidor.' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (pin !== adminPin) {
+      console.warn(`[set-po-sequence] Invalid PIN provided by user: ${user.email}`);
+      return new Response(JSON.stringify({ error: 'PIN de seguridad incorrecto.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Use the service role client to update the sequence
     const serviceRoleClient = createClient(
