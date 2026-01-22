@@ -82,6 +82,7 @@ serve(async (req) => {
     const tableHeaderBgColor = rgb(0.9, 0.9, 0.9);
     const borderColor = rgb(0.8, 0.8, 0.8);
     const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
+    const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Very light gray for table rows
 
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
@@ -190,30 +191,48 @@ serve(async (req) => {
     drawText(`RIF: ${request.suppliers?.rif || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
-    // --- Tabla de Ítems Solicitados ---
+    // --- Tabla de Ítems Solicitados (Enhanced Styling) ---
     drawTableHeader(); // Draw initial table header
 
-    // Dibujar filas de ítems
-    for (const item of items) {
+    // Dibujar filas de ítems con estilo mejorado
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       checkPageBreak(lineHeight); // Check before drawing each row
+
+      // Alternate row colors for better readability
+      const rowColor = i % 2 === 0 ? rgb(1, 1, 1) : tableRowBgColor;
+
       let currentX = tableX;
       page.drawRectangle({
         x: tableX,
         y: y - lineHeight,
         width: tableWidth,
         height: lineHeight,
+        color: rowColor,
         borderColor: borderColor,
         borderWidth: 1,
       });
+
+      // Draw item data with better alignment
       drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[0];
-      drawText(item.quantity.toString(), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      // Right-align numeric values
+      const quantityText = item.quantity.toString();
+      drawText(quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[1];
-      drawText(item.unit || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const unitText = item.unit || 'N/A';
+      drawText(unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
+
+      // Left-align description (can be longer)
       drawText(item.description || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
-      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const exemptText = item.is_exempt ? 'Sí' : 'No';
+      drawText(exemptText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(exemptText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+
       y -= lineHeight;
     }
     y -= lineHeight * 2; // Espacio después de la tabla
@@ -224,11 +243,17 @@ serve(async (req) => {
 
     const pdfBytes = await pdfDoc.save();
 
+    // Format filename as: SC, "NOMBRE DEL PROVEEDOR" "FECHA ACTUAL"
+    const supplierName = request.suppliers?.name || 'Proveedor';
+    const currentDate = new Date().toLocaleDateString('es-VE').replace(/\//g, '-');
+    const safeSupplierName = supplierName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const filename = `SC_${safeSupplierName}_${currentDate}.pdf`;
+
     return new Response(pdfBytes, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="solicitud_cotizacion_${request.id.substring(0, 8)}.pdf"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
 

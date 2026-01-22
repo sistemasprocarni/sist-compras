@@ -170,6 +170,7 @@ serve(async (req) => {
     const tableHeaderBgColor = rgb(0.9, 0.9, 0.9);
     const borderColor = rgb(0.8, 0.8, 0.8);
     const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
+    const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Very light gray for table rows
 
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
@@ -290,32 +291,52 @@ serve(async (req) => {
     drawText(`Estado: ${order.status}`, margin, y);
     y -= lineHeight * 2;
 
-    // --- Tabla de Ítems ---
+    // --- Tabla de Ítems (Enhanced Styling) ---
     drawTableHeader(); // Draw initial table header
 
-    // Dibujar filas de ítems
-    for (const item of items) {
+    // Dibujar filas de ítems con estilo mejorado
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       checkPageBreak(lineHeight); // Check before drawing each row
+
+      // Alternate row colors for better readability
+      const rowColor = i % 2 === 0 ? rgb(1, 1, 1) : tableRowBgColor;
+
       let currentX = tableX;
       page.drawRectangle({
         x: tableX,
         y: y - lineHeight,
         width: tableWidth,
         height: lineHeight,
+        color: rowColor,
         borderColor: borderColor,
         borderWidth: 1,
       });
+
+      // Draw item data with better alignment
       drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[0];
-      drawText(item.quantity.toString(), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      // Right-align numeric values
+      const quantityText = item.quantity.toString();
+      drawText(quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[1];
-      drawText(item.unit_price.toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const unitPriceText = item.unit_price.toFixed(2);
+      drawText(unitPriceText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitPriceText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
-      drawText(item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const taxText = item.is_exempt ? 'N/A' : `${(item.tax_rate * 100).toFixed(0)}%`;
+      drawText(taxText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(taxText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[3];
-      drawText(item.is_exempt ? 'Sí' : 'No', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const exemptText = item.is_exempt ? 'Sí' : 'No';
+      drawText(exemptText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(exemptText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[4];
-      drawText((item.quantity * item.unit_price).toFixed(2), currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
+
+      const subtotalText = (item.quantity * item.unit_price).toFixed(2);
+      drawText(subtotalText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(subtotalText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+
       y -= lineHeight;
     }
     y -= lineHeight; // Espacio después de la tabla
@@ -327,12 +348,18 @@ serve(async (req) => {
     // Check for page break before drawing totals
     checkPageBreak(lineHeight * 5); // 3 lines for totals, 1 for amount in words, 1 for spacing
 
-    drawText(`Base Imponible: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`, totalSectionX, y);
-    y -= lineHeight;
-    drawText(`Monto IVA: ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`, totalSectionX, y);
-    y -= lineHeight;
-    drawText(`TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`, totalSectionX, y, { font: boldFont, size: fontSize + 2 });
-    y -= lineHeight * 2;
+    // Draw totals with right alignment
+    const baseImponibleText = `Base Imponible: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`;
+    drawText(baseImponibleText, totalSectionX, y);
+
+    const montoIVAText = `Monto IVA: ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`;
+    drawText(montoIVAText, totalSectionX, y - lineHeight);
+
+    const totalText = `TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`;
+    const totalTextWidth = font.widthOfTextAtSize(totalText, fontSize + 2);
+    drawText(totalText, totalSectionX + 200 - totalTextWidth, y - lineHeight * 2, { font: boldFont, size: fontSize + 2 });
+
+    y -= lineHeight * 3;
 
     // Monto en palabras
     const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
