@@ -128,12 +128,45 @@ serve(async (req) => {
       }
     };
 
-    // --- Header ---
+    // --- Header with Company Logo ---
+    // Try to fetch and embed the company logo if available
+    let companyLogoImage = null;
     if (request.companies?.logo_url) {
-      drawText('LOGO EMPRESA', margin, y - 20, { font: boldFont, size: 12 });
+      try {
+        const logoResponse = await fetch(request.companies.logo_url);
+        if (logoResponse.ok) {
+          const logoBytes = await logoResponse.arrayBuffer();
+          companyLogoImage = await pdfDoc.embedPng(logoBytes);
+        }
+      } catch (logoError) {
+        console.warn(`[generate-qr-pdf] Could not load company logo:`, logoError);
+      }
     }
 
-    // Removed text centering that was causing the error
+    // Draw company logo or placeholder
+    if (companyLogoImage) {
+      const logoWidth = 100;
+      const logoHeight = 50;
+      const logoX = margin;
+      const logoY = y - logoHeight;
+
+      page.drawImage(companyLogoImage, {
+        x: logoX,
+        y: logoY,
+        width: logoWidth,
+        height: logoHeight,
+      });
+
+      // Draw company name next to logo
+      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
+      y -= logoHeight + lineHeight;
+    } else {
+      // Fallback: Draw company name as text
+      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14 });
+      y -= lineHeight * 2;
+    }
+
+    // Draw document title centered
     drawText('SOLICITUD DE COTIZACIÓN', width / 2 - 100, y, { font: boldFont, size: 18 });
     y -= lineHeight * 2;
     drawText(`Nº: ${request.id.substring(0, 8)}`, width - margin - 100, y, { font: boldFont, size: 12 });
