@@ -64,7 +64,7 @@ const GeneratePurchaseOrder = () => {
   };
 
   const handleAddItem = () => {
-    addItem({ material_name: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
+    addItem({ material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false });
   };
 
   const handleItemChange = (index: number, field: keyof typeof items[0], value: any) => {
@@ -187,58 +187,92 @@ const GeneratePurchaseOrder = () => {
           </div>
 
           <h3 className="text-lg font-semibold mb-4">Ítems de la Orden</h3>
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-md">
-                <div className="md:col-span-2">
-                  <Label htmlFor={`material_name-${index}`}>Material</Label>
-                  <SmartSearch
-                    placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
-                    onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                    fetchFunction={searchSupplierMaterials}
-                    displayValue={item.material_name}
-                    disabled={!supplierId}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`quantity-${index}`}>Cantidad</Label>
-                  <Input
-                    id={`quantity-${index}`}
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`unit_price-${index}`}>P. Unitario</Label>
-                  <Input
-                    id={`unit_price-${index}`}
-                    type="number"
-                    step="0.01"
-                    value={item.unit_price}
-                    onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value))}
-                    min="0"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id={`is_exempt-${index}`}
-                    checked={item.is_exempt}
-                    onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
-                    disabled={!item.material_name}
-                  />
-                  <Label htmlFor={`is_exempt-${index}`}>Exento IVA</Label>
-                </div>
-                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button variant="outline" onClick={handleAddItem} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-            </Button>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
+                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
+                  <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
+                  <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Exento</th>
+                  <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {items.map((item, index) => {
+                  const subtotal = item.quantity * item.unit_price;
+                  const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+                  const itemTotal = subtotal + itemIva;
+
+                  return (
+                    <tr key={index}>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <SmartSearch
+                          placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
+                          onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+                          fetchFunction={searchSupplierMaterials}
+                          displayValue={item.material_name}
+                          disabled={!supplierId}
+                        />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <Input
+                          type="text"
+                          value={item.supplier_code || ''}
+                          onChange={(e) => handleItemChange(index, 'supplier_code', e.target.value)}
+                          placeholder="Código Prov."
+                          className="h-8"
+                        />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+                          min="0"
+                          className="h-8"
+                        />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value))}
+                          min="0"
+                          className="h-8"
+                        />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+                        {currency} {subtotal.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-center text-sm">
+                        {currency} {itemIva.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-center">
+                        <Switch
+                          checked={item.is_exempt}
+                          onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
+                          disabled={!item.material_name}
+                        />
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-right">
+                        <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+          <Button variant="outline" onClick={handleAddItem} className="w-full mt-4">
+            <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
+          </Button>
 
           <div className="mt-8 border-t pt-4">
             <div className="flex justify-end items-center mb-2">

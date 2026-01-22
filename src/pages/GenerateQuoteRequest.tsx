@@ -24,7 +24,7 @@ interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
-  is_exempt?: boolean; // Añadido: Campo para exención de IVA
+  // is_exempt removed
 }
 
 interface MaterialSearchResult {
@@ -63,7 +63,7 @@ const GenerateQuoteRequest = () => {
   };
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0], is_exempt: false }]);
+    setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
   };
 
   const handleItemChange = (index: number, field: keyof QuoteRequestItem, value: any) => {
@@ -79,7 +79,7 @@ const GenerateQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    handleItemChange(index, 'is_exempt', material.is_exempt || false); // Asignar el valor de is_exempt
+    // is_exempt is no longer handled here
   };
 
   const handleCompanySelect = (company: Company) => {
@@ -237,15 +237,6 @@ const GenerateQuoteRequest = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Switch
-                      id={`is_exempt-${index}`}
-                      checked={item.is_exempt}
-                      onCheckedChange={(checked) => handleItemChange(index, 'is_exempt', checked)}
-                      disabled={!item.material_name}
-                    />
-                    <Label htmlFor={`is_exempt-${index}`} className="text-xs">Exento IVA</Label>
-                  </div>
                 </div>
                 <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
                   <Trash2 className="h-4 w-4" />

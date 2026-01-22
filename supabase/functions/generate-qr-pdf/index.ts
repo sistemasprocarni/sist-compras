@@ -99,8 +99,9 @@ serve(async (req) => {
     // Table column configuration
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    const colWidths = [tableWidth * 0.25, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.3, tableWidth * 0.15];
-    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción', 'Exento IVA'];
+    // Adjusted column widths: Material, Cantidad, Unidad, Descripción
+    const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.4];
+    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción'];
 
     // Function to draw table headers
     const drawTableHeader = () => {
@@ -228,10 +229,7 @@ serve(async (req) => {
 
       // Left-align description (can be longer)
       drawText(item.description || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[3];
-
-      const exemptText = item.is_exempt ? 'Sí' : 'No';
-      drawText(exemptText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(exemptText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+      // currentX += colWidths[3]; // No need to update currentX after the last column
 
       y -= lineHeight;
     }

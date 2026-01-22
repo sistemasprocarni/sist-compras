@@ -36,6 +36,7 @@ const PurchaseOrderService = {
       const orderItems = items.map(item => ({
         order_id: newOrder.id,
         material_name: item.material_name,
+        supplier_code: item.supplier_code, // Incluir supplier_code
         quantity: item.quantity,
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,

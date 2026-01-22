@@ -17,7 +17,7 @@ interface QuoteRequestItem {
   description?: string;
   unit?: string;
   quantity: number;
-  is_exempt?: boolean; // Añadido: Campo para indicar si el material está exento de IVA
+  is_exempt?: boolean; // Mantener en la interfaz de datos para la consulta, pero no mostrar en la tabla
 }
 
 interface SupplierDetails {
@@ -156,7 +156,6 @@ const QuoteRequestDetails = () => {
                   <TableHead>Cantidad</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Descripción</TableHead>
-                  <TableHead>Exento IVA</TableHead> {/* Nueva columna */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -166,7 +165,6 @@ const QuoteRequestDetails = () => {
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>{item.unit || 'N/A'}</TableCell>
                     <TableCell>{item.description || 'N/A'}</TableCell>
-                    <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell> {/* Mostrar valor */}
                   </TableRow>
                 ))}
               </TableBody>

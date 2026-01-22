@@ -78,13 +78,14 @@ export interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
-  is_exempt?: boolean;
+  // is_exempt removed from QuoteRequestItem
 }
 
 export interface PurchaseOrderItem {
   id?: string;
   order_id?: string;
   material_name: string;
+  supplier_code?: string; // Nuevo campo
   quantity: number;
   unit_price: number;
   tax_rate?: number;

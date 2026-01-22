@@ -39,7 +39,7 @@ const QuoteRequestService = {
         quantity: item.quantity,
         description: item.description,
         unit: item.unit,
-        is_exempt: item.is_exempt,
+        // is_exempt removed
       }));
 
       const { error: itemsError } = await supabase
@@ -90,7 +90,7 @@ const QuoteRequestService = {
         quantity: item.quantity,
         description: item.description,
         unit: item.unit,
-        is_exempt: item.is_exempt,
+        // is_exempt removed
       }));
 
       const { error: itemsError } = await supabase

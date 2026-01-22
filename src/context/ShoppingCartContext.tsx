@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface ShoppingCartItem {
   material_name: string;
+  supplier_code?: string; // Nuevo campo opcional para el código del proveedor
   quantity: number;
   unit_price: number;
   tax_rate?: number;
