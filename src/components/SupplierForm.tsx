@@ -97,7 +97,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
       payment_terms: 'Contado',
       custom_payment_terms: '',
       credit_days: 0,
-      status: 'Activo',
+      status: 'Active', // Changed to English to match database constraint
       materials: [],
     },
   });
@@ -125,7 +125,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         payment_terms: initialData.payment_terms,
         custom_payment_terms: initialData.custom_payment_terms || '',
         credit_days: initialData.credit_days || 0,
-        status: initialData.status || 'Activo',
+        status: initialData.status || 'Active', // Changed to English
         materials: formattedMaterials,
       });
     } else {
@@ -140,7 +140,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
         payment_terms: 'Contado',
         custom_payment_terms: '',
         credit_days: 0,
-        status: 'Activo',
+        status: 'Active', // Changed to English
         materials: [],
       });
     }
@@ -377,8 +377,8 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Activo">Activo</SelectItem>
-                    <SelectItem value="Inactivo">Inactivo</SelectItem>
+                    <SelectItem value="Active">Activo</SelectItem>
+                    <SelectItem value="Inactive">Inactivo</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
