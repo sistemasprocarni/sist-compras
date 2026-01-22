@@ -334,8 +334,9 @@ serve(async (req) => {
     drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
     y -= lineHeight;
     
-    drawText(`Estado: ${order.status}`, margin, y);
-    y -= lineHeight;
+    // REMOVED: drawText(`Estado: ${order.status}`, margin, y);
+    // y -= lineHeight; // Adjust Y position since one line was removed
+    
     drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`Condición de Pago: ${formatPaymentTerms(order)}`, margin, y);
