@@ -23,6 +23,7 @@ import CompanyManagement from "./pages/CompanyManagement";
 import PurchaseOrderManagement from "./pages/PurchaseOrderManagement";
 import PurchaseOrderDetails from "./pages/PurchaseOrderDetails"; // New import
 import EditPurchaseOrder from "./pages/EditPurchaseOrder"; // New import
+import Settings from "./pages/Settings"; // New import
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="/purchase-order-management" element={<PurchaseOrderManagement />} />
                 <Route path="/purchase-orders/:id" element={<PurchaseOrderDetails />} /> {/* New route */}
                 <Route path="/purchase-orders/edit/:id" element={<EditPurchaseOrder />} /> {/* New route */}
+                <Route path="/settings" element={<Settings />} /> {/* New route */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
