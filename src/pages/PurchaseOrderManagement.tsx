@@ -157,7 +157,7 @@ const PurchaseOrderManagement = () => {
                     <div className="text-sm space-y-1">
                       <p><strong>Empresa:</strong> {order.companies.name}</p>
                       <p><strong>Moneda:</strong> {order.currency}</p>
-                      <p><strong>Estado:</strong> {order.status}</p>
+                      <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
                       <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
@@ -183,7 +183,7 @@ const PurchaseOrderManagement = () => {
                       <TableHead>Proveedor</TableHead>
                       <TableHead>Empresa</TableHead>
                       <TableHead>Moneda</TableHead>
-                      <TableHead>Estado</TableHead>
+                      <TableHead>Tasa de Cambio</TableHead>
                       <TableHead>Fecha Creación</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -195,7 +195,7 @@ const PurchaseOrderManagement = () => {
                         <TableCell>{order.suppliers.name}</TableCell>
                         <TableCell>{order.companies.name}</TableCell>
                         <TableCell>{order.currency}</TableCell>
-                        <TableCell>{order.status}</TableCell>
+                        <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                         <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
