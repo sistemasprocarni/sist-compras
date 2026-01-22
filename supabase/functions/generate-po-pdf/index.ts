@@ -128,7 +128,7 @@ serve(async (req) => {
       .select(`
         *,
         suppliers (name, rif, email, phone, payment_terms),
-        companies (name, logo_url, fiscal_data)
+        companies (name, logo_url, fiscal_data, rif, address, phone, email)
       `)
       .eq('id', orderId)
       .single();
@@ -216,7 +216,7 @@ serve(async (req) => {
       }
     };
 
-    // --- Header with Company Logo ---
+    // --- Header with Company Logo and Details ---
     // Try to fetch and embed the company logo if available
     let companyLogoImage = null;
     if (order.companies?.logo_url) {
@@ -231,7 +231,7 @@ serve(async (req) => {
       }
     }
 
-    // Draw company logo or placeholder
+    // Draw company logo and details
     if (companyLogoImage) {
       const logoWidth = 50;
       const logoHeight = 50;
@@ -245,9 +245,17 @@ serve(async (req) => {
         height: logoHeight,
       });
 
-      // Draw company name next to logo
+      // Draw company name (larger and bold)
       drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
-      y -= logoHeight + lineHeight;
+
+      // Draw company details (slightly smaller but clear)
+      const detailsY = y - lineHeight;
+      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9 });
+      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9 });
+      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9 });
+      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9 });
+
+      y -= logoHeight + lineHeight * 4;
     } else {
       // Fallback: Draw company name as text
       drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14 });
