@@ -90,6 +90,11 @@ const EmailSenderModal: React.FC<EmailSenderModalProps> = ({
               </Label>
             </div>
           )}
+          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+            <p className="font-semibold mb-1">Información de respuesta:</p>
+            <p>El correo se enviará desde: <strong>noreply@em1234567.sendgrid.net</strong></p>
+            <p>Las respuestas llegarán a: <strong>sistemasprocarni2025@gmail.com</strong> y <strong>analistacompraspc@gmail.com</strong></p>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isSending}>

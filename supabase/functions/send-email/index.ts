@@ -46,26 +46,41 @@ serve(async (req) => {
       });
     }
 
-    // Determine the sender email based on the user's email
-    let senderEmail;
-    if (user.email === 'sistemasprocarni2025@gmail.com') {
-      senderEmail = 'sistemasprocarni2025@gmail.com';
-    } else if (user.email === 'analistacompraspc@gmail.com') {
-      senderEmail = 'analistacompraspc@gmail.com';
-    } else {
-      senderEmail = 'sistemasprocarni2025@gmail.com';
-    }
+    // Use SendGrid shared domain as sender
+    // Replace with your actual SendGrid sender email
+    const senderEmail = 'noreply@em1234567.sendgrid.net';
+    const senderName = 'Portal de Proveedores';
+
+    // Configure multiple reply-to addresses
+    const replyTo = [
+      {
+        email: 'sistemasprocarni2025@gmail.com',
+        name: 'Sistemas Procarni'
+      },
+      {
+        email: 'analistacompraspc@gmail.com',
+        name: 'Analista de Compras'
+      }
+    ];
 
     // Prepare email data for SendGrid
     const emailData = {
       personalizations: [{
-        to: [{ email: to }]
+        to: [{ email: to }],
+        // Add custom headers for better identification
+        headers: {
+          'X-Application': 'Portal de Proveedores',
+          'X-User-Email': user.email,
+          'X-Document-Type': 'Solicitud/Orden'
+        }
       }],
       from: {
         email: senderEmail,
-        name: user.email
+        name: senderName
       },
-      subject: subject,
+      reply_to: replyTo[0], // SendGrid only supports one reply-to in the main field
+      // For multiple reply-to, we'll add them in the subject or body
+      subject: `[Portal de Proveedores] ${subject}`,
       content: [
         {
           type: 'text/html',
@@ -114,7 +129,8 @@ serve(async (req) => {
     console.log('[send-email] Email sent successfully via SendGrid');
     return new Response(JSON.stringify({ 
       message: 'Email sent successfully via SendGrid',
-      sender: senderEmail 
+      sender: senderEmail,
+      replyTo: replyTo
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
