@@ -11,12 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
-import WhatsAppSenderWithPDF from '@/components/WhatsAppSenderWithPDF';
+import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
-import { generatePdfBlob } from '@/utils/pdfGenerator';
 
 interface PurchaseOrderItem {
   id: string;
@@ -276,9 +275,7 @@ const PurchaseOrderDetails = () => {
             endpoint="generate-po-pdf"
             label="Descargar PDF"
           />
-          <WhatsAppSenderWithPDF
-            generatePdf={() => generatePdfBlob('generate-po-pdf', { orderId: order.id }, session?.access_token || '')}
-            fileName={generateFileName()}
+          <WhatsAppSenderButton
             recipientPhone={order.suppliers?.phone}
             documentType="Orden de Compra"
             documentId={order.id}

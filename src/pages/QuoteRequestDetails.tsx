@@ -11,11 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
-import WhatsAppSenderWithPDF from '@/components/WhatsAppSenderWithPDF';
+import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
-import { generatePdfBlob } from '@/utils/pdfGenerator';
 
 interface QuoteRequestItem {
   id: string;
@@ -243,9 +242,7 @@ const QuoteRequestDetails = () => {
             endpoint="generate-qr-pdf"
             label="Descargar PDF"
           />
-          <WhatsAppSenderWithPDF
-            generatePdf={() => generatePdfBlob('generate-qr-pdf', { requestId: request.id }, session?.access_token || '')}
-            fileName={fileName}
+          <WhatsAppSenderButton
             recipientPhone={request.suppliers?.phone}
             documentType="Solicitud de Cotización"
             documentId={request.id}
