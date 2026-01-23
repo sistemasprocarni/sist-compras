@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
+import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
@@ -100,7 +101,7 @@ const QuoteRequestDetails = () => {
     });
   };
 
-  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean, phone?: string) => {
     if (!session?.user?.email || !request) return;
 
     const toastId = showLoading('Generando PDF y enviando correo...');
@@ -160,8 +161,8 @@ const QuoteRequestDetails = () => {
       }
 
       // 3. Send WhatsApp (if requested)
-      if (sendWhatsApp && request.suppliers?.phone) {
-        const formattedPhone = request.suppliers.phone.replace(/\D/g, '');
+      if (sendWhatsApp && phone) {
+        const formattedPhone = phone.replace(/\D/g, '');
         const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
         const whatsappMessage = `Hola, te he enviado por correo la Solicitud de Cotización #${request.id.substring(0, 8)} de ${request.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
         const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -240,6 +241,13 @@ const QuoteRequestDetails = () => {
             fileName={fileName}
             endpoint="generate-qr-pdf"
             label="Descargar PDF"
+          />
+          <WhatsAppSenderButton
+            recipientPhone={request.suppliers?.phone}
+            documentType="Solicitud de Cotización"
+            documentId={request.id}
+            documentNumber={request.id.substring(0, 8)}
+            companyName={request.companies?.name || ''}
           />
           <Button
             onClick={() => setIsEmailModalOpen(true)}

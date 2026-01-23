@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
+import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
@@ -134,7 +135,7 @@ const PurchaseOrderDetails = () => {
     });
   };
 
-  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean, phone?: string) => {
     if (!session?.user?.email || !order) return;
 
     const toastId = showLoading('Generando PDF y enviando correo...');
@@ -195,8 +196,8 @@ const PurchaseOrderDetails = () => {
       }
 
       // 3. Send WhatsApp (if requested)
-      if (sendWhatsApp && order.suppliers?.phone) {
-        const formattedPhone = order.suppliers.phone.replace(/\D/g, '');
+      if (sendWhatsApp && phone) {
+        const formattedPhone = phone.replace(/\D/g, '');
         const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
         const whatsappMessage = `Hola, te he enviado por correo la Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} de ${order.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
         const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -273,6 +274,13 @@ const PurchaseOrderDetails = () => {
             fileNameGenerator={generateFileName}
             endpoint="generate-po-pdf"
             label="Descargar PDF"
+          />
+          <WhatsAppSenderButton
+            recipientPhone={order.suppliers?.phone}
+            documentType="Orden de Compra"
+            documentId={order.id}
+            documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
+            companyName={order.companies?.name || ''}
           />
           <Button
             onClick={() => setIsEmailModalOpen(true)}
