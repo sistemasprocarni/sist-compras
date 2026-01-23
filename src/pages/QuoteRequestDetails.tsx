@@ -243,7 +243,6 @@ const QuoteRequestDetails = () => {
             label="Descargar PDF"
           />
           <WhatsAppSenderButton
-            requestId={request.id}
             recipientPhone={request.suppliers?.phone}
             documentType="Solicitud de Cotización"
             documentId={request.id}

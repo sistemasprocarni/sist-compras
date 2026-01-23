@@ -276,7 +276,6 @@ const PurchaseOrderDetails = () => {
             label="Descargar PDF"
           />
           <WhatsAppSenderButton
-            orderId={order.id}
             recipientPhone={order.suppliers?.phone}
             documentType="Orden de Compra"
             documentId={order.id}
