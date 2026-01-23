@@ -281,6 +281,7 @@ const PurchaseOrderDetails = () => {
             documentId={order.id}
             documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
             companyName={order.companies?.name || ''}
+            isPurchaseOrder={true}
           />
           <Button
             onClick={() => setIsEmailModalOpen(true)}
