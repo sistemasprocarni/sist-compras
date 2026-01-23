@@ -42,11 +42,14 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
 
     try {
       let signedUrl = '';
-      const endpoint = orderId ? 'generate-and-upload-po-pdf' : 'generate-and-upload-qr-pdf'; // We'll create the QR one next
+      let endpoint = '';
 
-      // For now, we only have the PO PDF function. We'll create the QR one later.
-      if (!orderId) {
-        throw new Error('Funcionalidad para Solicitud de Cotización aún no implementada.');
+      if (orderId) {
+        endpoint = 'generate-and-upload-po-pdf';
+      } else if (requestId) {
+        endpoint = 'generate-and-upload-qr-pdf';
+      } else {
+        throw new Error('No se proporcionó un ID de documento válido.');
       }
 
       const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/${endpoint}`, {
@@ -55,7 +58,7 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, requestId }),
       });
 
       if (!response.ok) {
