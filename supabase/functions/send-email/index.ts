@@ -47,14 +47,12 @@ serve(async (req) => {
     }
 
     // Determine the sender email based on the user's email
-    // You need to verify both emails in SendGrid first
     let senderEmail;
     if (user.email === 'sistemasprocarni2025@gmail.com') {
       senderEmail = 'sistemasprocarni2025@gmail.com';
     } else if (user.email === 'analistacompraspc@gmail.com') {
       senderEmail = 'analistacompraspc@gmail.com';
     } else {
-      // Default fallback - you should verify this email in SendGrid
       senderEmail = 'sistemasprocarni2025@gmail.com';
     }
 
@@ -65,7 +63,7 @@ serve(async (req) => {
       }],
       from: {
         email: senderEmail,
-        name: user.email // Use user's email as the sender name
+        name: user.email
       },
       subject: subject,
       content: [
@@ -78,8 +76,14 @@ serve(async (req) => {
 
     // Add attachment if present
     if (attachmentBase64 && attachmentFilename) {
+      // Remove data URL prefix if present (e.g., "data:application/pdf;base64,")
+      let base64Data = attachmentBase64;
+      if (base64Data.startsWith('data:')) {
+        base64Data = base64Data.split(',')[1];
+      }
+      
       emailData.attachments = [{
-        content: attachmentBase64,
+        content: base64Data,
         filename: attachmentFilename,
         type: 'application/pdf',
         disposition: 'attachment',
