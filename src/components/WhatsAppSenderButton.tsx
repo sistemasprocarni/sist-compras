@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { WhatsApp } from 'lucide-react'; // Importar el icono de WhatsApp
+import { MessageSquare } from 'lucide-react'; // Usar MessageSquare en lugar de WhatsApp
 import { showError } from '@/utils/toast';
 
 interface WhatsAppSenderButtonProps {
@@ -40,7 +40,7 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
       disabled={!recipientPhone}
       className="bg-green-600 hover:bg-green-700"
     >
-      <WhatsApp className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+      <MessageSquare className="mr-2 h-4 w-4" /> Enviar por WhatsApp
     </Button>
   );
 };
