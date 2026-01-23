@@ -34,6 +34,8 @@ serve(async (req) => {
 
     const { to, subject, body, attachmentBase64, attachmentFilename } = await req.json();
     console.log(`[send-email] Sending email to: ${to} from user: ${user.email}`);
+    console.log(`[send-email] Attachment filename: ${attachmentFilename}`);
+    console.log(`[send-email] Attachment base64 length: ${attachmentBase64 ? attachmentBase64.length : 0}`);
 
     // Check for Resend API key
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -49,13 +51,29 @@ serve(async (req) => {
 
     const resend = new Resend(resendApiKey);
 
-    const attachments = attachmentBase64 && attachmentFilename
-      ? [{
-          content: attachmentBase64,
-          filename: attachmentFilename,
-          encoding: 'base64',
-        }]
-      : [];
+    // Prepare attachments
+    const attachments = [];
+    if (attachmentBase64 && attachmentFilename) {
+      // Remove data URL prefix if present (e.g., "data:application/pdf;base64,")
+      let base64Data = attachmentBase64;
+      if (base64Data.startsWith('data:')) {
+        const commaIndex = base64Data.indexOf(',');
+        if (commaIndex > -1) {
+          base64Data = base64Data.substring(commaIndex + 1);
+        }
+      }
+      
+      console.log(`[send-email] Cleaned base64 length: ${base64Data.length}`);
+      
+      attachments.push({
+        content: base64Data,
+        filename: attachmentFilename,
+        encoding: 'base64',
+        contentType: 'application/pdf',
+      });
+    }
+
+    console.log(`[send-email] Number of attachments: ${attachments.length}`);
 
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev', // Replace with your verified domain in Resend

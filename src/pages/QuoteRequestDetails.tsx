@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails } from '@/integrations/supabase/data';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
@@ -84,74 +84,99 @@ const QuoteRequestDetails = () => {
     });
   };
 
-  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
-    if (!session?.user?.email || !request) return;
-
-    // 1. Generate PDF
-    const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-qr-pdf`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ requestId: request.id }),
-    });
-
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse.json();
-      throw new Error(errorData.error || 'Error al generar el PDF.');
-    }
-
-    const pdfBlob = await pdfResponse.blob();
-    const pdfBase64 = await blobToBase64(pdfBlob);
-
-    // 2. Send Email
-    const emailBody = `
-      <h2>Solicitud de Cotización #${request.id.substring(0, 8)}</h2>
-      <p><strong>Empresa:</strong> ${request.companies?.name}</p>
-      <p><strong>Proveedor:</strong> ${request.suppliers?.name}</p>
-      <p><strong>Fecha:</strong> ${new Date(request.created_at).toLocaleDateString('es-VE')}</p>
-      ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
-      <p>Se adjunta el PDF con los detalles de la solicitud.</p>
-    `;
-
-    const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: request.suppliers?.email,
-        subject: `Solicitud de Cotización #${request.id.substring(0, 8)} - ${request.companies?.name}`,
-        body: emailBody,
-        attachmentBase64: pdfBase64,
-        attachmentFilename: `SC_${request.id.substring(0, 8)}.pdf`,
-      }),
-    });
-
-    if (!emailResponse.ok) {
-      const errorData = await emailResponse.json();
-      throw new Error(errorData.error || 'Error al enviar el correo.');
-    }
-
-    // 3. Send WhatsApp (if requested)
-    if (sendWhatsApp && request.suppliers?.phone) {
-      const formattedPhone = request.suppliers.phone.replace(/\D/g, '');
-      const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
-      const whatsappMessage = `Hola, te he enviado por correo la Solicitud de Cotización #${request.id.substring(0, 8)} de ${request.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
-      const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
-      window.open(whatsappUrl, '_blank');
-    }
-  };
-
   const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        console.log(`[QuoteRequestDetails] Base64 conversion complete. Length: ${result.length}`);
+        resolve(result);
+      };
+      reader.onerror = (error) => {
+        console.error('[QuoteRequestDetails] Error converting blob to base64:', error);
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
+  };
+
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+    if (!session?.user?.email || !request) return;
+
+    const toastId = showLoading('Generando PDF y enviando correo...');
+
+    try {
+      // 1. Generate PDF
+      console.log(`[QuoteRequestDetails] Generating PDF for request: ${request.id}`);
+      const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-qr-pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requestId: request.id }),
+      });
+
+      if (!pdfResponse.ok) {
+        const errorData = await pdfResponse.json();
+        throw new Error(errorData.error || 'Error al generar el PDF.');
+      }
+
+      const pdfBlob = await pdfResponse.blob();
+      console.log(`[QuoteRequestDetails] PDF blob size: ${pdfBlob.size} bytes`);
+      
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      console.log(`[QuoteRequestDetails] PDF base64 length: ${pdfBase64.length}`);
+
+      // 2. Send Email
+      const emailBody = `
+        <h2>Solicitud de Cotización #${request.id.substring(0, 8)}</h2>
+        <p><strong>Empresa:</strong> ${request.companies?.name}</p>
+        <p><strong>Proveedor:</strong> ${request.suppliers?.name}</p>
+        <p><strong>Fecha:</strong> ${new Date(request.created_at).toLocaleDateString('es-VE')}</p>
+        ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
+        <p>Se adjunta el PDF con los detalles de la solicitud.</p>
+      `;
+
+      console.log(`[QuoteRequestDetails] Sending email to: ${request.suppliers?.email}`);
+      const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: request.suppliers?.email,
+          subject: `Solicitud de Cotización #${request.id.substring(0, 8)} - ${request.companies?.name}`,
+          body: emailBody,
+          attachmentBase64: pdfBase64,
+          attachmentFilename: `SC_${request.id.substring(0, 8)}.pdf`,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || 'Error al enviar el correo.');
+      }
+
+      // 3. Send WhatsApp (if requested)
+      if (sendWhatsApp && request.suppliers?.phone) {
+        const formattedPhone = request.suppliers.phone.replace(/\D/g, '');
+        const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
+        const whatsappMessage = `Hola, te he enviado por correo la Solicitud de Cotización #${request.id.substring(0, 8)} de ${request.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
+        const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+        window.open(whatsappUrl, '_blank');
+      }
+
+      dismissToast(toastId);
+      showSuccess('Correo enviado exitosamente.');
+      setIsEmailModalOpen(false);
+
+    } catch (error: any) {
+      console.error('[QuoteRequestDetails] Error sending email:', error);
+      dismissToast(toastId);
+      showError(error.message || 'Error al enviar el correo.');
+    }
   };
 
   if (isLoading) {

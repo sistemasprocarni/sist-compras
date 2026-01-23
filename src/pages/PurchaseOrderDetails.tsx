@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, FileText, Download, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
@@ -118,75 +118,100 @@ const PurchaseOrderDetails = () => {
     return `${sequence}_${supplierName}.pdf`;
   };
 
-  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
-    if (!session?.user?.email || !order) return;
-
-    // 1. Generate PDF
-    const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-po-pdf`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orderId: order.id }),
-    });
-
-    if (!pdfResponse.ok) {
-      const errorData = await pdfResponse.json();
-      throw new Error(errorData.error || 'Error al generar el PDF.');
-    }
-
-    const pdfBlob = await pdfResponse.blob();
-    const pdfBase64 = await blobToBase64(pdfBlob);
-
-    // 2. Send Email
-    const emailBody = `
-      <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
-      <p><strong>Empresa:</strong> ${order.companies?.name}</p>
-      <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
-      <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
-      <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
-      ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
-      <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
-    `;
-
-    const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: order.suppliers?.email,
-        subject: `Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} - ${order.companies?.name}`,
-        body: emailBody,
-        attachmentBase64: pdfBase64,
-        attachmentFilename: generateFileName(),
-      }),
-    });
-
-    if (!emailResponse.ok) {
-      const errorData = await emailResponse.json();
-      throw new Error(errorData.error || 'Error al enviar el correo.');
-    }
-
-    // 3. Send WhatsApp (if requested)
-    if (sendWhatsApp && order.suppliers?.phone) {
-      const formattedPhone = order.suppliers.phone.replace(/\D/g, '');
-      const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
-      const whatsappMessage = `Hola, te he enviado por correo la Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} de ${order.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
-      const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
-      window.open(whatsappUrl, '_blank');
-    }
-  };
-
   const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        console.log(`[PurchaseOrderDetails] Base64 conversion complete. Length: ${result.length}`);
+        resolve(result);
+      };
+      reader.onerror = (error) => {
+        console.error('[PurchaseOrderDetails] Error converting blob to base64:', error);
+        reject(error);
+      };
       reader.readAsDataURL(blob);
     });
+  };
+
+  const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean) => {
+    if (!session?.user?.email || !order) return;
+
+    const toastId = showLoading('Generando PDF y enviando correo...');
+
+    try {
+      // 1. Generate PDF
+      console.log(`[PurchaseOrderDetails] Generating PDF for order: ${order.id}`);
+      const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-po-pdf`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+
+      if (!pdfResponse.ok) {
+        const errorData = await pdfResponse.json();
+        throw new Error(errorData.error || 'Error al generar el PDF.');
+      }
+
+      const pdfBlob = await pdfResponse.blob();
+      console.log(`[PurchaseOrderDetails] PDF blob size: ${pdfBlob.size} bytes`);
+      
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      console.log(`[PurchaseOrderDetails] PDF base64 length: ${pdfBase64.length}`);
+
+      // 2. Send Email
+      const emailBody = `
+        <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
+        <p><strong>Empresa:</strong> ${order.companies?.name}</p>
+        <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
+        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
+        <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
+        ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
+        <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
+      `;
+
+      console.log(`[PurchaseOrderDetails] Sending email to: ${order.suppliers?.email}`);
+      const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: order.suppliers?.email,
+          subject: `Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} - ${order.companies?.name}`,
+          body: emailBody,
+          attachmentBase64: pdfBase64,
+          attachmentFilename: generateFileName(),
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        throw new Error(errorData.error || 'Error al enviar el correo.');
+      }
+
+      // 3. Send WhatsApp (if requested)
+      if (sendWhatsApp && order.suppliers?.phone) {
+        const formattedPhone = order.suppliers.phone.replace(/\D/g, '');
+        const finalPhone = formattedPhone.startsWith('58') ? formattedPhone : `58${formattedPhone}`;
+        const whatsappMessage = `Hola, te he enviado por correo la Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)} de ${order.companies?.name}. Por favor, revisa tu bandeja de entrada.`;
+        const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+        window.open(whatsappUrl, '_blank');
+      }
+
+      dismissToast(toastId);
+      showSuccess('Correo enviado exitosamente.');
+      setIsEmailModalOpen(false);
+
+    } catch (error: any) {
+      console.error('[PurchaseOrderDetails] Error sending email:', error);
+      dismissToast(toastId);
+      showError(error.message || 'Error al enviar el correo.');
+    }
   };
 
   if (isLoading) {
