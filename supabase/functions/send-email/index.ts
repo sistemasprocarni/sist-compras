@@ -68,7 +68,12 @@ serve(async (req) => {
         name: user.email // Use user's email as the sender name
       },
       subject: subject,
-      html: body,
+      content: [
+        {
+          type: 'text/html',
+          value: body
+        }
+      ],
     };
 
     // Add attachment if present
