@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from 'https://esm.sh/resend@1.1.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -34,88 +35,46 @@ serve(async (req) => {
     const { to, subject, body, attachmentBase64, attachmentFilename } = await req.json();
     console.log(`[send-email] Sending email to: ${to} from user: ${user.email}`);
 
-    // Check for SendGrid API key
-    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
-    if (!sendgridApiKey) {
-      console.error('[send-email] SENDGRID_API_KEY is not set in environment variables.');
+    // Check for Resend API key
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      console.error('[send-email] RESEND_API_KEY is not set in environment variables.');
       return new Response(JSON.stringify({ 
-        error: 'SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable in Supabase.' 
+        error: 'Resend API key not configured. Please set RESEND_API_KEY environment variable in Supabase.' 
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Determine the sender email based on the user's email
-    let senderEmail;
-    if (user.email === 'sistemasprocarni2025@gmail.com') {
-      senderEmail = 'sistemasprocarni2025@gmail.com';
-    } else if (user.email === 'analistacompraspc@gmail.com') {
-      senderEmail = 'analistacompraspc@gmail.com';
-    } else {
-      senderEmail = 'sistemasprocarni2025@gmail.com';
-    }
+    const resend = new Resend(resendApiKey);
 
-    // Prepare email data for SendGrid
-    const emailData = {
-      personalizations: [{
-        to: [{ email: to }]
-      }],
-      from: {
-        email: senderEmail,
-        name: user.email
-      },
+    const attachments = attachmentBase64 && attachmentFilename
+      ? [{
+          content: attachmentBase64,
+          filename: attachmentFilename,
+          encoding: 'base64',
+        }]
+      : [];
+
+    const { data, error } = await resend.emails.send({
+      from: 'onboarding@resend.dev', // Replace with your verified domain in Resend
+      to: to,
       subject: subject,
-      content: [
-        {
-          type: 'text/html',
-          value: body
-        }
-      ],
-    };
-
-    // Add attachment if present
-    if (attachmentBase64 && attachmentFilename) {
-      // Remove data URL prefix if present (e.g., "data:application/pdf;base64,")
-      let base64Data = attachmentBase64;
-      if (base64Data.startsWith('data:')) {
-        base64Data = base64Data.split(',')[1];
-      }
-      
-      emailData.attachments = [{
-        content: base64Data,
-        filename: attachmentFilename,
-        type: 'application/pdf',
-        disposition: 'attachment',
-      }];
-    }
-
-    // Send email via SendGrid API
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sendgridApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailData),
+      html: body,
+      attachments: attachments,
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('[send-email] SendGrid error:', errorData);
-      return new Response(JSON.stringify({ 
-        error: `SendGrid error: ${errorData}` 
-      }), {
+    if (error) {
+      console.error('[send-email] Error sending email:', error);
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[send-email] Email sent successfully via SendGrid');
-    return new Response(JSON.stringify({ 
-      message: 'Email sent successfully via SendGrid',
-      sender: senderEmail 
-    }), {
+    console.log('[send-email] Email sent successfully:', data);
+    return new Response(JSON.stringify({ message: 'Email sent successfully', data }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

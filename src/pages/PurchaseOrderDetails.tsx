@@ -139,7 +139,7 @@ const PurchaseOrderDetails = () => {
     const pdfBlob = await pdfResponse.blob();
     const pdfBase64 = await blobToBase64(pdfBlob);
 
-    // 2. Send Email via SendGrid
+    // 2. Send Email
     const emailBody = `
       <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
       <p><strong>Empresa:</strong> ${order.companies?.name}</p>

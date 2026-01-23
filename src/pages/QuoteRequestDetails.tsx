@@ -105,7 +105,7 @@ const QuoteRequestDetails = () => {
     const pdfBlob = await pdfResponse.blob();
     const pdfBase64 = await blobToBase64(pdfBlob);
 
-    // 2. Send Email via SendGrid
+    // 2. Send Email
     const emailBody = `
       <h2>Solicitud de Cotización #${request.id.substring(0, 8)}</h2>
       <p><strong>Empresa:</strong> ${request.companies?.name}</p>
