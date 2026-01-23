@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from 'https://esm.sh/resend@1.1.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -35,46 +34,79 @@ serve(async (req) => {
     const { to, subject, body, attachmentBase64, attachmentFilename } = await req.json();
     console.log(`[send-email] Sending email to: ${to} from user: ${user.email}`);
 
-    // Check for Resend API key
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      console.error('[send-email] RESEND_API_KEY is not set in environment variables.');
+    // Check for SendGrid API key
+    const sendgridApiKey = Deno.env.get('SENDGRID_API_KEY');
+    if (!sendgridApiKey) {
+      console.error('[send-email] SENDGRID_API_KEY is not set in environment variables.');
       return new Response(JSON.stringify({ 
-        error: 'Resend API key not configured. Please set RESEND_API_KEY environment variable in Supabase.' 
+        error: 'SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable in Supabase.' 
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const resend = new Resend(resendApiKey);
+    // Determine the sender email based on the user's email
+    // You need to verify both emails in SendGrid first
+    let senderEmail;
+    if (user.email === 'sistemasprocarni2025@gmail.com') {
+      senderEmail = 'sistemasprocarni2025@gmail.com';
+    } else if (user.email === 'analistacompraspc@gmail.com') {
+      senderEmail = 'analistacompraspc@gmail.com';
+    } else {
+      // Default fallback - you should verify this email in SendGrid
+      senderEmail = 'sistemasprocarni2025@gmail.com';
+    }
 
-    const attachments = attachmentBase64 && attachmentFilename
-      ? [{
-          content: attachmentBase64,
-          filename: attachmentFilename,
-          encoding: 'base64',
-        }]
-      : [];
-
-    const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Replace with your verified domain in Resend
-      to: to,
+    // Prepare email data for SendGrid
+    const emailData = {
+      personalizations: [{
+        to: [{ email: to }]
+      }],
+      from: {
+        email: senderEmail,
+        name: user.email // Use user's email as the sender name
+      },
       subject: subject,
       html: body,
-      attachments: attachments,
+    };
+
+    // Add attachment if present
+    if (attachmentBase64 && attachmentFilename) {
+      emailData.attachments = [{
+        content: attachmentBase64,
+        filename: attachmentFilename,
+        type: 'application/pdf',
+        disposition: 'attachment',
+      }];
+    }
+
+    // Send email via SendGrid API
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sendgridApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData),
     });
 
-    if (error) {
-      console.error('[send-email] Error sending email:', error);
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('[send-email] SendGrid error:', errorData);
+      return new Response(JSON.stringify({ 
+        error: `SendGrid error: ${errorData}` 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[send-email] Email sent successfully:', data);
-    return new Response(JSON.stringify({ message: 'Email sent successfully', data }), {
+    console.log('[send-email] Email sent successfully via SendGrid');
+    return new Response(JSON.stringify({ 
+      message: 'Email sent successfully via SendGrid',
+      sender: senderEmail 
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
