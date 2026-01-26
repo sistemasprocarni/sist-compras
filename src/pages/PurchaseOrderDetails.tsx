@@ -16,6 +16,7 @@ import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface PurchaseOrderItem {
   id: string;
@@ -25,6 +26,7 @@ interface PurchaseOrderItem {
   unit_price: number;
   tax_rate: number;
   is_exempt: boolean;
+  unit?: string; // Added unit field
 }
 
 interface SupplierDetails {
@@ -78,6 +80,7 @@ const PurchaseOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session } = useSession();
+  const isMobile = useIsMobile();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -248,11 +251,11 @@ const PurchaseOrderDetails = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
               <Button variant="secondary">
@@ -323,38 +326,64 @@ const PurchaseOrderDetails = () => {
 
           <h3 className="text-lg font-semibold mt-8 mb-4">Ítems de la Orden</h3>
           {order.purchase_order_items && order.purchase_order_items.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Cód. Prov.</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>P. Unitario ({order.currency})</TableHead>
-                    <TableHead>Subtotal ({order.currency})</TableHead>
-                    <TableHead>IVA ({order.currency})</TableHead>
-                    <TableHead>Exento</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.purchase_order_items.map((item) => {
-                    const subtotal = item.quantity * item.unit_price;
-                    const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.material_name}</TableCell>
-                        <TableCell>{item.supplier_code || 'N/A'}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>{item.unit_price.toFixed(2)}</TableCell>
-                        <TableCell>{subtotal.toFixed(2)}</TableCell>
-                        <TableCell>{itemIva.toFixed(2)}</TableCell>
-                        <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            isMobile ? (
+              <div className="space-y-3">
+                {order.purchase_order_items.map((item) => {
+                  const subtotal = item.quantity * item.unit_price;
+                  const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
+                  return (
+                    <Card key={item.id} className="p-3">
+                      <p className="font-semibold text-procarni-primary">{item.material_name}</p>
+                      <div className="text-sm mt-1 grid grid-cols-2 gap-2">
+                        <p><strong>Cód. Prov:</strong> {item.supplier_code || 'N/A'}</p>
+                        <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>
+                        <p><strong>P. Unitario:</strong> {order.currency} {item.unit_price.toFixed(2)}</p>
+                        <p><strong>Subtotal:</strong> {order.currency} {subtotal.toFixed(2)}</p>
+                        <p><strong>IVA:</strong> {order.currency} {itemIva.toFixed(2)}</p>
+                        <p><strong>Exento:</strong> {item.is_exempt ? 'Sí' : 'No'}</p>
+                      </div>
+                      <div className="mt-2 pt-2 border-t flex justify-between font-bold text-sm">
+                        <span>Total Ítem:</span>
+                        <span>{order.currency} {(subtotal + itemIva).toFixed(2)}</span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Cód. Prov.</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>P. Unitario ({order.currency})</TableHead>
+                      <TableHead>Subtotal ({order.currency})</TableHead>
+                      <TableHead>IVA ({order.currency})</TableHead>
+                      <TableHead>Exento</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {order.purchase_order_items.map((item) => {
+                      const subtotal = item.quantity * item.unit_price;
+                      const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.material_name}</TableCell>
+                          <TableCell>{item.supplier_code || 'N/A'}</TableCell>
+                          <TableCell>{item.quantity} {item.unit || 'N/A'}</TableCell>
+                          <TableCell>{item.unit_price.toFixed(2)}</TableCell>
+                          <TableCell>{subtotal.toFixed(2)}</TableCell>
+                          <TableCell>{itemIva.toFixed(2)}</TableCell>
+                          <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <p className="text-muted-foreground">Esta orden no tiene ítems registrados.</p>
           )}
@@ -381,7 +410,7 @@ const PurchaseOrderDetails = () => {
       <EmailSenderModal
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
-        onSend={handleSendEmail}
+        onSend={(message, sendWhatsApp) => handleSendEmail(message, sendWhatsApp, order.suppliers?.phone)}
         recipientEmail={order.suppliers?.email || ''}
         recipientPhone={order.suppliers?.phone}
         documentType="Orden de Compra"

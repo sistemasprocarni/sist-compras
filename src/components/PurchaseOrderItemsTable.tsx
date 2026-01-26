@@ -7,6 +7,7 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterialsBySupplier } from '@/integrations/supabase/data';
 import AddMaterialToSupplierDialog from '@/components/AddMaterialToSupplierDialog';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface PurchaseOrderItemForm {
   id?: string;
@@ -55,6 +56,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   onMaterialSelect,
 }) => {
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const searchSupplierMaterials = async (query: string) => {
     if (!supplierId) return [];
@@ -62,110 +64,208 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   };
 
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean }) => {
-    // Optionally, you could automatically select the newly added material
-    // For now, we'll just close the dialog and let the user select it from the search
+    // Logic to handle material addition (e.g., invalidate queries or prompt user to select)
+  };
+
+  const renderItemRow = (item: PurchaseOrderItemForm, index: number) => {
+    const subtotal = item.quantity * item.unit_price;
+    const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+
+    if (isMobile) {
+      return (
+        <div key={index} className="border rounded-md p-3 space-y-3 bg-white shadow-sm">
+          <div className="flex justify-between items-center border-b pb-2">
+            <h4 className="font-semibold text-procarni-primary truncate">{item.material_name || 'Nuevo Ítem'}</h4>
+            <div className="flex gap-1">
+              <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+              <Button variant="destructive" size="icon" onClick={() => onRemoveItem(index)} className="h-8 w-8">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Producto</label>
+              <SmartSearch
+                placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
+                onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
+                fetchFunction={searchSupplierMaterials}
+                displayValue={item.material_name}
+                disabled={!supplierId}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Código Prov.</label>
+              <Input
+                type="text"
+                value={item.supplier_code || ''}
+                onChange={(e) => onItemChange(index, 'supplier_code', e.target.value)}
+                placeholder="Código Prov."
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Cantidad</label>
+              <Input
+                type="number"
+                value={item.quantity}
+                onChange={(e) => onItemChange(index, 'quantity', parseFloat(e.target.value))}
+                min="0"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Unidad</label>
+              <Select value={item.unit} onValueChange={(value) => onItemChange(index, 'unit', value)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_UNITS.map(unitOption => (
+                    <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Precio Unit. ({currency})</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={item.unit_price}
+                onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
+                min="0"
+                className="h-9"
+              />
+            </div>
+            <div className="flex flex-col justify-end">
+              <div className="flex items-center justify-between p-2 border rounded-md">
+                <label className="text-xs font-medium text-muted-foreground">Exento IVA</label>
+                <Switch
+                  checked={item.is_exempt}
+                  onCheckedChange={(checked) => onItemChange(index, 'is_exempt', checked)}
+                  disabled={!item.material_name}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center pt-2 border-t mt-3">
+            <span className="text-xs font-medium text-muted-foreground">Total Ítem:</span>
+            <span className="font-bold text-sm">{currency} {(subtotal + itemIva).toFixed(2)}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Desktop/Tablet View (Original Table)
+    return (
+      <tr key={index}>
+        <td className="px-2 py-2 whitespace-nowrap">
+          <SmartSearch
+            placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
+            onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
+            fetchFunction={searchSupplierMaterials}
+            displayValue={item.material_name}
+            disabled={!supplierId}
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap">
+          <Input
+            type="text"
+            value={item.supplier_code || ''}
+            onChange={(e) => onItemChange(index, 'supplier_code', e.target.value)}
+            placeholder="Código Prov."
+            className="h-8"
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap">
+          <Input
+            type="number"
+            value={item.quantity}
+            onChange={(e) => onItemChange(index, 'quantity', parseFloat(e.target.value))}
+            min="0"
+            className="h-8"
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap">
+          <Select value={item.unit} onValueChange={(value) => onItemChange(index, 'unit', value)}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Unidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {MATERIAL_UNITS.map(unitOption => (
+                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap">
+          <Input
+            type="number"
+            step="0.01"
+            value={item.unit_price}
+            onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
+            min="0"
+            className="h-8"
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+          {currency} {subtotal.toFixed(2)}
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap text-center text-sm">
+          {currency} {itemIva.toFixed(2)}
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap text-center">
+          <Switch
+            checked={item.is_exempt}
+            onCheckedChange={(checked) => onItemChange(index, 'is_exempt', checked)}
+            disabled={!item.material_name}
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap text-right">
+          <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+          <Button variant="destructive" size="icon" onClick={() => onRemoveItem(index)} className="h-8 w-8">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </td>
+      </tr>
+    );
   };
 
   return (
     <>
       <h3 className="text-lg font-semibold mb-4">Ítems de la Orden</h3>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Unidad</th>
-              <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
-              <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
-              <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
-              <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Exento</th>
-              <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {items.map((item, index) => {
-              const subtotal = item.quantity * item.unit_price;
-              const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
-
-              return (
-                <tr key={index}>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <SmartSearch
-                      placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
-                      onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
-                      fetchFunction={searchSupplierMaterials}
-                      displayValue={item.material_name}
-                      disabled={!supplierId}
-                    />
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <Input
-                      type="text"
-                      value={item.supplier_code || ''}
-                      onChange={(e) => onItemChange(index, 'supplier_code', e.target.value)}
-                      placeholder="Código Prov."
-                      className="h-8"
-                    />
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => onItemChange(index, 'quantity', parseFloat(e.target.value))}
-                      min="0"
-                      className="h-8"
-                    />
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <Select value={item.unit} onValueChange={(value) => onItemChange(index, 'unit', value)}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Unidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MATERIAL_UNITS.map(unitOption => (
-                          <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.unit_price}
-                      onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
-                      min="0"
-                      className="h-8"
-                    />
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
-                    {currency} {subtotal.toFixed(2)}
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap text-center text-sm">
-                    {currency} {itemIva.toFixed(2)}
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap text-center">
-                    <Switch
-                      checked={item.is_exempt}
-                      onCheckedChange={(checked) => onItemChange(index, 'is_exempt', checked)}
-                      disabled={!item.material_name}
-                    />
-                  </td>
-                  <td className="px-2 py-2 whitespace-nowrap text-right">
-                    <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
-                      <PlusCircle className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="icon" onClick={() => onRemoveItem(index)} className="h-8 w-8">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {isMobile ? (
+          <div className="space-y-4">
+            {items.map(renderItemRow)}
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Unidad</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Exento</th>
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {items.map(renderItemRow)}
+            </tbody>
+          </table>
+        )}
       </div>
       <div className="flex justify-between mt-4">
         <Button variant="outline" onClick={onAddItem} className="w-full mr-2">

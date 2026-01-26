@@ -14,6 +14,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AddMaterialToSupplierDialogForQuote from '@/components/AddMaterialToSupplierDialogForQuote';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface Company {
   id: string;
@@ -46,6 +47,7 @@ const GenerateQuoteRequest = () => {
   const { session, isLoadingSession } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [companyId, setCompanyId] = useState<string>('');
   const [companyName, setCompanyName] = useState<string>('');
@@ -172,6 +174,122 @@ const GenerateQuoteRequest = () => {
     setIsSubmitting(false);
   };
 
+  const renderItemFields = (item: QuoteRequestItem, index: number) => {
+    const fields = [
+      {
+        label: 'Material',
+        content: (
+          <SmartSearch
+            placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+            onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+            fetchFunction={searchSupplierMaterials}
+            displayValue={item.material_name}
+            disabled={!supplierId}
+          />
+        ),
+        span: isMobile ? 2 : 2,
+      },
+      {
+        label: 'Cantidad',
+        content: (
+          <Input
+            id={`quantity-${index}`}
+            type="number"
+            value={item.quantity}
+            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+            min="0"
+          />
+        ),
+        span: isMobile ? 1 : 1,
+      },
+      {
+        label: 'Unidad',
+        content: (
+          <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+            <SelectTrigger id={`unit-${index}`}>
+              <SelectValue placeholder="Unidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {MATERIAL_UNITS.map(unitOption => (
+                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+        span: isMobile ? 1 : 1,
+      },
+      {
+        label: 'Descripción',
+        content: (
+          <Textarea
+            id={`description-${index}`}
+            value={item.description}
+            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+            placeholder="Especificación, marca, etc."
+            rows={1}
+          />
+        ),
+        span: isMobile ? 2 : 2,
+      },
+    ];
+
+    if (isMobile) {
+      return (
+        <div key={index} className="border rounded-md p-3 space-y-3 bg-white shadow-sm">
+          <div className="flex justify-between items-center border-b pb-2">
+            <h4 className="font-semibold text-procarni-primary truncate">{item.material_name || 'Nuevo Ítem'}</h4>
+            <div className="flex gap-1">
+              <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+              <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {fields.map((field, fieldIndex) => (
+              <div key={fieldIndex} className={`space-y-1 ${field.span === 2 ? 'col-span-2' : ''}`}>
+                <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
+                {field.content}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Desktop/Tablet View
+    return (
+      <div key={index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md">
+        <div className="col-span-2">
+          <Label htmlFor={`material_name-${index}`}>Material</Label>
+          {fields[0].content}
+        </div>
+        <div className="col-span-1">
+          <Label htmlFor={`quantity-${index}`}>Cantidad</Label>
+          {fields[1].content}
+        </div>
+        <div className="col-span-1">
+          <Label htmlFor={`unit-${index}`}>Unidad</Label>
+          {fields[2].content}
+        </div>
+        <div className="col-span-2">
+          <Label htmlFor={`description-${index}`}>Descripción</Label>
+          {fields[3].content}
+        </div>
+        <div className="flex flex-col space-y-2 col-span-1">
+          <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+          <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -235,61 +353,7 @@ const GenerateQuoteRequest = () => {
 
           <h3 className="text-lg font-semibold mb-4">Ítems de la Solicitud</h3>
           <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end border p-3 rounded-md">
-                <div className="md:col-span-2">
-                  <Label htmlFor={`material_name-${index}`}>Material</Label>
-                  <SmartSearch
-                    placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
-                    onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-                    fetchFunction={searchSupplierMaterials}
-                    displayValue={item.material_name}
-                    disabled={!supplierId}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor={`quantity-${index}`}>Cantidad</Label>
-                  <Input
-                    id={`quantity-${index}`}
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
-                    min="0"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor={`description-${index}`}>Descripción</Label>
-                  <Textarea
-                    id={`description-${index}`}
-                    value={item.description}
-                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    placeholder="Especificación, marca, etc."
-                    rows={1}
-                  />
-                </div>
-                <div className="flex flex-col space-y-2">
-                  <Label htmlFor={`unit-${index}`}>Unidad</Label>
-                  <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
-                    <SelectTrigger id={`unit-${index}`}>
-                      <SelectValue placeholder="Unidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MATERIAL_UNITS.map(unitOption => (
-                        <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col space-y-2">
-                  <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                  <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+            {items.map(renderItemFields)}
             <div className="flex justify-between">
               <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem

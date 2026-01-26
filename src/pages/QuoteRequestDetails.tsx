@@ -15,6 +15,7 @@ import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface QuoteRequestItem {
   id: string;
@@ -62,6 +63,7 @@ const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { session } = useSession();
+  const isMobile = useIsMobile();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -215,11 +217,11 @@ const QuoteRequestDetails = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
               <Button variant="secondary">
@@ -284,26 +286,42 @@ const QuoteRequestDetails = () => {
 
           <h3 className="text-lg font-semibold mt-8 mb-4">Ítems Solicitados</h3>
           {request.quote_request_items && request.quote_request_items.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead>Descripción</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            isMobile ? (
+              <div className="space-y-3">
                 {request.quote_request_items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.material_name}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.unit || 'N/A'}</TableCell>
-                    <TableCell>{item.description || 'N/A'}</TableCell>
-                  </TableRow>
+                  <Card key={item.id} className="p-3">
+                    <p className="font-semibold text-procarni-primary">{item.material_name}</p>
+                    <div className="text-sm mt-1 space-y-0.5">
+                      <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>
+                      <p><strong>Descripción:</strong> {item.description || 'N/A'}</p>
+                    </div>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Unidad</TableHead>
+                      <TableHead>Descripción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {request.quote_request_items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.material_name}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.unit || 'N/A'}</TableCell>
+                        <TableCell>{item.description || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <p className="text-muted-foreground">Esta solicitud no tiene ítems registrados.</p>
           )}

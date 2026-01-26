@@ -8,10 +8,12 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const { data: supplier, isLoading, error } = useQuery({
     queryKey: ['supplierDetails', id],
@@ -85,11 +87,11 @@ const SupplierDetails = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Button onClick={handleGenerateSC} className="bg-procarni-secondary hover:bg-green-700">
             <PlusCircle className="mr-2 h-4 w-4" /> Generar SC
           </Button>
@@ -133,7 +135,7 @@ const SupplierDetails = () => {
                 </a>
               ) : 'N/A'}
             </p>
-            <p><strong>Dirección:</strong> {supplier.address || 'N/A'}</p>
+            <p className="md:col-span-2"><strong>Dirección:</strong> {supplier.address || 'N/A'}</p>
             <p>
               <strong>Términos de Pago:</strong>{' '}
               {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms
@@ -146,26 +148,41 @@ const SupplierDetails = () => {
 
           <h3 className="text-lg font-semibold mt-8 mb-4">Materiales Ofrecidos</h3>
           {supplier.materials && supplier.materials.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre del Material</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Especificación del Proveedor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            isMobile ? (
+              <div className="space-y-3">
                 {supplier.materials.map((sm) => (
-                  <TableRow key={sm.id}>
-                    <TableCell>{sm.materials.code || 'N/A'}</TableCell>
-                    <TableCell>{sm.materials.name}</TableCell>
-                    <TableCell>{sm.materials.category || 'N/A'}</TableCell>
-                    <TableCell>{sm.specification || 'N/A'}</TableCell>
-                  </TableRow>
+                  <Card key={sm.id} className="p-3">
+                    <p className="font-semibold text-procarni-primary">{sm.materials.name}</p>
+                    <div className="text-sm mt-1 space-y-0.5">
+                      <p><strong>Código:</strong> {sm.materials.code || 'N/A'}</p>
+                      <p><strong>Categoría:</strong> {sm.materials.category || 'N/A'}</p>
+                      <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
+                    </div>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nombre del Material</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Especificación del Proveedor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {supplier.materials.map((sm) => (
+                    <TableRow key={sm.id}>
+                      <TableCell>{sm.materials.code || 'N/A'}</TableCell>
+                      <TableCell>{sm.materials.name}</TableCell>
+                      <TableCell>{sm.materials.category || 'N/A'}</TableCell>
+                      <TableCell>{sm.specification || 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )
           ) : (
             <p className="text-muted-foreground">Este proveedor no tiene materiales registrados.</p>
           )}
