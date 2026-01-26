@@ -47,7 +47,7 @@ export interface QuoteRequest {
   company_id: string;
   currency: string;
   exchange_rate?: number | null;
-  status: string;
+  status: 'Draft' | 'Sent' | 'Archived'; // Updated status type
   created_at: string;
   created_by?: string;
   user_id: string;
@@ -60,7 +60,7 @@ export interface PurchaseOrder {
   company_id: string;
   currency: string;
   exchange_rate?: number | null;
-  status: string;
+  status: 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'Archived'; // Updated status type
   created_at: string;
   created_by?: string;
   user_id: string;
@@ -85,7 +85,7 @@ export interface QuoteRequestItem {
   quantity: number;
   description?: string;
   unit?: string;
-  // is_exempt removed from QuoteRequestItem
+  // is_exempt removed
 }
 
 export interface PurchaseOrderItem {
