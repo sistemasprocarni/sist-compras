@@ -13,6 +13,7 @@ import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchC
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AddMaterialToSupplierDialogForQuote from '@/components/AddMaterialToSupplierDialogForQuote';
 
 interface Company {
   id: string;
@@ -53,6 +54,7 @@ const GenerateQuoteRequest = () => {
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   const [items, setItems] = useState<QuoteRequestItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
@@ -110,6 +112,11 @@ const GenerateQuoteRequest = () => {
   const handleCompanySelect = (company: Company) => {
     setCompanyId(company.id);
     setCompanyName(company.name);
+  };
+
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string }) => {
+    // Optionally, you could automatically select the newly added material
+    // For now, we'll just close the dialog and let the user select it from the search
   };
 
   const handleSubmit = async () => {
@@ -273,9 +280,19 @@ const GenerateQuoteRequest = () => {
                 </Button>
               </div>
             ))}
-            <Button variant="outline" onClick={handleAddItem} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-            </Button>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddMaterialDialogOpen(true)}
+                disabled={!supplierId}
+                className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
+              </Button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
@@ -286,6 +303,13 @@ const GenerateQuoteRequest = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+      <AddMaterialToSupplierDialogForQuote
+        isOpen={isAddMaterialDialogOpen}
+        onClose={() => setIsAddMaterialDialogOpen(false)}
+        onMaterialAdded={handleMaterialAdded}
+        supplierId={supplierId}
+        supplierName={supplierName}
+      />
     </div>
   );
 };

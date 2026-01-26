@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterialsBySupplier } from '@/integrations/supabase/data';
+import AddMaterialToSupplierDialog from '@/components/AddMaterialToSupplierDialog';
 
 interface PurchaseOrderItemForm {
   id?: string;
@@ -34,6 +35,7 @@ const MATERIAL_UNITS = [
 interface PurchaseOrderItemsTableProps {
   items: PurchaseOrderItemForm[];
   supplierId: string;
+  supplierName: string;
   currency: 'USD' | 'VES';
   onAddItem: () => void;
   onRemoveItem: (index: number) => void;
@@ -44,15 +46,23 @@ interface PurchaseOrderItemsTableProps {
 const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   items,
   supplierId,
+  supplierName,
   currency,
   onAddItem,
   onRemoveItem,
   onItemChange,
   onMaterialSelect,
 }) => {
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+
   const searchSupplierMaterials = async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
+  };
+
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean }) => {
+    // Optionally, you could automatically select the newly added material
+    // For now, we'll just close the dialog and let the user select it from the search
   };
 
   return (
@@ -153,9 +163,26 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           </tbody>
         </table>
       </div>
-      <Button variant="outline" onClick={onAddItem} className="w-full mt-4">
-        <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-      </Button>
+      <div className="flex justify-between mt-4">
+        <Button variant="outline" onClick={onAddItem} className="w-full mr-2">
+          <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setIsAddMaterialDialogOpen(true)}
+          disabled={!supplierId}
+          className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
+        </Button>
+      </div>
+      <AddMaterialToSupplierDialog
+        isOpen={isAddMaterialDialogOpen}
+        onClose={() => setIsAddMaterialDialogOpen(false)}
+        onMaterialAdded={handleMaterialAdded}
+        supplierId={supplierId}
+        supplierName={supplierName}
+      />
     </>
   );
 };

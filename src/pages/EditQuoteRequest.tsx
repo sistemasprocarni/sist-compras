@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, FileText } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { getQuoteRequestDetails, searchSuppliers, searchMaterialsBySupplier, searchCompanies, updateQuoteRequest } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
+import AddMaterialToSupplierDialogForQuote from '@/components/AddMaterialToSupplierDialogForQuote';
 
 interface Company {
   id: string;
@@ -51,6 +52,7 @@ const EditQuoteRequest = () => {
   const navigate = useNavigate();
   const { session, isLoadingSession } = useSession();
   const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
 
   const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
   const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
@@ -151,6 +153,11 @@ const EditQuoteRequest = () => {
   const handleCompanySelect = (company: Company) => {
     setCompanyId(company.id);
     setCompanyName(company.name);
+  };
+
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string }) => {
+    // Optionally, you could automatically select the newly added material
+    // For now, we'll just close the dialog and let the user select it from the search
   };
 
   const handleSubmit = async () => {
@@ -324,9 +331,19 @@ const EditQuoteRequest = () => {
                 </Button>
               </div>
             ))}
-            <Button variant="outline" onClick={handleAddItem} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-            </Button>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddMaterialDialogOpen(true)}
+                disabled={!supplierId}
+                className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
+              </Button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
@@ -337,6 +354,13 @@ const EditQuoteRequest = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+      <AddMaterialToSupplierDialogForQuote
+        isOpen={isAddMaterialDialogOpen}
+        onClose={() => setIsAddMaterialDialogOpen(false)}
+        onMaterialAdded={handleMaterialAdded}
+        supplierId={supplierId}
+        supplierName={supplierName}
+      />
     </div>
   );
 };

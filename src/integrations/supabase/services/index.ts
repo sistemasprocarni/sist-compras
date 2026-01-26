@@ -5,3 +5,4 @@ export * from './materialService';
 export * from './companyService';
 export * from './quoteRequestService';
 export * from './purchaseOrderService';
+export * from './supplierMaterialService';

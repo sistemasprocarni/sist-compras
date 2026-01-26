@@ -27,6 +27,7 @@ import {
   updatePurchaseOrder, // Added updatePurchaseOrder
   deletePurchaseOrder,
   getPurchaseOrderDetails,
+  createSupplierMaterialRelation, // Added createSupplierMaterialRelation
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -107,4 +108,5 @@ export {
   updatePurchaseOrder, // Exported
   deletePurchaseOrder,
   getPurchaseOrderDetails,
+  createSupplierMaterialRelation, // Exported
 };

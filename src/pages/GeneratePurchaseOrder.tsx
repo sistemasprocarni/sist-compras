@@ -292,6 +292,7 @@ const GeneratePurchaseOrder = () => {
           <PurchaseOrderItemsTable
             items={items}
             supplierId={supplierId}
+            supplierName={supplierName}
             currency={currency}
             onAddItem={handleAddItem}
             onRemoveItem={handleRemoveItem}

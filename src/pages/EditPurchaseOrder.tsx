@@ -266,6 +266,7 @@ const EditPurchaseOrder = () => {
           <PurchaseOrderItemsTable
             items={items}
             supplierId={supplierId}
+            supplierName={supplierName}
             currency={currency}
             onAddItem={handleAddItem}
             onRemoveItem={handleRemoveItem}
