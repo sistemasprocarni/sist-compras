@@ -40,6 +40,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean; // Añadido: Campo para exención de IVA
+  specification?: string; // Added specification field
 }
 
 // Define las unidades de medida.
@@ -147,7 +148,7 @@ const EditQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    // is_exempt is no longer handled here
+    handleItemChange(index, 'description', material.specification || ''); // Update description with specification
   };
 
   const handleCompanySelect = (company: Company) => {

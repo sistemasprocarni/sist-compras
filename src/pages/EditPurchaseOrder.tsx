@@ -30,6 +30,7 @@ interface PurchaseOrderItemForm {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string;
+  specification?: string; // Added specification field
 }
 
 interface MaterialSearchResult {
@@ -39,6 +40,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
+  specification?: string; // Added specification field
 }
 
 const EditPurchaseOrder = () => {
@@ -100,12 +102,13 @@ const EditPurchaseOrder = () => {
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
         unit: item.unit || 'KG',
+        specification: item.specification || '', // Use specification from item data
       })));
     }
   }, [initialOrder]);
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG' }]);
+    setItems((prevItems) => [...prevItems, { material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG', specification: '' }]);
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseOrderItemForm, value: any) => {
@@ -122,6 +125,7 @@ const EditPurchaseOrder = () => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
+    handleItemChange(index, 'specification', material.specification || ''); // Update specification
   };
 
   const handleCompanySelect = (company: Company) => {
