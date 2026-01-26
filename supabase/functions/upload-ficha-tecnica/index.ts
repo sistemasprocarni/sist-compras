@@ -114,7 +114,7 @@ serve(async (req) => {
       });
     }
 
-    // --- 1. Google Drive Authentication and Upload ---
+    // --- 1. Google Drive Authentication and Setup ---
     
     const serviceAccountEmail = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_EMAIL');
     const privateKey = Deno.env.get('GOOGLE_PRIVATE_KEY');
@@ -130,67 +130,54 @@ serve(async (req) => {
     // Convert Base64 to binary data
     const fileBuffer = Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0));
 
-    // Metadata for the file
+    // --- 2. Create empty file with metadata (Step 1) ---
     const metadata = {
       name: fileName,
       parents: [driveFolderId],
       mimeType: mimeType,
     };
 
-    // Boundary for multipart request
-    const boundary = 'foo_bar_baz';
-    
-    // Part 1: Metadata
-    const metadataPart = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`;
-    
-    // Part 2: File content (Base64 encoded for the body)
-    const filePartHeader = `--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n`;
-    const filePartFooter = `\r\n--${boundary}--`;
-
-    // Base64 encode the file buffer for the body
-    const fileBase64Encoded = btoa(String.fromCharCode(...fileBuffer));
-    
-    // Combine parts into a single buffer
-    const encoder = new TextEncoder();
-    const metadataBuffer = encoder.encode(metadataPart);
-    const fileHeaderBuffer = encoder.encode(filePartHeader);
-    const fileContentBuffer = encoder.encode(fileBase64Encoded);
-    const fileFooterBuffer = encoder.encode(filePartFooter);
-
-    const requestBody = new Uint8Array(
-      metadataBuffer.length + 
-      fileHeaderBuffer.length + 
-      fileContentBuffer.length + 
-      fileFooterBuffer.length
-    );
-
-    let offset = 0;
-    requestBody.set(metadataBuffer, offset);
-    offset += metadataBuffer.length;
-    requestBody.set(fileHeaderBuffer, offset);
-    offset += fileHeaderBuffer.length;
-    requestBody.set(fileContentBuffer, offset);
-    offset += fileContentBuffer.length;
-    requestBody.set(fileFooterBuffer, offset);
-
-    // Upload file to Google Drive, requesting fields id and webViewLink
-    const uploadResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink`, {
+    console.log('[upload-ficha-tecnica] Step 1: Creating file metadata...');
+    const createResponse = await fetch(`https://www.googleapis.com/drive/v3/files?fields=id,webViewLink`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': requestBody.length.toString(),
+        'Content-Type': 'application/json',
       },
-      body: requestBody,
+      body: JSON.stringify(metadata),
+    });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error('[upload-ficha-tecnica] Drive Create Metadata Error:', errorText);
+      throw new Error(`Error al crear metadatos del archivo en Google Drive: ${errorText}`);
+    }
+
+    const createdFile = await createResponse.json();
+    driveFileId = createdFile.id;
+    urlVisualizacion = createdFile.webViewLink;
+    console.log(`[upload-ficha-tecnica] Metadata created successfully. ID: ${driveFileId}`);
+
+    // --- 3. Upload file content (Step 2: PATCH) ---
+    console.log('[upload-ficha-tecnica] Step 2: Uploading file content via PATCH...');
+    
+    const uploadResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': mimeType,
+        'Content-Length': fileBuffer.length.toString(),
+      },
+      body: fileBuffer, // Send binary data directly
     });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('[upload-ficha-tecnica] Drive Upload Error:', errorText);
+      console.error('[upload-ficha-tecnica] Drive Upload Content Error:', errorText);
       
-      let errorMessage = `Error al subir archivo a Google Drive: ${errorText}`;
+      let errorMessage = `Error al subir contenido del archivo a Google Drive: ${errorText}`;
       
-      // Check for 403 storage quota error
+      // Check for 403 storage quota error (although less likely here, still possible if permissions are wrong)
       if (uploadResponse.status === 403 && errorText.includes('storageQuotaExceeded')) {
           errorMessage = `Error 403 (Cuota de Almacenamiento Excedida): La Service Account no tiene cuota propia. Asegúrate de que la carpeta de destino (ID: ${driveFolderId}) sea una Unidad Compartida o que la Service Account tenga permisos de 'Editor' o 'Propietario' en la carpeta.`;
       } else if (uploadResponse.status === 404 && errorText.includes(driveFolderId)) {
@@ -200,12 +187,10 @@ serve(async (req) => {
       throw new Error(errorMessage);
     }
 
-    const driveFile = await uploadResponse.json();
-    driveFileId = driveFile.id;
-    urlVisualizacion = driveFile.webViewLink;
-    console.log(`[upload-ficha-tecnica] File uploaded successfully. ID: ${driveFileId}, Link: ${urlVisualizacion}`);
+    console.log(`[upload-ficha-tecnica] File content uploaded successfully. ID: ${driveFileId}`);
 
-    // --- 2. Set Public Read Permissions ---
+    // --- 4. Set Public Read Permissions ---
+    console.log('[upload-ficha-tecnica] Step 3: Setting public read permissions...');
     const permissionResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}/permissions`, {
       method: 'POST',
       headers: {
@@ -226,7 +211,7 @@ serve(async (req) => {
       console.log(`[upload-ficha-tecnica] Public read permission set for file ${driveFileId}.`);
     }
 
-    // --- 3. Insert Metadata into Supabase ---
+    // --- 5. Insert Metadata into Supabase ---
     const { data: newFicha, error: insertError } = await supabaseClient
       .from('fichas_tecnicas')
       .insert({
