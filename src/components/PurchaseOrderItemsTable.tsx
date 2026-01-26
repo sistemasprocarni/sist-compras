@@ -17,7 +17,6 @@ interface PurchaseOrderItemForm {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string;
-  specification?: string; // Added specification field
 }
 
 interface MaterialSearchResult {
@@ -27,7 +26,6 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
 }
 
 const MATERIAL_UNITS = [
@@ -171,14 +169,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       <div className="flex justify-between mt-4">
         <Button variant="outline" onClick={onAddItem} className="w-full mr-2">
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setIsAddMaterialDialogOpen(true)}
-          disabled={!supplierId}
-          className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
-        >
-          <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
         </Button>
       </div>
       <AddMaterialToSupplierDialog

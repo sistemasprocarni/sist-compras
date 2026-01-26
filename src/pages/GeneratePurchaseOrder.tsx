@@ -35,7 +35,6 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
 }
 
 // Define las unidades de medida.
@@ -96,7 +95,6 @@ const GeneratePurchaseOrder = () => {
           tax_rate: 0.16,
           is_exempt: false,
           unit: item.unit || MATERIAL_UNITS[0],
-          specification: item.description || '', // Use description as specification
         });
       });
     }
@@ -122,7 +120,6 @@ const GeneratePurchaseOrder = () => {
         tax_rate: 0.16,
         is_exempt: materialData.is_exempt || false,
         unit: materialData.unit || MATERIAL_UNITS[0],
-        specification: materialData.specification || '', // Use specification from material data
       });
     }
   }, [materialData]);
@@ -150,18 +147,17 @@ const GeneratePurchaseOrder = () => {
   }, [supplierDetails]);
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
-    // Update material_name, unit, is_exempt, and specification based on selected material
+    // Update material_name, unit, and is_exempt based on selected material
     updateItem(index, {
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
-      specification: material.specification || '', // Update specification
       // tax_rate remains 0.16 by default, calculation handles is_exempt
     });
   };
 
   const handleAddItem = () => {
-    addItem({ material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0], specification: '' });
+    addItem({ material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0] });
   };
 
   const handleItemChange = (index: number, field: keyof typeof items[0], value: any) => {

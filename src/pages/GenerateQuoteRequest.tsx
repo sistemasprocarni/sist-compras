@@ -35,7 +35,6 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
 }
 
 const MATERIAL_UNITS = [
@@ -79,7 +78,7 @@ const GenerateQuoteRequest = () => {
       setItems([{
         material_name: materialData.name,
         quantity: 0,
-        description: materialData.specification || '', // Use specification as description
+        description: '',
         unit: materialData.unit || MATERIAL_UNITS[0],
       }]);
     }
@@ -108,7 +107,6 @@ const GenerateQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    handleItemChange(index, 'description', material.specification || ''); // Update description with specification
   };
 
   const handleCompanySelect = (company: Company) => {
