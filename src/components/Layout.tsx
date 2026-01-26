@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDropdown from './UserDropdown';
-import SidebarNav from './SidebarNav'; // Import the new component
+import SidebarNav from './SidebarNav';
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -18,7 +18,7 @@ const Layout = () => {
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-procarni-primary text-white">
         <NavLink to="/" className="flex items-center gap-2 font-semibold">
           <Package2 className="h-6 w-6" />
-          <span className="">Portal de Compras</span>
+          <span className="">Procarni System</span>
         </NavLink>
       </div>
       <div className="flex-1 overflow-y-auto">
