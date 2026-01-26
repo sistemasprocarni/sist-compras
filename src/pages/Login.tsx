@@ -23,9 +23,22 @@ const Login = () => {
                 },
               },
             },
+            className: {
+              button: 'w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors',
+            },
           }}
           theme="light" // Puedes cambiar a 'dark' si tu app soporta tema oscuro
           redirectTo={window.location.origin} // Redirige a la raíz después del login
+          localization={{
+            variables: {
+              sign_in: {
+                button_label: 'Iniciar Sesión',
+              },
+              sign_up: {
+                button_label: 'Registrarse',
+              },
+            },
+          }}
         />
       </div>
       <MadeWithDyad />
