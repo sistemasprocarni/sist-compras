@@ -39,6 +39,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
+  specification?: string; // Added specification field
 }
 
 const EditPurchaseOrder = () => {
@@ -122,6 +123,10 @@ const EditPurchaseOrder = () => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
+    // Import specification into description if available
+    if (material.specification) {
+      handleItemChange(index, 'description', material.specification);
+    }
   };
 
   const handleCompanySelect = (company: Company) => {

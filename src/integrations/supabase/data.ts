@@ -56,7 +56,7 @@ export const searchMaterialsBySupplier = async (supplierId: string, query: strin
 
   let selectQuery = supabase
     .from('supplier_materials')
-    .select('materials:material_id(id, name, code, category, unit, is_exempt)')
+    .select('materials:material_id(id, name, code, category, unit, is_exempt), specification')
     .eq('supplier_id', supplierId);
 
   const { data: relations, error } = await selectQuery.limit(50);
@@ -66,7 +66,10 @@ export const searchMaterialsBySupplier = async (supplierId: string, query: strin
     return [];
   }
 
-  let materials = relations.map(sm => sm.materials).filter(m => m !== null);
+  let materials = relations.map(sm => ({
+    ...sm.materials,
+    specification: sm.specification,
+  })).filter(m => m !== null);
 
   // Client-side filtering based on query
   if (query.trim()) {

@@ -26,6 +26,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
+  specification?: string; // Added specification field
 }
 
 const MATERIAL_UNITS = [

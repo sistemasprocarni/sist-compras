@@ -35,6 +35,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
+  specification?: string; // Added specification field
 }
 
 // Define las unidades de medida.
@@ -154,6 +155,10 @@ const GeneratePurchaseOrder = () => {
       is_exempt: material.is_exempt || false,
       // tax_rate remains 0.16 by default, calculation handles is_exempt
     });
+    // Import specification into description if available
+    if (material.specification) {
+      updateItem(index, { description: material.specification });
+    }
   };
 
   const handleAddItem = () => {
