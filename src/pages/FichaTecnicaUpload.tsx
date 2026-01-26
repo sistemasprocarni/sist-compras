@@ -1,5 +1,3 @@
-// src/pages/FichaTecnicaUpload.tsx
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -146,6 +144,9 @@ const FichaTecnicaUpload = () => {
         fileName: selectedFile.name,
         mimeType: selectedFile.type,
       };
+
+      // Log the payload to verify it's correct
+      console.log('[FichaTecnicaUpload] Payload:', payload);
 
       const newFicha = await uploadFichaTecnica(payload);
 
