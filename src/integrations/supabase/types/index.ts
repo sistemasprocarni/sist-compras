@@ -105,8 +105,7 @@ export interface FichaTecnica {
   user_id: string;
   nombre_producto: string;
   proveedor_id: string;
-  drive_file_id: string;
-  url_visualizacion: string;
+  storage_url: string; // Renamed from url_visualizacion
   created_at: string;
   suppliers?: { name: string }; // For fetching list
 }

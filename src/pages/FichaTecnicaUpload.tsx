@@ -148,7 +148,7 @@ const FichaTecnicaUpload = () => {
               <CardTitle className="text-lg mb-1 truncate">{ficha.nombre_producto}</CardTitle>
               <CardDescription className="mb-2">Proveedor: {ficha.suppliers?.name || 'N/A'}</CardDescription>
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" size="sm" onClick={() => handleViewFicha(ficha.url_visualizacion)}>
+                <Button variant="outline" size="sm" onClick={() => handleViewFicha(ficha.storage_url)}>
                   <Eye className="mr-2 h-4 w-4" /> Ver PDF
                 </Button>
               </div>
@@ -176,7 +176,7 @@ const FichaTecnicaUpload = () => {
                 <TableCell>{ficha.suppliers?.name || 'N/A'}</TableCell>
                 <TableCell>{new Date(ficha.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleViewFicha(ficha.url_visualizacion)}>
+                  <Button variant="ghost" size="icon" onClick={() => handleViewFicha(ficha.storage_url)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </TableCell>
