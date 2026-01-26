@@ -24,6 +24,7 @@ import PurchaseOrderManagement from "./pages/PurchaseOrderManagement";
 import PurchaseOrderDetails from "./pages/PurchaseOrderDetails";
 import EditPurchaseOrder from "./pages/EditPurchaseOrder";
 import Settings from "./pages/Settings";
+import FichaTecnicaUpload from "./pages/FichaTecnicaUpload";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="/purchase-orders/:id" element={<PurchaseOrderDetails />} />
                 <Route path="/purchase-orders/edit/:id" element={<EditPurchaseOrder />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/ficha-tecnica-upload" element={<FichaTecnicaUpload />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

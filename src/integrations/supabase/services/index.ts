@@ -6,3 +6,4 @@ export * from './companyService';
 export * from './quoteRequestService';
 export * from './purchaseOrderService';
 export * from './supplierMaterialService';
+export * from './fichaTecnicaService';

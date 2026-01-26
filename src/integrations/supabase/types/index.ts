@@ -99,3 +99,14 @@ export interface PurchaseOrderItem {
   is_exempt?: boolean;
   unit?: string; // Added unit field
 }
+
+export interface FichaTecnica {
+  id: string;
+  user_id: string;
+  nombre_producto: string;
+  proveedor_id: string;
+  drive_file_id: string;
+  url_visualizacion: string;
+  created_at: string;
+  suppliers?: { name: string }; // For fetching list
+}

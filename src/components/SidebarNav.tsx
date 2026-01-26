@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog } from 'lucide-react';
+import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp } from 'lucide-react';
 
 const navItems = [
   {
@@ -29,7 +29,8 @@ const navItems = [
     items: [
       { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
       { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
-      { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' }, // Renamed from "Configuración"
+      { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
+      { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
     ]
   }
 ];

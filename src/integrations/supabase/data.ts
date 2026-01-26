@@ -32,6 +32,8 @@ import {
   archivePurchaseOrder, // Exported
   unarchivePurchaseOrder, // Exported
   createSupplierMaterialRelation,
+  uploadFichaTecnica,
+  getAllFichasTecnicas,
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -120,4 +122,6 @@ export {
   archivePurchaseOrder,
   unarchivePurchaseOrder,
   createSupplierMaterialRelation,
+  uploadFichaTecnica,
+  getAllFichasTecnicas,
 };
