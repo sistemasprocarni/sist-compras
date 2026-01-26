@@ -4,14 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Trash2, Search, Eye, Edit, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, Search, Eye, Edit, ArrowLeft, Archive, RotateCcw } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getAllPurchaseOrders, deletePurchaseOrder } from '@/integrations/supabase/data';
+import { getAllPurchaseOrders, deletePurchaseOrder, archivePurchaseOrder, unarchivePurchaseOrder } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface PurchaseOrder {
   id: string;
@@ -46,71 +47,95 @@ const PurchaseOrderManagement = () => {
   const isMobile = useIsMobile();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [orderToDeleteId, setOrderToDeleteId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [orderToModify, setOrderToModify] = useState<{ id: string; action: 'archive' | 'unarchive' } | null>(null);
 
-  const { data: purchaseOrders, isLoading, error } = useQuery<PurchaseOrder[]>({
-    queryKey: ['purchaseOrders'],
-    queryFn: getAllPurchaseOrders,
-    enabled: !!session,
+  // Fetch active orders
+  const { data: activePurchaseOrders, isLoading: isLoadingActive, error: activeError } = useQuery<PurchaseOrder[]>({
+    queryKey: ['purchaseOrders', 'Active'],
+    queryFn: () => getAllPurchaseOrders('Active'),
+    enabled: !!session && activeTab === 'active',
   });
 
+  // Fetch archived orders
+  const { data: archivedPurchaseOrders, isLoading: isLoadingArchived, error: archivedError } = useQuery<PurchaseOrder[]>({
+    queryKey: ['purchaseOrders', 'Archived'],
+    queryFn: () => getAllPurchaseOrders('Archived'),
+    enabled: !!session && activeTab === 'archived',
+  });
+
+  const currentOrders = activeTab === 'active' ? activePurchaseOrders : archivedPurchaseOrders;
+  const isLoading = activeTab === 'active' ? isLoadingActive : isLoadingArchived;
+  const error = activeTab === 'active' ? activeError : archivedError;
+
   const filteredPurchaseOrders = useMemo(() => {
-    if (!purchaseOrders) return [];
-    if (!searchTerm) return purchaseOrders;
+    if (!currentOrders) return [];
+    if (!searchTerm) return currentOrders;
 
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return purchaseOrders.filter(order =>
+    return currentOrders.filter(order =>
       formatSequenceNumber(order.sequence_number, order.created_at).toLowerCase().includes(lowerCaseSearchTerm) ||
       order.suppliers.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       order.companies.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       order.currency.toLowerCase().includes(lowerCaseSearchTerm)
     );
-  }, [purchaseOrders, searchTerm]);
+  }, [currentOrders, searchTerm]);
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePurchaseOrder,
+  const archiveMutation = useMutation({
+    mutationFn: archivePurchaseOrder,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
-      showSuccess('Orden de compra eliminada exitosamente.');
-      setIsDeleteDialogOpen(false);
-      setOrderToDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Archived'] });
+      showSuccess('Orden de compra archivada exitosamente.');
+      setIsConfirmDialogOpen(false);
+      setOrderToModify(null);
     },
     onError: (err) => {
-      showError(`Error al eliminar orden: ${err.message}`);
-      setIsDeleteDialogOpen(false);
-      setOrderToDeleteId(null);
+      showError(`Error al archivar orden: ${err.message}`);
+      setIsConfirmDialogOpen(false);
+      setOrderToModify(null);
     },
   });
 
-  const confirmDeleteOrder = (id: string) => {
-    setOrderToDeleteId(id);
-    setIsDeleteDialogOpen(true);
+  const unarchiveMutation = useMutation({
+    mutationFn: unarchivePurchaseOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Archived'] });
+      showSuccess('Orden de compra desarchivada exitosamente.');
+      setIsConfirmDialogOpen(false);
+      setOrderToModify(null);
+    },
+    onError: (err) => {
+      showError(`Error al desarchivar orden: ${err.message}`);
+      setIsConfirmDialogOpen(false);
+      setOrderToModify(null);
+    },
+  });
+
+  const confirmAction = (id: string, action: 'archive' | 'unarchive') => {
+    setOrderToModify({ id, action });
+    setIsConfirmDialogOpen(true);
   };
 
-  const executeDeleteOrder = async () => {
-    if (orderToDeleteId) {
-      await deleteMutation.mutateAsync(orderToDeleteId);
+  const executeAction = async () => {
+    if (!orderToModify) return;
+
+    if (orderToModify.action === 'archive') {
+      await archiveMutation.mutateAsync(orderToModify.id);
+    } else if (orderToModify.action === 'unarchive') {
+      await unarchiveMutation.mutateAsync(orderToModify.id);
     }
   };
 
   const handleViewDetails = (orderId: string) => {
-    // We need a details page for Purchase Orders, let's assume the route is /purchase-orders/:id
     navigate(`/purchase-orders/${orderId}`);
   };
 
   const handleEditOrder = (orderId: string) => {
-    // We need an edit page for Purchase Orders, let's assume the route is /purchase-orders/edit/:id
     navigate(`/purchase-orders/edit/${orderId}`);
   };
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 text-center text-muted-foreground">
-        Cargando órdenes de compra...
-      </div>
-    );
-  }
 
   if (error) {
     showError(error.message);
@@ -141,106 +166,206 @@ const PurchaseOrderManagement = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar por N°, proveedor, empresa o moneda..."
-              className="w-full appearance-none bg-background pl-8 shadow-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archived')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="active">Activas</TabsTrigger>
+              <TabsTrigger value="archived">Archivadas</TabsTrigger>
+            </TabsList>
 
-          {filteredPurchaseOrders.length > 0 ? (
-            isMobile ? (
-              <div className="grid gap-4">
-                {filteredPurchaseOrders.map((order) => (
-                  <Card key={order.id} className="p-4">
-                    <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
-                    <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
-                    <div className="text-sm space-y-1">
-                      <p><strong>Empresa:</strong> {order.companies.name}</p>
-                      <p><strong>Moneda:</strong> {order.currency}</p>
-                      <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
-                      <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => confirmDeleteOrder(order.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+            <TabsContent value="active" className="mt-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por N°, proveedor, empresa o moneda..."
+                  className="w-full appearance-none bg-background pl-8 shadow-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>N° Orden</TableHead>
-                      <TableHead>Proveedor</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Moneda</TableHead>
-                      <TableHead>Tasa de Cambio</TableHead>
-                      <TableHead>Fecha Creación</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+
+              {isLoading ? (
+                <div className="text-center text-muted-foreground p-8">Cargando órdenes activas...</div>
+              ) : filteredPurchaseOrders.length > 0 ? (
+                isMobile ? (
+                  <div className="grid gap-4">
                     {filteredPurchaseOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
-                        <TableCell>{order.suppliers.name}</TableCell>
-                        <TableCell>{order.companies.name}</TableCell>
-                        <TableCell>{order.currency}</TableCell>
-                        <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
+                      <Card key={order.id} className="p-4">
+                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
+                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Empresa:</strong> {order.companies.name}</p>
+                          <p><strong>Moneda:</strong> {order.currency}</p>
+                          <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
+                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
                           <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmDeleteOrder(order.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+                            <Archive className="h-4 w-4 text-muted-foreground" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>N° Orden</TableHead>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Fecha Creación</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPurchaseOrders.map((order) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
+                            <TableCell>{order.suppliers.name}</TableCell>
+                            <TableCell>{order.companies.name}</TableCell>
+                            <TableCell>{order.currency}</TableCell>
+                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+                                <Archive className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No hay órdenes de compra activas o no se encontraron resultados para tu búsqueda.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="archived" className="mt-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar en archivados..."
+                  className="w-full appearance-none bg-background pl-8 shadow-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-            )
-          ) : (
-            <div className="text-center text-muted-foreground p-8">
-              No hay órdenes de compra registradas o no se encontraron resultados para tu búsqueda.
-            </div>
-          )}
+
+              {isLoading ? (
+                <div className="text-center text-muted-foreground p-8">Cargando órdenes archivadas...</div>
+              ) : filteredPurchaseOrders.length > 0 ? (
+                isMobile ? (
+                  <div className="grid gap-4">
+                    {filteredPurchaseOrders.map((order) => (
+                      <Card key={order.id} className="p-4 bg-gray-50 dark:bg-gray-800">
+                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
+                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Empresa:</strong> {order.companies.name}</p>
+                          <p><strong>Moneda:</strong> {order.currency}</p>
+                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
+                            <RotateCcw className="h-4 w-4 text-procarni-secondary" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>N° Orden</TableHead>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Fecha Creación</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPurchaseOrders.map((order) => (
+                          <TableRow key={order.id} className="bg-gray-50 dark:bg-gray-800">
+                            <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
+                            <TableCell>{order.suppliers.name}</TableCell>
+                            <TableCell>{order.companies.name}</TableCell>
+                            <TableCell>{order.currency}</TableCell>
+                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
+                                <RotateCcw className="h-4 w-4 text-procarni-secondary" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No hay órdenes de compra archivadas o no se encontraron resultados para tu búsqueda.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
       <MadeWithDyad />
 
-      {/* AlertDialog for delete confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* AlertDialog for archive/unarchive confirmation */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {orderToModify?.action === 'archive' ? 'Confirmar Archivado' : 'Confirmar Desarchivado'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente la orden de compra y todos sus ítems asociados.
+              {orderToModify?.action === 'archive'
+                ? '¿Estás seguro de que deseas archivar esta orden de compra? Podrás restaurarla más tarde.'
+                : '¿Estás seguro de que deseas restaurar esta orden de compra a la lista activa?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={executeDeleteOrder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+            <AlertDialogCancel disabled={archiveMutation.isPending || unarchiveMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeAction} 
+              disabled={archiveMutation.isPending || unarchiveMutation.isPending}
+              className={orderToModify?.action === 'archive' ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-procarni-secondary hover:bg-green-700"}
+            >
+              {orderToModify?.action === 'archive' ? 'Archivar' : 'Desarchivar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -22,12 +22,16 @@ import {
   updateQuoteRequest,
   deleteQuoteRequest,
   getQuoteRequestDetails,
+  archiveQuoteRequest, // Exported
+  unarchiveQuoteRequest, // Exported
   getAllPurchaseOrders,
   createPurchaseOrder,
-  updatePurchaseOrder, // Added updatePurchaseOrder
+  updatePurchaseOrder,
   deletePurchaseOrder,
   getPurchaseOrderDetails,
-  createSupplierMaterialRelation, // Added createSupplierMaterialRelation
+  archivePurchaseOrder, // Exported
+  unarchivePurchaseOrder, // Exported
+  createSupplierMaterialRelation,
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -106,10 +110,14 @@ export {
   updateQuoteRequest,
   deleteQuoteRequest,
   getQuoteRequestDetails,
+  archiveQuoteRequest,
+  unarchiveQuoteRequest,
   getAllPurchaseOrders,
   createPurchaseOrder,
-  updatePurchaseOrder, // Exported
+  updatePurchaseOrder,
   deletePurchaseOrder,
   getPurchaseOrderDetails,
-  createSupplierMaterialRelation, // Exported
+  archivePurchaseOrder,
+  unarchivePurchaseOrder,
+  createSupplierMaterialRelation,
 };

@@ -5,11 +5,21 @@ import { showError } from '@/utils/toast';
 import { PurchaseOrder, PurchaseOrderItem } from '../types';
 
 const PurchaseOrderService = {
-  getAll: async (): Promise<PurchaseOrder[]> => {
-    const { data, error } = await supabase
+  getAll: async (statusFilter: 'Active' | 'Archived' = 'Active'): Promise<PurchaseOrder[]> => {
+    let query = supabase
       .from('purchase_orders')
       .select('*, suppliers(name), companies(name)')
       .order('created_at', { ascending: false });
+
+    if (statusFilter === 'Active') {
+      // Excluir 'Archived'
+      query = query.neq('status', 'Archived');
+    } else if (statusFilter === 'Archived') {
+      // Solo incluir 'Archived'
+      query = query.eq('status', 'Archived');
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('[PurchaseOrderService.getAll] Error:', error);
@@ -111,7 +121,36 @@ const PurchaseOrderService = {
     return updatedOrder;
   },
 
+  archive: async (id: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({ status: 'Archived' })
+      .eq('id', id);
+
+    if (error) {
+      console.error('[PurchaseOrderService.archive] Error:', error);
+      showError('Error al archivar la orden de compra.');
+      return false;
+    }
+    return true;
+  },
+
+  unarchive: async (id: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({ status: 'Draft' }) // Restaurar a Draft
+      .eq('id', id);
+
+    if (error) {
+      console.error('[PurchaseOrderService.unarchive] Error:', error);
+      showError('Error al desarchivar la orden de compra.');
+      return false;
+    }
+    return true;
+  },
+
   delete: async (id: string): Promise<boolean> => {
+    // Mantener la función de eliminación física por si acaso, pero no se usará en la UI de gestión.
     const { error } = await supabase
       .from('purchase_orders')
       .delete()
@@ -146,4 +185,6 @@ export const {
   update: updatePurchaseOrder,
   delete: deletePurchaseOrder,
   getById: getPurchaseOrderDetails,
+  archive: archivePurchaseOrder,
+  unarchive: unarchivePurchaseOrder,
 } = PurchaseOrderService;
