@@ -38,7 +38,8 @@ const QuoteRequestManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [requestToModify, setRequestToModify] = useState<{ id: string; action: 'archive' | 'unarchive' } | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // Nuevo estado para eliminación permanente
+  const [requestToModify, setRequestToModify] = useState<{ id: string; action: 'archive' | 'unarchive' | 'delete' } | null>(null);
 
   // Fetch active requests
   const { data: activeQuoteRequests, isLoading: isLoadingActive, error: activeError } = useQuery<QuoteRequest[]>({
@@ -102,9 +103,29 @@ const QuoteRequestManagement = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteQuoteRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Archived'] });
+      showSuccess('Solicitud eliminada permanentemente.');
+      setIsDeleteDialogOpen(false);
+      setRequestToModify(null);
+    },
+    onError: (err) => {
+      showError(`Error al eliminar solicitud: ${err.message}`);
+      setIsDeleteDialogOpen(false);
+      setRequestToModify(null);
+    },
+  });
+
   const confirmAction = (id: string, action: 'archive' | 'unarchive') => {
     setRequestToModify({ id, action });
     setIsConfirmDialogOpen(true);
+  };
+
+  const confirmDelete = (id: string) => {
+    setRequestToModify({ id, action: 'delete' });
+    setIsDeleteDialogOpen(true);
   };
 
   const executeAction = async () => {
@@ -114,6 +135,8 @@ const QuoteRequestManagement = () => {
       await archiveMutation.mutateAsync(requestToModify.id);
     } else if (requestToModify.action === 'unarchive') {
       await unarchiveMutation.mutateAsync(requestToModify.id);
+    } else if (requestToModify.action === 'delete') {
+      await deleteMutation.mutateAsync(requestToModify.id);
     }
   };
 
@@ -277,6 +300,9 @@ const QuoteRequestManagement = () => {
                           <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'unarchive')}>
                             <RotateCcw className="h-4 w-4 text-procarni-secondary" />
                           </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(request.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
                       </Card>
                     ))}
@@ -308,6 +334,9 @@ const QuoteRequestManagement = () => {
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'unarchive')}>
                                 <RotateCcw className="h-4 w-4 text-procarni-secondary" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmDelete(request.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -348,6 +377,28 @@ const QuoteRequestManagement = () => {
               className={requestToModify?.action === 'archive' ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-procarni-secondary hover:bg-green-700"}
             >
               {requestToModify?.action === 'archive' ? 'Archivar' : 'Desarchivar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog for permanent delete confirmation (SC only) */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Eliminación Permanente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es irreversible. ¿Estás seguro de que deseas eliminar permanentemente esta Solicitud de Cotización?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeAction} 
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar Permanentemente'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
