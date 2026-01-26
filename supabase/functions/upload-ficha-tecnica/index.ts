@@ -173,8 +173,8 @@ serve(async (req) => {
     offset += fileContentBuffer.length;
     requestBody.set(fileFooterBuffer, offset);
 
-    // Upload file to Google Drive
-    const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    // Upload file to Google Drive, requesting fields id and webViewLink
+    const uploadResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -190,8 +190,10 @@ serve(async (req) => {
       
       let errorMessage = `Error al subir archivo a Google Drive: ${errorText}`;
       
-      // Check for 404 error specifically related to the folder ID
-      if (uploadResponse.status === 404 && errorText.includes(driveFolderId)) {
+      // Check for 403 storage quota error
+      if (uploadResponse.status === 403 && errorText.includes('storageQuotaExceeded')) {
+          errorMessage = `Error 403 (Cuota de Almacenamiento Excedida): La Service Account no tiene cuota propia. Asegúrate de que la carpeta de destino (ID: ${driveFolderId}) sea una Unidad Compartida o que la Service Account tenga permisos de 'Editor' o 'Propietario' en la carpeta.`;
+      } else if (uploadResponse.status === 404 && errorText.includes(driveFolderId)) {
           errorMessage = `Error 404: La carpeta de Google Drive con ID '${driveFolderId}' no fue encontrada. Por favor, verifica que el secreto DRIVE_FOLDER_ID sea correcto y que la Service Account tenga permisos de edición en esa carpeta.`;
       }
 
@@ -200,7 +202,8 @@ serve(async (req) => {
 
     const driveFile = await uploadResponse.json();
     driveFileId = driveFile.id;
-    console.log(`[upload-ficha-tecnica] File uploaded successfully. ID: ${driveFileId}`);
+    urlVisualizacion = driveFile.webViewLink;
+    console.log(`[upload-ficha-tecnica] File uploaded successfully. ID: ${driveFileId}, Link: ${urlVisualizacion}`);
 
     // --- 2. Set Public Read Permissions ---
     const permissionResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}/permissions`, {
@@ -217,31 +220,13 @@ serve(async (req) => {
 
     if (!permissionResponse.ok) {
       const errorText = await permissionResponse.text();
-      console.warn('[upload-ficha-tecnica] Permission Error:', errorText);
+      console.warn('[upload-ficha-tecnica] Permission Error (Continuing):', errorText);
       // Log warning but continue, as file is uploaded
     } else {
       console.log(`[upload-ficha-tecnica] Public read permission set for file ${driveFileId}.`);
     }
 
-    // --- 3. Get Web View Link ---
-    const fileDetailsResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?fields=webViewLink`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!fileDetailsResponse.ok) {
-      const errorText = await fileDetailsResponse.text();
-      console.error('[upload-ficha-tecnica] Details Fetch Error:', errorText);
-      throw new Error(`Error al obtener el enlace de visualización de Google Drive.`);
-    }
-
-    const fileDetails = await fileDetailsResponse.json();
-    urlVisualizacion = fileDetails.webViewLink;
-    console.log(`[upload-ficha-tecnica] Web View Link: ${urlVisualizacion}`);
-
-    // --- 4. Insert Metadata into Supabase ---
+    // --- 3. Insert Metadata into Supabase ---
     const { data: newFicha, error: insertError } = await supabaseClient
       .from('fichas_tecnicas')
       .insert({
