@@ -55,7 +55,7 @@ const Login = () => {
                 email_input_placeholder: 'Tu correo electrónico',
                 password_input_placeholder: 'Tu contraseña',
                 confirm_password_input_placeholder: 'Confirma tu contraseña',
-                link_text: 'Inicia Sesión',
+                link_text: '¿No tienes una cuenta? Regístrate',
               },
               forgotten_password: {
                 button_label: 'Enviar enlace de restablecimiento',
