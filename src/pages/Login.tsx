@@ -39,6 +39,8 @@ const Login = () => {
                 loading_button_label: 'Iniciando sesión...',
                 social_provider_text: 'Iniciar sesión con {{provider}}',
                 confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
+                email_input_placeholder: 'Tu correo electrónico',
+                password_input_placeholder: 'Tu contraseña',
               },
               sign_up: {
                 button_label: 'Registrarse',
@@ -48,6 +50,9 @@ const Login = () => {
                 loading_button_label: 'Registrando...',
                 social_provider_text: 'Registrarse con {{provider}}',
                 confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
+                email_input_placeholder: 'Tu correo electrónico',
+                password_input_placeholder: 'Tu contraseña',
+                confirm_password_input_placeholder: 'Confirma tu contraseña',
               },
               forgotten_password: {
                 button_label: 'Enviar enlace de restablecimiento',
@@ -55,12 +60,15 @@ const Login = () => {
                 loading_button_label: 'Enviando...',
                 link_text: '¿Olvidaste tu contraseña?',
                 confirmation_text: 'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.',
+                email_input_placeholder: 'Tu correo electrónico',
               },
               update_password: {
                 button_label: 'Actualizar contraseña',
                 password_label: 'Nueva contraseña',
                 confirm_password_label: 'Confirmar nueva contraseña',
                 loading_button_label: 'Actualizando...',
+                password_input_placeholder: 'Tu nueva contraseña',
+                confirm_password_input_placeholder: 'Confirma tu nueva contraseña',
               },
             },
           }}
