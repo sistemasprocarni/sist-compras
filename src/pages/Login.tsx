@@ -42,7 +42,7 @@ const Login = () => {
                 email_input_placeholder: 'Tu correo electrónico',
                 password_input_placeholder: 'Tu contraseña',
                 no_account_text: '¿No tienes una cuenta?',
-                link_text: 'Regístrate',
+                link_text: '¿Ya tienes una cuenta? Inicia sesión',
               },
               sign_up: {
                 button_label: 'Registrarse',
