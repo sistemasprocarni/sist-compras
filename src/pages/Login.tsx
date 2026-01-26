@@ -41,6 +41,8 @@ const Login = () => {
                 confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
                 email_input_placeholder: 'Tu correo electrónico',
                 password_input_placeholder: 'Tu contraseña',
+                no_account_text: '¿No tienes una cuenta?',
+                link_text: 'Regístrate',
               },
               sign_up: {
                 button_label: 'Registrarse',
@@ -53,6 +55,7 @@ const Login = () => {
                 email_input_placeholder: 'Tu correo electrónico',
                 password_input_placeholder: 'Tu contraseña',
                 confirm_password_input_placeholder: 'Confirma tu contraseña',
+                link_text: 'Inicia Sesión',
               },
               forgotten_password: {
                 button_label: 'Enviar enlace de restablecimiento',
