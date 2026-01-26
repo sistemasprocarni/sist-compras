@@ -21,8 +21,6 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    // Use the Service Role Key for the storage upload to bypass RLS if needed, 
-    // but here we use the Anon Key with the user's JWT for RLS enforcement.
     supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -57,11 +55,27 @@ serve(async (req) => {
     const filePath = `${user.id}/${Date.now()}_${fileName.replace(/\s/g, '_')}`;
     
     // Convert Base64 string to ArrayBuffer/Blob for upload
-    const fileBuffer = Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0));
+    // Remove data URL prefix if present (e.g., "data:application/pdf;base64,")
+    let base64Data = fileBase64;
+    if (base64Data.startsWith('data:')) {
+      const commaIndex = base64Data.indexOf(',');
+      if (commaIndex > -1) {
+        base64Data = base64Data.substring(commaIndex + 1);
+      }
+    }
+
+    // Convert Base64 to Uint8Array (ArrayBuffer)
+    const fileBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
     console.log(`[upload-ficha-tecnica] Uploading file to storage path: ${filePath}`);
 
-    const { error: uploadError } = await supabaseClient.storage
+    // Use the service role client for upload to bypass RLS if needed
+    const serviceRoleClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    const { error: uploadError } = await serviceRoleClient.storage
       .from('fichas')
       .upload(filePath, fileBuffer, {
         contentType: mimeType,
@@ -74,7 +88,7 @@ serve(async (req) => {
     }
 
     // --- 2. Get Public URL ---
-    const { data: publicUrlData } = supabaseClient.storage
+    const { data: publicUrlData } = serviceRoleClient.storage
       .from('fichas')
       .getPublicUrl(filePath);
       
@@ -88,7 +102,7 @@ serve(async (req) => {
         user_id: user.id,
         nombre_producto: nombre_producto,
         proveedor_id: proveedor_id,
-        storage_url: storageUrl, // Use the new column name
+        storage_url: storageUrl,
       })
       .select()
       .single();
