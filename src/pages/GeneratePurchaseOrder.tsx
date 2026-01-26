@@ -6,7 +6,7 @@ import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
 import { PlusCircle, Trash2, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier, getSupplierDetails } from '@/integrations/supabase/data';
+import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier, getSupplierDetails, updateQuoteRequest } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
@@ -229,7 +229,7 @@ const GeneratePurchaseOrder = () => {
       created_by: userEmail || 'unknown',
       user_id: userId,
       // New fields
-      delivery_date: format(deliveryDate, 'yyyy-MM-dd'),
+      delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
       payment_terms: paymentTerms,
       custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
       credit_days: paymentTerms === 'Crédito' ? creditDays : 0,
@@ -241,6 +241,25 @@ const GeneratePurchaseOrder = () => {
     const createdOrder = await createPurchaseOrder(orderData, items);
 
     if (createdOrder) {
+      // 1. Archive the source Quote Request if it exists
+      if (quoteRequest?.id && quoteRequest.quote_request_items) {
+        // Prepare items payload for update (removing id/request_id fields)
+        const itemsPayload = quoteRequest.quote_request_items.map((item: any) => ({
+          material_name: item.material_name,
+          quantity: item.quantity,
+          description: item.description,
+          unit: item.unit,
+        }));
+
+        const updatedQR = await updateQuoteRequest(quoteRequest.id, { status: 'Archived' }, itemsPayload);
+        
+        if (updatedQR) {
+          console.log(`Quote Request ${quoteRequest.id} archived successfully.`);
+        } else {
+          showError('Advertencia: No se pudo archivar la Solicitud de Cotización de origen.');
+        }
+      }
+
       showSuccess('Orden de compra creada exitosamente.');
       clearCart();
       setCompanyId('');
