@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Search } from 'lucide-react';
+import { Package2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -17,7 +17,7 @@ const Layout = () => {
     <div className="flex h-full max-h-screen flex-col gap-2">
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-procarni-primary text-white">
         <NavLink to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/Sis-Prov.png" alt="Procarni System Logo" className="h-6 w-6" />
+          <Package2 className="h-6 w-6" />
           <span className="">Procarni System</span>
         </NavLink>
       </div>
@@ -36,7 +36,7 @@ const Layout = () => {
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
-            <img src="/Sis-Prov.png" alt="Procarni System Logo" className="h-5 w-5" />
+            <Package2 className="h-5 w-5" />
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
