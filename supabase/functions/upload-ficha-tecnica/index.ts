@@ -16,10 +16,19 @@ async function getGoogleAccessToken(serviceAccountEmail: string, privateKey: str
   // IMPORTANT: Handle private key formatting (replace escaped newlines with actual newlines)
   const cleanedPrivateKey = privateKey.replace(/\\n/g, '\n');
 
+  // 1. Remove PEM headers/footers and whitespace
+  const pemKey = cleanedPrivateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+
+  // 2. Base64 decode to get the DER buffer
+  const derKey = Uint8Array.from(atob(pemKey), c => c.charCodeAt(0));
+
   // Import the private key for signing
   const key = await crypto.subtle.importKey(
     "pkcs8",
-    new TextEncoder().encode(cleanedPrivateKey),
+    derKey, // Use the DER buffer
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"],
