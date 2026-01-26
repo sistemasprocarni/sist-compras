@@ -187,7 +187,15 @@ serve(async (req) => {
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
       console.error('[upload-ficha-tecnica] Drive Upload Error:', errorText);
-      throw new Error(`Error al subir archivo a Google Drive: ${errorText}`);
+      
+      let errorMessage = `Error al subir archivo a Google Drive: ${errorText}`;
+      
+      // Check for 404 error specifically related to the folder ID
+      if (uploadResponse.status === 404 && errorText.includes(driveFolderId)) {
+          errorMessage = `Error 404: La carpeta de Google Drive con ID '${driveFolderId}' no fue encontrada. Por favor, verifica que el secreto DRIVE_FOLDER_ID sea correcto y que la Service Account tenga permisos de edición en esa carpeta.`;
+      }
+
+      throw new Error(errorMessage);
     }
 
     const driveFile = await uploadResponse.json();
@@ -261,10 +269,6 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during file upload.';
     console.error('[upload-ficha-tecnica] General Error:', errorMessage, error);
-
-    // The try/catch block ensures that if Drive upload fails, we don't proceed to Supabase.
-    // If Supabase insertion fails, we throw the error, but we cannot easily clean up the Drive file 
-    // from here without complex service role logic, so we rely on the error message to inform the user.
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
