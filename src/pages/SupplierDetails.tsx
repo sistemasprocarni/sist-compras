@@ -1,19 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getSupplierDetails } from '@/integrations/supabase/data';
+import { getSupplierDetails, getFichaTecnicaBySupplierAndProduct } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FichaTecnica } from '@/integrations/supabase/types';
 
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [currentFichaUrl, setCurrentFichaUrl] = useState('');
+  const [currentFichaTitle, setCurrentFichaTitle] = useState('');
 
   const { data: supplier, isLoading, error } = useQuery({
     queryKey: ['supplierDetails', id],
@@ -52,6 +57,23 @@ const SupplierDetails = () => {
         supplier: supplier,
       },
     });
+  };
+
+  const handleViewFicha = async (materialName: string) => {
+    if (!supplier?.id) {
+      showError('ID de proveedor no disponible.');
+      return;
+    }
+
+    const ficha: FichaTecnica | null = await getFichaTecnicaBySupplierAndProduct(supplier.id, materialName);
+
+    if (ficha && ficha.storage_url) {
+      setCurrentFichaUrl(ficha.storage_url);
+      setCurrentFichaTitle(`Ficha Técnica: ${materialName}`);
+      setIsViewerOpen(true);
+    } else {
+      showError(`No se encontró una ficha técnica para el material "${materialName}" de este proveedor.`);
+    }
   };
 
   if (isLoading) {
@@ -158,30 +180,43 @@ const SupplierDetails = () => {
                       <p><strong>Categoría:</strong> {sm.materials.category || 'N/A'}</p>
                       <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
                     </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)}>
+                        <FileText className="mr-2 h-4 w-4" /> Ver Ficha Técnica
+                      </Button>
+                    </div>
                   </Card>
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nombre del Material</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Especificación del Proveedor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {supplier.materials.map((sm) => (
-                    <TableRow key={sm.id}>
-                      <TableCell>{sm.materials.code || 'N/A'}</TableCell>
-                      <TableCell>{sm.materials.name}</TableCell>
-                      <TableCell>{sm.materials.category || 'N/A'}</TableCell>
-                      <TableCell>{sm.specification || 'N/A'}</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre del Material</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Especificación del Proveedor</TableHead>
+                      <TableHead className="text-right">Ficha Técnica</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {supplier.materials.map((sm) => (
+                      <TableRow key={sm.id}>
+                        <TableCell>{sm.materials.code || 'N/A'}</TableCell>
+                        <TableCell>{sm.materials.name}</TableCell>
+                        <TableCell>{sm.materials.category || 'N/A'}</TableCell>
+                        <TableCell>{sm.specification || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )
           ) : (
             <p className="text-muted-foreground">Este proveedor no tiene materiales registrados.</p>
@@ -189,6 +224,21 @@ const SupplierDetails = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+
+      <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+        <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{currentFichaTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {currentFichaUrl ? (
+              <iframe src={currentFichaUrl} className="w-full h-full border-none" title="PDF Viewer"></iframe>
+            ) : (
+              <div className="text-center text-destructive">No se pudo cargar el documento.</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -58,9 +58,67 @@ const FichaTecnicaService = {
     }
     return data as FichaTecnica[];
   },
+
+  getBySupplierAndProduct: async (proveedorId: string, nombreProducto: string): Promise<FichaTecnica | null> => {
+    const { data, error } = await supabase
+      .from('fichas_tecnicas')
+      .select('*')
+      .eq('proveedor_id', proveedorId)
+      .eq('nombre_producto', nombreProducto)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('[FichaTecnicaService.getBySupplierAndProduct] Error:', error);
+      return null;
+    }
+    return data as FichaTecnica | null;
+  },
+
+  delete: async (fichaId: string, storageUrl: string): Promise<boolean> => {
+    // 1. Extract file path from storage URL
+    // Example URL: https://[project_id].supabase.co/storage/v1/object/public/fichas/user_id/timestamp_filename.pdf
+    const pathSegments = storageUrl.split('/');
+    const bucketIndex = pathSegments.indexOf('fichas');
+    
+    if (bucketIndex === -1 || bucketIndex + 1 >= pathSegments.length) {
+      console.error('[FichaTecnicaService.delete] Invalid storage URL format:', storageUrl);
+      showError('Error: URL de almacenamiento inválida.');
+      return false;
+    }
+    
+    // Path is everything after 'fichas/'
+    const filePath = pathSegments.slice(bucketIndex + 1).join('/');
+    
+    // 2. Delete file from Storage
+    const { error: storageError } = await supabase.storage
+      .from('fichas')
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error('[FichaTecnicaService.delete] Storage Delete Error:', storageError);
+      showError('Error al eliminar el archivo del almacenamiento.');
+      // We continue to delete the DB entry even if storage fails, to clean up metadata
+    }
+
+    // 3. Delete metadata from DB
+    const { error: dbError } = await supabase
+      .from('fichas_tecnicas')
+      .delete()
+      .eq('id', fichaId);
+
+    if (dbError) {
+      console.error('[FichaTecnicaService.delete] DB Delete Error:', dbError);
+      showError('Error al eliminar el registro de la base de datos.');
+      return false;
+    }
+
+    return true;
+  },
 };
 
 export const {
   upload: uploadFichaTecnica,
   getAll: getAllFichasTecnicas,
+  delete: deleteFichaTecnica,
+  getBySupplierAndProduct: getFichaTecnicaBySupplierAndProduct,
 } = FichaTecnicaService;

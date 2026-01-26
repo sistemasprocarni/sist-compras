@@ -34,6 +34,8 @@ import {
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
+  deleteFichaTecnica,
+  getFichaTecnicaBySupplierAndProduct, // Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -124,4 +126,6 @@ export {
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
+  deleteFichaTecnica,
+  getFichaTecnicaBySupplierAndProduct,
 };

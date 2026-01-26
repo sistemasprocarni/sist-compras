@@ -5,17 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, UploadCloud, Eye, Search } from 'lucide-react';
+import { ArrowLeft, UploadCloud, Eye, Search, Trash2 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError, showSuccess } from '@/utils/toast';
 import SmartSearch from '@/components/SmartSearch';
-import { searchSuppliers, uploadFichaTecnica, getAllFichasTecnicas } from '@/integrations/supabase/data';
-import { useQuery } from '@tanstack/react-query';
+import { searchSuppliers, uploadFichaTecnica, getAllFichasTecnicas, searchMaterialsBySupplier, deleteFichaTecnica } from '@/integrations/supabase/data';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FichaTecnica } from '@/integrations/supabase/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Supplier {
@@ -24,23 +25,51 @@ interface Supplier {
   rif: string;
 }
 
+interface MaterialSearchResult {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+  unit?: string;
+  is_exempt?: boolean;
+  specification?: string;
+}
+
 const FichaTecnicaUpload = () => {
   const { session } = useSession();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [productName, setProductName] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialSearchResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [currentFichaUrl, setCurrentFichaUrl] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [fichaToDelete, setFichaToDelete] = useState<FichaTecnica | null>(null);
 
   const { data: fichas, isLoading: isLoadingFichas, refetch } = useQuery<FichaTecnica[]>({
     queryKey: ['fichasTecnicas'],
     queryFn: getAllFichasTecnicas,
     enabled: !!session,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, storage_url }: { id: string; storage_url: string }) => deleteFichaTecnica(id, storage_url),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fichasTecnicas'] });
+      showSuccess('Ficha técnica eliminada exitosamente.');
+      setIsDeleteDialogOpen(false);
+      setFichaToDelete(null);
+    },
+    onError: (err) => {
+      showError(`Error al eliminar ficha: ${err.message}`);
+      setIsDeleteDialogOpen(false);
+      setFichaToDelete(null);
+    },
   });
 
   const filteredFichas = useMemo(() => {
@@ -66,13 +95,28 @@ const FichaTecnicaUpload = () => {
     }
   };
 
+  const handleSupplierSelect = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setSelectedMaterial(null); // Reset material when supplier changes
+  };
+
+  const handleMaterialSelect = (material: MaterialSearchResult) => {
+    setSelectedMaterial(material);
+  };
+
+  const searchSupplierMaterials = async (query: string) => {
+    if (!selectedSupplier) return [];
+    // We use the material name as the product name for the ficha técnica
+    return searchMaterialsBySupplier(selectedSupplier.id, query);
+  };
+
   const handleUpload = async () => {
     if (!selectedSupplier) {
       showError('Por favor, selecciona un proveedor.');
       return;
     }
-    if (!productName.trim()) {
-      showError('Por favor, ingresa el nombre del producto.');
+    if (!selectedMaterial) {
+      showError('Por favor, selecciona un material/producto.');
       return;
     }
     if (!selectedFile) {
@@ -96,7 +140,7 @@ const FichaTecnicaUpload = () => {
       });
 
       const payload = {
-        nombre_producto: productName.trim(),
+        nombre_producto: selectedMaterial.name, // Use material name as product name
         proveedor_id: selectedSupplier.id,
         fileBase64: fileBase64,
         fileName: selectedFile.name,
@@ -109,14 +153,14 @@ const FichaTecnicaUpload = () => {
         showSuccess('Ficha técnica subida y registrada exitosamente.');
         // Reset form
         setSelectedSupplier(null);
-        setProductName('');
+        setSelectedMaterial(null);
         setSelectedFile(null);
         // Clear file input manually
         const fileInput = document.getElementById('pdfFile') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
         
         // Force refetch the list
-        refetch();
+        queryClient.invalidateQueries({ queryKey: ['fichasTecnicas'] });
       }
     } catch (error: any) {
       console.error('Error during upload:', error);
@@ -129,6 +173,17 @@ const FichaTecnicaUpload = () => {
   const handleViewFicha = (url: string) => {
     setCurrentFichaUrl(url);
     setIsViewerOpen(true);
+  };
+
+  const confirmDelete = (ficha: FichaTecnica) => {
+    setFichaToDelete(ficha);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (fichaToDelete) {
+      await deleteMutation.mutateAsync({ id: fichaToDelete.id, storage_url: fichaToDelete.storage_url });
+    }
   };
 
   const renderFichasTable = () => {
@@ -150,6 +205,9 @@ const FichaTecnicaUpload = () => {
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="outline" size="sm" onClick={() => handleViewFicha(ficha.storage_url)}>
                   <Eye className="mr-2 h-4 w-4" /> Ver PDF
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => confirmDelete(ficha)}>
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </Card>
@@ -179,6 +237,9 @@ const FichaTecnicaUpload = () => {
                   <Button variant="ghost" size="icon" onClick={() => handleViewFicha(ficha.storage_url)}>
                     <Eye className="h-4 w-4" />
                   </Button>
+                  <Button variant="ghost" size="icon" onClick={() => confirmDelete(ficha)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -207,7 +268,7 @@ const FichaTecnicaUpload = () => {
               <Label htmlFor="supplier">Proveedor *</Label>
               <SmartSearch
                 placeholder="Buscar proveedor por RIF o nombre"
-                onSelect={setSelectedSupplier}
+                onSelect={handleSupplierSelect}
                 fetchFunction={searchSuppliers}
                 displayValue={selectedSupplier?.name || ''}
                 disabled={isUploading}
@@ -215,15 +276,15 @@ const FichaTecnicaUpload = () => {
               {selectedSupplier && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {selectedSupplier.name}</p>}
             </div>
             <div>
-              <Label htmlFor="productName">Nombre del Producto *</Label>
-              <Input
-                id="productName"
-                type="text"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="Ej: Ficha Técnica Pollo Entero"
-                disabled={isUploading}
+              <Label htmlFor="productName">Producto (Material) *</Label>
+              <SmartSearch
+                placeholder={selectedSupplier ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+                onSelect={handleMaterialSelect}
+                fetchFunction={searchSupplierMaterials}
+                displayValue={selectedMaterial?.name || ''}
+                disabled={isUploading || !selectedSupplier}
               />
+              {selectedMaterial && <p className="text-sm text-muted-foreground mt-1">Material seleccionado: {selectedMaterial.name} ({selectedMaterial.code})</p>}
             </div>
           </div>
 
@@ -242,7 +303,7 @@ const FichaTecnicaUpload = () => {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleUpload} disabled={isUploading || !selectedSupplier || !productName || !selectedFile} className="bg-procarni-secondary hover:bg-green-700">
+            <Button onClick={handleUpload} disabled={isUploading || !selectedSupplier || !selectedMaterial || !selectedFile} className="bg-procarni-secondary hover:bg-green-700">
               <UploadCloud className="mr-2 h-4 w-4" />
               {isUploading ? 'Subiendo...' : 'Subir Ficha Técnica'}
             </Button>
@@ -286,6 +347,24 @@ const FichaTecnicaUpload = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AlertDialog for delete confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente la ficha técnica "{fichaToDelete?.nombre_producto}" y su archivo asociado del almacenamiento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} disabled={deleteMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
