@@ -153,6 +153,9 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                     />
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap text-right">
+                    <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
                     <Button variant="destructive" size="icon" onClick={() => onRemoveItem(index)} className="h-8 w-8">
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -166,14 +169,6 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       <div className="flex justify-between mt-4">
         <Button variant="outline" onClick={onAddItem} className="w-full mr-2">
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => setIsAddMaterialDialogOpen(true)}
-          disabled={!supplierId}
-          className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
-        >
-          <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
         </Button>
       </div>
       <AddMaterialToSupplierDialog

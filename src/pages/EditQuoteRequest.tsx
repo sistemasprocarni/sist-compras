@@ -326,22 +326,19 @@ const EditQuoteRequest = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-col space-y-2">
+                  <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                  <Button variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
             <div className="flex justify-between">
               <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddMaterialDialogOpen(true)}
-                disabled={!supplierId}
-                className="w-full ml-2 bg-procarni-secondary text-white hover:bg-green-700"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" /> Nuevo Material
               </Button>
             </div>
           </div>
