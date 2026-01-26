@@ -33,9 +33,34 @@ const Login = () => {
             variables: {
               sign_in: {
                 button_label: 'Iniciar Sesión',
+                email_label: 'Correo Electrónico',
+                password_label: 'Contraseña',
+                forgot_password_link: '¿Olvidaste tu contraseña?',
+                loading_button_label: 'Iniciando sesión...',
+                social_provider_text: 'Iniciar sesión con {{provider}}',
+                confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
               },
               sign_up: {
                 button_label: 'Registrarse',
+                email_label: 'Correo Electrónico',
+                password_label: 'Contraseña',
+                confirm_password_label: 'Confirmar Contraseña',
+                loading_button_label: 'Registrando...',
+                social_provider_text: 'Registrarse con {{provider}}',
+                confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
+              },
+              forgotten_password: {
+                button_label: 'Enviar enlace de restablecimiento',
+                email_label: 'Correo Electrónico',
+                loading_button_label: 'Enviando...',
+                link_text: '¿Olvidaste tu contraseña?',
+                confirmation_text: 'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.',
+              },
+              update_password: {
+                button_label: 'Actualizar contraseña',
+                password_label: 'Nueva contraseña',
+                confirm_password_label: 'Confirmar nueva contraseña',
+                loading_button_label: 'Actualizando...',
               },
             },
           }}
