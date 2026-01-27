@@ -8,3 +8,4 @@ export * from './purchaseOrderService';
 export * from './supplierMaterialService';
 export * from './fichaTecnicaService';
 export * from './priceHistoryService';
+export * from './auditLogService';

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign } from 'lucide-react';
+import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign, ScrollText } from 'lucide-react'; // Import ScrollText icon
 
 const navItems = [
   {
@@ -18,7 +18,7 @@ const navItems = [
     category: 'Procesos',
     items: [
       { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
-      { to: '/price-comparison', icon: <DollarSign className="h-5 w-5" />, label: 'Comparación de Precios' }, // NEW LINK
+      { to: '/price-comparison', icon: <DollarSign className="h-5 w-5" />, label: 'Comparación de Precios' },
       { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
       { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
       { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
@@ -32,6 +32,7 @@ const navItems = [
       { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
       { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
       { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
+      { to: '/audit-log', icon: <ScrollText className="h-5 w-5" />, label: 'Historial de Auditoría' }, // NEW LINK
     ]
   }
 ];

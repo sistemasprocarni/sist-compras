@@ -29,14 +29,15 @@ import {
   updatePurchaseOrder,
   deletePurchaseOrder,
   getPurchaseOrderDetails,
-  archivePurchaseOrder, // Exported
-  unarchivePurchaseOrder, // Exported
+  archivePurchaseOrder,
+  unarchivePurchaseOrder,
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
   deleteFichaTecnica,
   getFichaTecnicaBySupplierAndProduct, // Exported
-  getPriceHistoryByMaterialId, // NEW: Exported
+  getPriceHistoryByMaterialId, // Exported
+  getAllAuditLogs, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -129,5 +130,6 @@ export {
   getAllFichasTecnicas,
   deleteFichaTecnica,
   getFichaTecnicaBySupplierAndProduct,
-  getPriceHistoryByMaterialId, // NEW: Exported
+  getPriceHistoryByMaterialId,
+  getAllAuditLogs, // NEW: Exported
 };
