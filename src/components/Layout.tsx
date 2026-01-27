@@ -17,8 +17,8 @@ const Layout = () => {
     <div className="flex h-full max-h-screen flex-col gap-2">
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-procarni-primary text-white">
         <NavLink to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-10 w-auto object-contain" />
-          <span className="">Procarni System</span>
+          <img src="/Sis-Prov.png" alt="Logo" className="h-10 w-auto" onError={(e) => e.currentTarget.style.display='none'} />
+          <span>Procarni System</span>
         </NavLink>
       </div>
       <div className="flex-1 overflow-y-auto">
