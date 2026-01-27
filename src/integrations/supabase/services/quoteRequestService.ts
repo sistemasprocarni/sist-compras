@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { QuoteRequest, QuoteRequestItem } from '../types';
+import { logAudit } from './auditLogService';
 
 const QuoteRequestService = {
   getAll: async (statusFilter: 'Active' | 'Archived' = 'Active'): Promise<QuoteRequest[]> => {
@@ -43,6 +44,15 @@ const QuoteRequestService = {
       return null;
     }
 
+    // --- AUDIT LOG ---
+    logAudit('CREATE_QUOTE_REQUEST', { 
+      request_id: newRequest.id, 
+      supplier_id: newRequest.supplier_id, 
+      company_id: newRequest.company_id,
+      items_count: items.length
+    });
+    // -----------------
+
     if (items && items.length > 0) {
       const requestItems = items.map(item => ({
         request_id: newRequest.id,
@@ -80,6 +90,14 @@ const QuoteRequestService = {
       showError('Error al actualizar la solicitud de cotización.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_QUOTE_REQUEST', { 
+      request_id: id, 
+      updates: updates,
+      items_count: items.length
+    });
+    // -----------------
 
     // Eliminar ítems existentes
     const { error: deleteError } = await supabase
@@ -129,35 +147,23 @@ const QuoteRequestService = {
       showError(`Error al actualizar el estado de la solicitud a ${newStatus}.`);
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_QUOTE_REQUEST_STATUS', { 
+      request_id: id, 
+      new_status: newStatus 
+    });
+    // -----------------
+    
     return true;
   },
 
   archive: async (id: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('quote_requests')
-      .update({ status: 'Archived' })
-      .eq('id', id);
-
-    if (error) {
-      console.error('[QuoteRequestService.archive] Error:', error);
-      showError('Error al archivar la solicitud de cotización.');
-      return false;
-    }
-    return true;
+    return QuoteRequestService.updateStatus(id, 'Archived');
   },
 
   unarchive: async (id: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('quote_requests')
-      .update({ status: 'Draft' }) // Restaurar a Draft
-      .eq('id', id);
-
-    if (error) {
-      console.error('[QuoteRequestService.unarchive] Error:', error);
-      showError('Error al desarchivar la solicitud de cotización.');
-      return false;
-    }
-    return true;
+    return QuoteRequestService.updateStatus(id, 'Draft');
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -172,6 +178,11 @@ const QuoteRequestService = {
       showError('Error al eliminar la solicitud de cotización.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_QUOTE_REQUEST', { request_id: id });
+    // -----------------
+    
     return true;
   },
 

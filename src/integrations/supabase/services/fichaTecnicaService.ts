@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { FichaTecnica } from '../types';
+import { logAudit } from './auditLogService';
 
 interface UploadPayload {
   nombre_producto: string;
@@ -36,6 +37,16 @@ const FichaTecnicaService = {
       }
 
       const newFicha: FichaTecnica = await response.json();
+      
+      // --- AUDIT LOG ---
+      logAudit('UPLOAD_FICHA_TECNICA', { 
+        ficha_id: newFicha.id, 
+        nombre_producto: newFicha.nombre_producto, 
+        proveedor_id: newFicha.proveedor_id,
+        file_name: payload.fileName
+      });
+      // -----------------
+      
       return newFicha;
 
     } catch (error: any) {
@@ -111,6 +122,13 @@ const FichaTecnicaService = {
       showError('Error al eliminar el registro de la base de datos.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_FICHA_TECNICA', { 
+      ficha_id: fichaId, 
+      storage_path: filePath 
+    });
+    // -----------------
 
     return true;
   },

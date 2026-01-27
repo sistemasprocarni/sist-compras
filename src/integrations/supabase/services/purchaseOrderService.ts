@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { PurchaseOrder, PurchaseOrderItem } from '../types';
+import { logAudit } from './auditLogService';
 
 const PurchaseOrderService = {
   getAll: async (statusFilter: 'Active' | 'Archived' = 'Active'): Promise<PurchaseOrder[]> => {
@@ -41,6 +42,16 @@ const PurchaseOrderService = {
       showError('Error al crear la orden de compra.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('CREATE_PURCHASE_ORDER', { 
+      order_id: newOrder.id, 
+      sequence_number: newOrder.sequence_number,
+      supplier_id: newOrder.supplier_id, 
+      company_id: newOrder.company_id,
+      items_count: items.length
+    });
+    // -----------------
 
     if (items && items.length > 0) {
       const orderItems = items.map(item => ({
@@ -106,6 +117,15 @@ const PurchaseOrderService = {
       showError('Error al actualizar la orden de compra.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_PURCHASE_ORDER', { 
+      order_id: id, 
+      sequence_number: updatedOrder.sequence_number,
+      updates: updates,
+      items_count: items.length
+    });
+    // -----------------
 
     // 1. Eliminar ítems existentes
     const { error: deleteError } = await supabase
@@ -181,39 +201,26 @@ const PurchaseOrderService = {
       showError(`Error al actualizar el estado de la orden a ${newStatus}.`);
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_PURCHASE_ORDER_STATUS', { 
+      order_id: id, 
+      new_status: newStatus 
+    });
+    // -----------------
+    
     return true;
   },
 
   archive: async (id: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('purchase_orders')
-      .update({ status: 'Archived' })
-      .eq('id', id);
-
-    if (error) {
-      console.error('[PurchaseOrderService.archive] Error:', error);
-      showError('Error al archivar la orden de compra.');
-      return false;
-    }
-    return true;
+    return PurchaseOrderService.updateStatus(id, 'Archived');
   },
 
   unarchive: async (id: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('purchase_orders')
-      .update({ status: 'Draft' }) // Restaurar a Draft
-      .eq('id', id);
-
-    if (error) {
-      console.error('[PurchaseOrderService.unarchive] Error:', error);
-      showError('Error al desarchivar la orden de compra.');
-      return false;
-    }
-    return true;
+    return PurchaseOrderService.updateStatus(id, 'Draft');
   },
 
   delete: async (id: string): Promise<boolean> => {
-    // Mantener la función de eliminación física por si acaso, pero no se usará en la UI de gestión.
     const { error } = await supabase
       .from('purchase_orders')
       .delete()
@@ -224,6 +231,11 @@ const PurchaseOrderService = {
       showError('Error al eliminar la orden de compra.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_PURCHASE_ORDER', { order_id: id });
+    // -----------------
+    
     return true;
   },
 

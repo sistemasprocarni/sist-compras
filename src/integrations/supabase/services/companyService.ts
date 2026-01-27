@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { Company } from '../types';
+import { logAudit } from './auditLogService';
 
 const CompanyService = {
   getAll: async (): Promise<Company[]> => {
@@ -31,6 +32,15 @@ const CompanyService = {
       showError('Error al crear la empresa.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('CREATE_COMPANY', { 
+      company_id: newCompany.id, 
+      name: newCompany.name, 
+      rif: newCompany.rif 
+    });
+    // -----------------
+    
     return newCompany;
   },
 
@@ -47,6 +57,14 @@ const CompanyService = {
       showError('Error al actualizar la empresa.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_COMPANY', { 
+      company_id: id, 
+      updates: updates 
+    });
+    // -----------------
+    
     return updatedCompany;
   },
 
@@ -61,6 +79,11 @@ const CompanyService = {
       showError('Error al eliminar la empresa.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_COMPANY', { company_id: id });
+    // -----------------
+    
     return true;
   },
 

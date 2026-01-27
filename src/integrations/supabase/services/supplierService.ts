@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { Supplier, SupplierMaterialPayload } from '../types';
+import { logAudit } from './auditLogService';
 
 const SupplierService = {
   getAll: async (): Promise<Supplier[]> => {
@@ -34,6 +35,15 @@ const SupplierService = {
       showError('Error al crear el proveedor.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('CREATE_SUPPLIER', { 
+      supplier_id: newSupplier.id, 
+      name: newSupplier.name, 
+      rif: newSupplier.rif,
+      materials_count: materials.length
+    });
+    // -----------------
 
     if (materials && materials.length > 0) {
       const supplierMaterials = materials.map(mat => ({
@@ -74,6 +84,14 @@ const SupplierService = {
       showError('Error al actualizar el proveedor.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_SUPPLIER', { 
+      supplier_id: id, 
+      updates: updates,
+      materials_count: materials.length
+    });
+    // -----------------
 
     // Obtener las relaciones de materiales existentes
     const { data: existingSupplierMaterials, error: fetchError } = await supabase
@@ -154,6 +172,11 @@ const SupplierService = {
       showError('Error al eliminar el proveedor.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_SUPPLIER', { supplier_id: id });
+    // -----------------
+    
     return true;
   },
 

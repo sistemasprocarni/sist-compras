@@ -40,6 +40,7 @@ import {
   getFichaTecnicaBySupplierAndProduct, // Exported
   getPriceHistoryByMaterialId, // Exported
   getAllAuditLogs, // NEW: Exported
+  logAudit, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -120,7 +121,7 @@ export {
   getQuoteRequestDetails,
   archiveQuoteRequest,
   unarchiveQuoteRequest,
-  updateQuoteRequestStatus, // NEW
+  updateQuoteRequestStatus,
   getAllPurchaseOrders,
   createPurchaseOrder,
   updatePurchaseOrder,
@@ -128,7 +129,7 @@ export {
   getPurchaseOrderDetails,
   archivePurchaseOrder,
   unarchivePurchaseOrder,
-  updatePurchaseOrderStatus, // NEW
+  updatePurchaseOrderStatus,
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
@@ -136,4 +137,5 @@ export {
   getFichaTecnicaBySupplierAndProduct,
   getPriceHistoryByMaterialId,
   getAllAuditLogs,
+  logAudit,
 };

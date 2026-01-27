@@ -3,6 +3,7 @@
 import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { Material } from '../types';
+import { logAudit } from './auditLogService';
 
 const MaterialService = {
   getAll: async (): Promise<Material[]> => {
@@ -31,6 +32,15 @@ const MaterialService = {
       showError('Error al crear el material.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('CREATE_MATERIAL', { 
+      material_id: newMaterial.id, 
+      name: newMaterial.name, 
+      code: newMaterial.code 
+    });
+    // -----------------
+    
     return newMaterial;
   },
 
@@ -47,6 +57,14 @@ const MaterialService = {
       showError('Error al actualizar el material.');
       return null;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('UPDATE_MATERIAL', { 
+      material_id: id, 
+      updates: updates 
+    });
+    // -----------------
+    
     return updatedMaterial;
   },
 
@@ -61,6 +79,11 @@ const MaterialService = {
       showError('Error al eliminar el material.');
       return false;
     }
+
+    // --- AUDIT LOG ---
+    logAudit('DELETE_MATERIAL', { material_id: id });
+    // -----------------
+    
     return true;
   },
 
