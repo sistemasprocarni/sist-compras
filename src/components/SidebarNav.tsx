@@ -23,14 +23,16 @@ const navItems = [
       { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
       { to: '/purchase-order-management', icon: <ListOrdered className="h-5 w-5" />, label: 'Gestión de Órdenes (OC)' },
     ]
+  },
+  {
+    category: 'Configuración',
+    items: [
+      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
+      { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
+      { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
+      { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
+    ]
   }
-];
-
-const configItems = [
-  { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
-  { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
-  { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
-  { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
 ];
 
 const SidebarNav = () => {
@@ -48,8 +50,8 @@ const SidebarNav = () => {
       className="w-full"
     >
       {navItems.map((category) => (
-        <AccordionItem key={category.category} value={category.category} className="border-b border-white/20">
-          <AccordionTrigger className="px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 rounded-md">
+        <AccordionItem key={category.category} value={category.category} className="border-b border-sidebar-border">
+          <AccordionTrigger className="px-4 py-2 text-sm font-semibold text-sidebar-foreground hover:bg-muted/50 rounded-md">
             {category.category}
           </AccordionTrigger>
           <AccordionContent className="pb-2">
@@ -62,8 +64,8 @@ const SidebarNav = () => {
                     `flex items-center gap-3 rounded-lg px-3 py-2 transition-all 
                     ${
                       isActive 
-                        ? 'bg-white text-procarni-primary' 
-                        : 'text-white hover:bg-white/20 hover:text-white'
+                        ? 'bg-procarni-primary text-white' 
+                        : 'text-sidebar-foreground hover:bg-procarni-primary/10 hover:text-procarni-primary'
                     }`
                   }
                 >
@@ -75,34 +77,6 @@ const SidebarNav = () => {
           </AccordionContent>
         </AccordionItem>
       ))}
-      
-      {/* Configuración section outside the main loop to ensure it's always at the bottom of the scrollable area */}
-      <AccordionItem value="Configuración" className="border-b border-white/20">
-        <AccordionTrigger className="px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 rounded-md">
-          Configuración
-        </AccordionTrigger>
-        <AccordionContent className="pb-2">
-          <nav className="grid items-start px-2 text-sm font-medium">
-            {configItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-lg px-3 py-2 transition-all 
-                  ${
-                    isActive 
-                      ? 'bg-white text-procarni-primary' 
-                      : 'text-white hover:bg-white/20 hover:text-white'
-                  }`
-                }
-              >
-                {item.icon}
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </AccordionContent>
-      </AccordionItem>
     </Accordion>
   );
 };

@@ -35,7 +35,7 @@ const UserDropdown = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/20 hover:text-white">
+        <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:text-procarni-primary">
           <UserCircle className="mr-2 h-5 w-5" />
           <span className="truncate">{session.user.email || 'Usuario'}</span>
         </Button>
