@@ -1,19 +1,24 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { PDFDocument, rgb, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1';
+import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Define colores corporativos y de borde
+// --- CONSTANTS ---
 const PROC_RED = rgb(0.533, 0.039, 0.039); // #880a0a
-const LIGHT_GRAY = rgb(0.9, 0.9, 0.9); // Borde de tabla muy fino
-const DARK_GRAY = rgb(0.5, 0.5, 0.5); // Detalles de la empresa
-const BLUE_ACCENT = rgb(0.1, 0.4, 0.8); // Color para total USD
+const LIGHT_GRAY = rgb(0.9, 0.9, 0.9);
+const DARK_GRAY = rgb(0.5, 0.5, 0.5);
+const MARGIN = 30;
+const FONT_SIZE = 10;
+const LINE_HEIGHT = FONT_SIZE * 1.2;
+const COMPANY_NAME_FONT_SIZE = 12;
+const LOGO_SIZE = 50;
 
-// Re-implementación de las utilidades de cálculo para el entorno Deno
+// --- UTILITY FUNCTIONS (Kept outside serve) ---
+
 const calculateTotals = (items: Array<{ quantity: number; unit_price: number; tax_rate?: number; is_exempt?: boolean }>) => {
   let baseImponible = 0;
   let montoIVA = 0;
@@ -21,16 +26,16 @@ const calculateTotals = (items: Array<{ quantity: number; unit_price: number; ta
 
   items.forEach(item => {
     const itemTotal = item.quantity * item.unit_price;
-    baseImponible += itemTotal; // La base imponible siempre incluye el valor del ítem
+    baseImponible += itemTotal;
 
-    if (!item.is_exempt) { // Solo aplica IVA si el ítem NO está exento
-      const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
+    if (!item.is_exempt) {
+      const taxRate = item.tax_rate ?? 0.16;
       montoIVA += itemTotal * taxRate;
     }
     total += itemTotal;
   });
 
-  total += montoIVA; // Sumar el IVA al total final
+  total += montoIVA;
 
   return {
     baseImponible: parseFloat(baseImponible.toFixed(2)),
@@ -102,7 +107,6 @@ const numberToWords = (amount: number, currency: 'VES' | 'USD'): string => {
   return `${texto} CON ${decimalTexto}/100`.trim();
 };
 
-// Helper function for text wrapping (approximation based on character count)
 function wrapText(text: string, maxCharsPerLine: number): string[] {
   if (!text) return [];
   const words = text.split(/\s+/);
@@ -123,7 +127,6 @@ function wrapText(text: string, maxCharsPerLine: number): string[] {
   return lines;
 }
 
-// NEW: Standardized sequence number formatter
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
   if (!sequence) return 'N/A';
   
@@ -134,6 +137,8 @@ const formatSequenceNumber = (sequence?: number, dateString?: string): string =>
   
   return `OC-${year}-${month}-${seq}`;
 };
+
+// --- MAIN SERVE HANDLER ---
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -161,7 +166,7 @@ serve(async (req) => {
     const { orderId } = await req.json();
     console.log(`[generate-po-pdf] Generating PDF for order ID: ${orderId} by user: ${user.email}`);
 
-    // --- Lógica de obtención de datos de la orden de compra ---
+    // --- Data Fetching ---
     const { data: order, error: orderError } = await supabaseClient
       .from('purchase_orders')
       .select(`
@@ -173,7 +178,6 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
-      console.error(`[generate-po-pdf] Error fetching order ${orderId}:`, orderError);
       return new Response(JSON.stringify({ error: 'Order not found or access denied.' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -186,7 +190,6 @@ serve(async (req) => {
       .eq('order_id', orderId);
 
     if (itemsError) {
-      console.error(`[generate-po-pdf] Error fetching order items for ${orderId}:`, itemsError);
       return new Response(JSON.stringify({ error: 'Error fetching order items.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -204,50 +207,17 @@ serve(async (req) => {
       return order.payment_terms || 'Contado';
     };
 
-    // --- Generación de PDF con pdf-lib ---
+    // --- PDF Setup ---
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage(); 
+    const { width, height } = page.getSize();
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-    const { width, height } = page.getSize();
-    const margin = 30;
-    let y = height - margin;
-    const fontSize = 10;
-    const lineHeight = fontSize * 1.2;
-    
-    // Helper para dibujar texto
-    const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
-      // Ensure text is a string before drawing
-      const safeText = String(text || 'N/A'); 
-      page.drawText(safeText, {
-        x,
-        y: yPos,
-        font: font,
-        size: fontSize,
-        color: rgb(0, 0, 0),
-        ...options,
-      });
-    };
-
-    // Helper para dibujar rectángulo con borde (usado para totales)
-    const drawBorderedRect = (x: number, y: number, width: number, height: number, options: any = {}) => {
-      page.drawRectangle({
-        x,
-        y,
-        width,
-        height,
-        borderColor: options.borderColor || LIGHT_GRAY,
-        borderWidth: options.borderWidth || 1,
-        color: options.color || rgb(1, 1, 1),
-      });
-    };
-
-    // Table column configuration - Improved layout
-    const tableX = margin;
-    const tableWidth = width - 2 * margin;
+    // Table column configuration
+    const tableWidth = width - 2 * MARGIN;
     const colWidths = [
       tableWidth * 0.30,  // Material
       tableWidth * 0.10,  // Cantidad
@@ -258,325 +228,355 @@ serve(async (req) => {
     ];
     const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
-    // Function to draw table headers (Red text, thin gray bottom border)
-    const drawTableHeader = () => {
-      let currentX = tableX;
+    // PDF State Management
+    interface PDFState {
+      page: PDFPage;
+      y: number;
+    }
+
+    let state: PDFState = { page, y: height - MARGIN };
+
+    // --- Core Drawing Helpers ---
+
+    const drawText = (state: PDFState, text: string, x: number, yPos: number, options: any = {}) => {
+      const safeText = String(text || 'N/A'); 
+      state.page.drawText(safeText, {
+        x,
+        y: yPos,
+        font: font,
+        size: FONT_SIZE,
+        color: rgb(0, 0, 0),
+        ...options,
+      });
+    };
+
+    const drawBorderedRect = (state: PDFState, x: number, y: number, w: number, h: number, options: any = {}) => {
+      state.page.drawRectangle({
+        x,
+        y,
+        width: w,
+        height: h,
+        borderColor: options.borderColor || LIGHT_GRAY,
+        borderWidth: options.borderWidth || 1,
+        color: options.color || rgb(1, 1, 1),
+      });
+    };
+
+    const drawTableHeader = (state: PDFState): PDFState => {
+      let currentX = MARGIN;
       
-      // Draw thin gray line below header row
-      page.drawLine({
-        start: { x: tableX, y: y - lineHeight },
-        end: { x: tableX + tableWidth, y: y - lineHeight },
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y - LINE_HEIGHT },
+        end: { x: MARGIN + tableWidth, y: state.y - LINE_HEIGHT },
         thickness: 1,
         color: LIGHT_GRAY,
       });
       
-      // Draw header text
       for (let i = 0; i < colHeaders.length; i++) {
-        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { 
+        drawText(state, colHeaders[i], currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
           font: boldFont, 
           size: 10,
-          color: PROC_RED // Red header text
+          color: PROC_RED
         });
         currentX += colWidths[i];
       }
-      y -= lineHeight;
+      state.y -= LINE_HEIGHT;
+      return state;
     };
 
-    // Function to check for page breaks and add new page if necessary
-    const checkPageBreak = (requiredSpace: number) => {
-      if (y - requiredSpace < margin + lineHeight * 6) { // Leave space for totals and footer
-        page = pdfDoc.addPage();
-        y = height - margin;
-        drawTableHeader(); // Redraw headers on new page
+    const checkPageBreak = (state: PDFState, requiredSpace: number): PDFState => {
+      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 6) {
+        state.page = pdfDoc.addPage();
+        state.y = height - MARGIN;
+        state = drawTableHeader(state); // Redraw headers on new page
       }
+      return state;
     };
 
-    // --- Header: Company Logo & Name (Left) and Document Title & Number (Right) ---
-    
-    const companyNameFontSize = 12;
-    const logoWidth = 50;
-    const logoHeight = 50;
-    const headerHeight = logoHeight + lineHeight; // Minimum height for the header block
+    // --- Modular Drawing Functions ---
 
-    let companyLogoImage = null;
-    if (order.companies?.logo_url) {
-      try {
-        const logoResponse = await fetch(order.companies.logo_url);
-        if (logoResponse.ok) {
-          const logoBytes = await logoResponse.arrayBuffer();
-          companyLogoImage = await pdfDoc.embedPng(logoBytes);
+    const drawHeader = async (state: PDFState, order: any): Promise<PDFState> => {
+      let companyLogoImage = null;
+      if (order.companies?.logo_url) {
+        try {
+          const logoResponse = await fetch(order.companies.logo_url);
+          if (logoResponse.ok) {
+            const logoBytes = await logoResponse.arrayBuffer();
+            companyLogoImage = await pdfDoc.embedPng(logoBytes);
+          }
+        } catch (logoError) {
+          console.warn(`[generate-po-pdf] Could not load company logo:`, logoError);
         }
-      } catch (logoError) {
-        console.warn(`[generate-po-pdf] Could not load company logo:`, logoError);
       }
-    }
 
-    // 1. Draw Company Logo and Name (Top Left)
-    if (companyLogoImage) {
-      const logoX = margin;
-      const logoY = y - logoHeight;
+      const headerBlockHeight = LOGO_SIZE + LINE_HEIGHT;
+      const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
 
-      page.drawImage(companyLogoImage, {
-        x: logoX,
-        y: logoY,
-        width: logoWidth,
-        height: logoHeight,
+      // 1. Draw Company Logo and Name (Top Left)
+      if (companyLogoImage) {
+        const logoX = MARGIN;
+        const logoY = state.y - LOGO_SIZE;
+
+        state.page.drawImage(companyLogoImage, {
+          x: logoX,
+          y: logoY,
+          width: LOGO_SIZE,
+          height: LOGO_SIZE,
+        });
+
+        drawText(state, order.companies?.name || 'N/A', logoX + LOGO_SIZE + 10, state.y - (LOGO_SIZE / 2) + (COMPANY_NAME_FONT_SIZE / 2), { 
+          font: boldFont, 
+          size: COMPANY_NAME_FONT_SIZE, 
+          color: PROC_RED 
+        });
+      } else {
+        drawText(state, order.companies?.name || 'N/A', MARGIN, state.y, { font: boldFont, size: COMPANY_NAME_FONT_SIZE, color: PROC_RED });
+      }
+
+      // 2. Draw Document Title and Number (Top Right)
+      const titleX = width - MARGIN - 150;
+      drawText(state, 'ORDEN DE COMPRA', titleX, state.y, { font: boldFont, size: 16, color: PROC_RED });
+      
+      drawText(state, `Nº: ${formattedSequence}`, titleX, state.y - LINE_HEIGHT * 2, { font: boldFont, size: 10 }); 
+      drawText(state, `Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, titleX, state.y - LINE_HEIGHT, { size: 10 });
+
+      // Update Y position based on the tallest element in the header
+      state.y -= Math.max(headerBlockHeight, LINE_HEIGHT * 3);
+      
+      // Separator line (Red, 2pt)
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y },
+        end: { x: width - MARGIN, y: state.y },
+        thickness: 2,
+        color: PROC_RED,
       });
+      state.y -= LINE_HEIGHT * 2;
+      return state;
+    };
 
-      // Draw company name (smaller and bold)
-      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y - (logoHeight / 2) + (companyNameFontSize / 2), { 
-        font: boldFont, 
-        size: companyNameFontSize, 
-        color: PROC_RED 
-      });
-    } else {
-      // Fallback: Draw company name as text
-      drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: companyNameFontSize, color: PROC_RED });
-    }
-
-    // 2. Draw Document Title and Number (Top Right)
-    const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
-    const titleY = y;
-    const dateY = y - lineHeight;
-    const numberY = y - lineHeight * 2;
-    
-    // Document Title
-    drawText('ORDEN DE COMPRA', width - margin - 150, titleY, { font: boldFont, size: 16, color: PROC_RED });
-    
-    // Document Number and Date
-    drawText(`Nº: ${formattedSequence}`, width - margin - 150, numberY, { font: boldFont, size: 10 }); 
-    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 150, dateY, { size: 10 });
-
-    // Update Y position based on the tallest element in the header (logo/details or title/number)
-    y -= Math.max(headerHeight, lineHeight * 3);
-    
-    // Separator line (Red, 2pt)
-    page.drawLine({
-      start: { x: margin, y: y },
-      end: { x: width - margin, y: y },
-      thickness: 2,
-      color: PROC_RED,
-    });
-    y -= lineHeight * 2;
-
-    // --- Detalles del Proveedor ---
-    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
-    page.drawLine({
-      start: { x: margin, y: y - lineHeight + 2 },
-      end: { x: width - margin, y: y - lineHeight + 2 },
-      thickness: 0.5,
-      color: LIGHT_GRAY,
-    });
-    y -= lineHeight;
-    drawText(`Nombre: ${order.suppliers?.name || 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`RIF: ${order.suppliers?.rif || 'N/A'}`, margin, y);
-    y -= lineHeight * 2;
-
-    // --- Detalles de la Orden ---
-    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
-    page.drawLine({
-      start: { x: margin, y: y - lineHeight + 2 },
-      end: { x: width - margin, y: y - lineHeight + 2 },
-      thickness: 0.5,
-      color: LIGHT_GRAY,
-    });
-    y -= lineHeight;
-    
-    drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
-    y -= lineHeight;
-    drawText(`Condición de Pago: ${formatPaymentTerms(order)}`, margin, y);
-    y -= lineHeight * 2;
-
-    // --- Observaciones ---
-    if (order.observations) {
-      drawText('OBSERVACIONES:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
-      page.drawLine({
-        start: { x: margin, y: y - lineHeight + 2 },
-        end: { x: width - margin, y: y - lineHeight + 2 },
+    const drawSupplierDetails = (state: PDFState, order: any): PDFState => {
+      drawText(state, 'DATOS DEL PROVEEDOR:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-      y -= lineHeight;
+      state.y -= LINE_HEIGHT;
+      drawText(state, `Nombre: ${order.suppliers?.name || 'N/A'}`, MARGIN, state.y);
+      state.y -= LINE_HEIGHT;
+      drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
+      state.y -= LINE_HEIGHT * 2;
+      return state;
+    };
+
+    const drawOrderDetails = (state: PDFState, order: any): PDFState => {
+      const paymentTerms = formatPaymentTerms(order);
+
+      drawText(state, 'DETALLES DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
+      });
+      state.y -= LINE_HEIGHT;
+      
+      drawText(state, `Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, MARGIN, state.y);
+      state.y -= LINE_HEIGHT;
+      drawText(state, `Condición de Pago: ${paymentTerms}`, MARGIN, state.y);
+      state.y -= LINE_HEIGHT * 2;
+      return state;
+    };
+
+    const drawObservations = (state: PDFState, order: any): PDFState => {
+      if (!order.observations) return state;
+
+      drawText(state, 'OBSERVACIONES:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
+      });
+      state.y -= LINE_HEIGHT;
       
       const observationsText = order.observations;
       const maxCharsPerLine = 100; 
-      
       const textRuns = wrapText(observationsText, maxCharsPerLine);
       
       for (const run of textRuns) {
-        checkPageBreak(lineHeight);
-        drawText(run, margin, y);
-        y -= lineHeight;
+        state = checkPageBreak(state, LINE_HEIGHT);
+        drawText(state, run, MARGIN, state.y);
+        state.y -= LINE_HEIGHT;
       }
-      y -= lineHeight; 
-    }
+      state.y -= LINE_HEIGHT; 
+      return state;
+    };
 
-    // --- Tabla de Ítems ---
-    drawText('ÍTEMS DE LA ORDEN:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
-    page.drawLine({
-      start: { x: margin, y: y - lineHeight + 2 },
-      end: { x: width - margin, y: y - lineHeight + 2 },
-      thickness: 0.5,
-      color: LIGHT_GRAY,
-    });
-    y -= lineHeight;
-    
-    drawTableHeader(); // Draw initial table header
-
-    // Dibujar filas de ítems
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      checkPageBreak(lineHeight + 10); 
-
-      // Draw thin gray line above the row content (to separate rows)
-      page.drawLine({
-        start: { x: tableX, y: y },
-        end: { x: tableX + tableWidth, y: y },
+    const drawItemsTable = (state: PDFState, items: any[]): PDFState => {
+      drawText(state, 'ÍTEMS DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-
-      // Calculate values
-      const subtotal = item.quantity * item.unit_price;
-      const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
-      const totalItem = subtotal + itemIva;
-
-      let currentX = tableX;
+      state.y -= LINE_HEIGHT;
       
-      // Draw item data with better alignment
-      // Descripción (Material name)
-      drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[0];
+      state = drawTableHeader(state);
 
-      // Cantidad
-      const quantityText = item.quantity.toString();
-      drawText(quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[1];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        state = checkPageBreak(state, LINE_HEIGHT + 10); 
 
-      // Unidad
-      const unitText = item.unit || 'UND';
-      drawText(unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[2];
+        state.page.drawLine({
+          start: { x: MARGIN, y: state.y },
+          end: { x: MARGIN + tableWidth, y: state.y },
+          thickness: 0.5,
+          color: LIGHT_GRAY,
+        });
 
-      // P. Unitario
-      const unitPriceText = `${order.currency} ${item.unit_price.toFixed(2)}`;
-      drawText(unitPriceText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(unitPriceText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[3];
+        const subtotal = item.quantity * item.unit_price;
+        const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+        const totalItem = subtotal + itemIva;
 
-      // IVA
-      const ivaText = item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`;
-      drawText(ivaText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(ivaText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
-      currentX += colWidths[4];
+        let currentX = MARGIN;
+        
+        // 1. Descripción (Material name)
+        drawText(state, item.material_name, currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        currentX += colWidths[0];
 
-      // Total
-      const totalItemText = `${order.currency} ${totalItem.toFixed(2)}`;
-      drawText(totalItemText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(totalItemText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
+        // 2. Cantidad
+        const quantityText = item.quantity.toString();
+        drawText(state, quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        currentX += colWidths[1];
 
-      y -= lineHeight;
-    }
-    
-    // Draw final bottom border for the table
-    page.drawLine({
-      start: { x: tableX, y: y },
-      end: { x: tableX + tableWidth, y: y },
-      thickness: 1,
-      color: LIGHT_GRAY,
-    });
-    
-    y -= lineHeight * 2; // Espacio después de la tabla
+        // 3. Unidad
+        const unitText = item.unit || 'UND';
+        drawText(state, unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        currentX += colWidths[2];
 
-    // --- Totals Table ---
-    const calculatedTotals = calculateTotals(items);
-    const totalSectionWidth = 200;
-    const totalSectionX = width - margin - totalSectionWidth; 
-    
-    // Determine height needed for totals table (3 or 4 rows)
-    let totalRows = 3;
-    let hasUsdTotal = false;
-    if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
-      totalRows = 4;
-      hasUsdTotal = true;
-    }
-    
-    const totalSectionHeight = lineHeight * totalRows + 10; // Height for rows + padding
+        // 4. P. Unitario
+        const unitPriceText = `${order.currency} ${item.unit_price.toFixed(2)}`;
+        drawText(state, unitPriceText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(unitPriceText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        currentX += colWidths[3];
 
-    // Check for page break before drawing totals
-    checkPageBreak(totalSectionHeight + lineHeight * 3); 
+        // 5. IVA
+        const ivaText = item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`;
+        drawText(state, ivaText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(ivaText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        currentX += colWidths[4];
 
-    // Draw light gray border around totals box
-    drawBorderedRect(totalSectionX, y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
-      borderColor: LIGHT_GRAY,
-      borderWidth: 1,
-    });
-    
-    let currentY = y - 5; // Start drawing text inside the box
+        // 6. Total
+        const totalItemText = `${order.currency} ${totalItem.toFixed(2)}`;
+        drawText(state, totalItemText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(totalItemText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
 
-    // Draw totals with right alignment
-    const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
-      const fontToUse = isBold ? boldFont : font;
+        state.y -= LINE_HEIGHT;
+      }
       
-      // Draw Label (Left side)
-      drawText(label, totalSectionX + 5, currentY - (lineHeight - size) / 2, { font: fontToUse, size, color });
-      
-      // Draw Value (Right side, right aligned)
-      const valueWidth = fontToUse.widthOfTextAtSize(value, size);
-      drawText(value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (lineHeight - size) / 2, { font: fontToUse, size, color });
-      
-      currentY -= lineHeight;
-    };
-
-    // Draw internal separator lines
-    const drawInternalSeparator = () => {
-      page.drawLine({
-        start: { x: totalSectionX, y: currentY + lineHeight - 5 },
-        end: { x: totalSectionX + totalSectionWidth, y: currentY + lineHeight - 5 },
-        thickness: 0.5,
+      state.page.drawLine({
+        start: { x: MARGIN, y: state.y },
+        end: { x: MARGIN + tableWidth, y: state.y },
+        thickness: 1,
         color: LIGHT_GRAY,
       });
+      
+      state.y -= LINE_HEIGHT * 2;
+      return state;
     };
 
-    // 1. Base Imponible (Normal font, default size)
-    drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
-    drawInternalSeparator();
+    const drawTotalsAndSummary = (state: PDFState, order: any, items: any[]): PDFState => {
+      const calculatedTotals = calculateTotals(items);
+      const totalSectionWidth = 200;
+      const totalSectionX = width - MARGIN - totalSectionWidth; 
+      
+      let totalRows = 3;
+      let hasUsdTotal = false;
+      if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
+        totalRows = 4;
+        hasUsdTotal = true;
+      }
+      
+      const totalSectionHeight = LINE_HEIGHT * totalRows + 10;
 
-    // 2. Monto IVA (Normal font, default size)
-    drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
-    drawInternalSeparator();
+      state = checkPageBreak(state, totalSectionHeight + LINE_HEIGHT * 3); 
 
-    // 3. TOTAL (Bold, default size, black color)
-    drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), fontSize);
-    
-    if (hasUsdTotal) {
-      // 4. TOTAL (USD) (Bold, default size, black color)
-      const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
-      drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), fontSize);
-    }
+      drawBorderedRect(state, totalSectionX, state.y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
+        borderColor: LIGHT_GRAY,
+        borderWidth: 1,
+      });
+      
+      let currentY = state.y - 5;
 
-    y = y - totalSectionHeight - lineHeight; // Update main Y position after totals box
+      const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
+        const fontToUse = isBold ? boldFont : font;
+        
+        drawText(state, label, totalSectionX + 5, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
+        
+        const valueWidth = fontToUse.widthOfTextAtSize(value, size);
+        drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
+        
+        currentY -= LINE_HEIGHT;
+      };
 
-    // Monto en palabras
-    const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
-    drawText(`Monto en Letras: ${amountInWords}`, margin, y, { font: italicFont });
-    y -= lineHeight * 3;
+      const drawInternalSeparator = () => {
+        state.page.drawLine({
+          start: { x: totalSectionX, y: currentY + LINE_HEIGHT - 5 },
+          end: { x: totalSectionX + totalSectionWidth, y: currentY + LINE_HEIGHT - 5 },
+          thickness: 0.5,
+          color: LIGHT_GRAY,
+        });
+      };
 
-    // --- Footer ---
-    const footerY = margin; // Fixed position from bottom
-    page.drawLine({
-      start: { x: width / 2 - 100, y: footerY + lineHeight },
-      end: { x: width / 2 + 100, y: footerY + lineHeight },
-      thickness: 1,
-      color: DARK_GRAY, // Use dark gray for signature line
-    });
-    drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
-    drawText(`Generado por: ${order.created_by || user.email}`, margin, footerY + lineHeight * 2);
+      drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+      drawInternalSeparator();
+
+      drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+      drawInternalSeparator();
+
+      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), FONT_SIZE);
+      
+      if (hasUsdTotal) {
+        const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
+        drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), FONT_SIZE);
+      }
+
+      state.y = state.y - totalSectionHeight - LINE_HEIGHT;
+
+      const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
+      drawText(state, `Monto en Letras: ${amountInWords}`, MARGIN, state.y, { font: italicFont });
+      state.y -= LINE_HEIGHT * 3;
+      return state;
+    };
+
+    const drawFooter = (state: PDFState, order: any, user: any): PDFState => {
+      const footerY = MARGIN;
+      state.page.drawLine({
+        start: { x: width / 2 - 100, y: footerY + LINE_HEIGHT },
+        end: { x: width / 2 + 100, y: footerY + LINE_HEIGHT },
+        thickness: 1,
+        color: DARK_GRAY,
+      });
+      drawText(state, 'Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
+      drawText(state, `Generado por: ${order.created_by || user.email}`, MARGIN, footerY + LINE_HEIGHT * 2);
+      return state;
+    };
+
+    // --- Execution Flow ---
+    state = await drawHeader(state, order);
+    state = drawSupplierDetails(state, order);
+    state = drawOrderDetails(state, order);
+    state = drawObservations(state, order);
+    state = drawItemsTable(state, items);
+    state = drawTotalsAndSummary(state, order, items);
+    state = drawFooter(state, order, user);
 
     const pdfBytes = await pdfDoc.save();
 
     // Format filename as: OC-YYYY-MM-XXX-PROVEEDOR.pdf
     const supplierName = order.suppliers?.name || 'Proveedor';
     const safeSupplierName = supplierName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const filename = `${formattedSequence}-${safeSupplierName}.pdf`;
+    const filename = `${formatSequenceNumber(order.sequence_number, order.created_at)}-${safeSupplierName}.pdf`;
 
     return new Response(pdfBytes, {
       headers: {
@@ -587,7 +587,6 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    // Improved error logging and response
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during PDF generation.';
     console.error('[generate-po-pdf] General Error:', errorMessage, error);
     return new Response(JSON.stringify({ error: errorMessage }), {
