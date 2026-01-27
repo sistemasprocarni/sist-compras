@@ -14,7 +14,7 @@ const Layout = () => {
   const isMobile = useIsMobile();
 
   const SidebarHeader = () => (
-    <div className="flex flex-col items-center justify-center py-4 border-b border-gray-200 bg-background dark:bg-gray-900">
+    <div className="flex flex-col items-center justify-center py-4 border-b border-gray-200 bg-background dark:bg-gray-900 shrink-0">
       <NavLink to="/" className="flex flex-col items-center gap-2 font-semibold text-procarni-primary dark:text-white">
         <img 
           src="/Sis-Prov.png" 
@@ -28,10 +28,12 @@ const Layout = () => {
   const Sidebar = () => (
     <div className="flex h-full max-h-screen flex-col gap-0 bg-sidebar text-sidebar-foreground border-r border-border">
       <SidebarHeader />
+      {/* Navigation area - this is the only part that should scroll */}
       <div className="flex-1 overflow-y-auto p-2">
         <SidebarNav />
       </div>
-      <div className="mt-auto p-2 border-t border-gray-200 dark:border-gray-700">
+      {/* Footer area - fixed at the bottom */}
+      <div className="mt-auto p-2 border-t border-gray-200 dark:border-gray-700 shrink-0">
         <UserDropdown />
       </div>
       <MadeWithDyad />
@@ -91,7 +93,7 @@ const Layout = () => {
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={85}>
         <div className="flex flex-col h-full">
-          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
+          <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6 shrink-0">
             <div className="w-full flex-1">
               <form>
                 <div className="relative">
