@@ -63,8 +63,9 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         // Colores corporativos
-        'procarni-primary': '#880a0a', // Rojo Procarni
+        'procarni-primary': '#880a0a', // Rojo Italia
         'procarni-secondary': '#0e5708', // Verde acciones
+        'procarni-alert': '#F39C12', // Amarillo Alertas
       },
       borderRadius: {
         lg: "var(--radius)",

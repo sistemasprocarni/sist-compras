@@ -50,8 +50,8 @@ const SidebarNav = () => {
       className="w-full"
     >
       {navItems.map((category) => (
-        <AccordionItem key={category.category} value={category.category} className="border-b-0">
-          <AccordionTrigger className="px-4 py-2 text-sm font-semibold hover:bg-muted/50 rounded-md">
+        <AccordionItem key={category.category} value={category.category} className="border-b border-sidebar-border">
+          <AccordionTrigger className="px-4 py-2 text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-md">
             {category.category}
           </AccordionTrigger>
           <AccordionContent className="pb-2">
@@ -61,8 +61,11 @@ const SidebarNav = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary ${
-                      isActive ? 'bg-muted text-primary' : ''
+                    `flex items-center gap-3 rounded-lg px-3 py-2 transition-all 
+                    ${
+                      isActive 
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                        : 'text-sidebar-primary hover:bg-sidebar-accent/30 hover:text-sidebar-accent-foreground'
                     }`
                   }
                 >

@@ -13,18 +13,22 @@ import SidebarNav from './SidebarNav';
 const Layout = () => {
   const isMobile = useIsMobile();
 
+  const SidebarHeader = () => (
+    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-white dark:bg-gray-900">
+      <NavLink to="/" className="flex items-center gap-2 font-semibold text-procarni-primary dark:text-white">
+        <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-10 w-auto object-contain" />
+        <span className="text-lg">Procarni System</span>
+      </NavLink>
+    </div>
+  );
+
   const Sidebar = () => (
-    <div className="flex h-full max-h-screen flex-col gap-2">
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-procarni-primary text-white">
-        <NavLink to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-10 w-auto object-contain" />
-          <span className="">Procarni System</span>
-        </NavLink>
-      </div>
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex h-full max-h-screen flex-col gap-0 bg-sidebar text-sidebar-foreground">
+      <SidebarHeader />
+      <div className="flex-1 overflow-y-auto p-2">
         <SidebarNav />
       </div>
-      <div className="mt-auto p-4 border-t">
+      <div className="mt-auto p-4 border-t border-sidebar-border">
         <UserDropdown />
       </div>
       <MadeWithDyad />
@@ -40,11 +44,12 @@ const Layout = () => {
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+        <SheetContent side="left" className="flex flex-col bg-sidebar text-sidebar-foreground">
+          <SidebarHeader />
+          <div className="flex-1 overflow-y-auto p-2">
             <SidebarNav />
           </div>
-          <div className="mt-auto p-4 border-t">
+          <div className="mt-auto p-4 border-t border-sidebar-border">
             <UserDropdown />
           </div>
         </SheetContent>

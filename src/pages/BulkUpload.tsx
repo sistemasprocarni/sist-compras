@@ -342,7 +342,7 @@ const BulkUpload = () => {
         </CardContent>
       </Card>
 
-      <Card className="mb-6 border-destructive">
+      <Card className="mb-6 border-destructive card-alert-border">
         <CardHeader>
           <CardTitle className="text-destructive">Gestión Avanzada de Datos</CardTitle>
           <CardDescription>Opciones para respaldar, eliminar o reiniciar datos existentes. Requiere PIN de seguridad.</CardDescription>
@@ -407,7 +407,7 @@ const BulkUpload = () => {
         </CardContent>
       </Card>
 
-      <Card className="mb-6 border-destructive">
+      <Card className="mb-6 border-destructive card-alert-border">
         <CardHeader>
           <CardTitle className="text-destructive">Reinicio Completo de Datos</CardTitle>
           <CardDescription>
