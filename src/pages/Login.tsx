@@ -25,14 +25,13 @@ const Login = () => {
             variables: {
               default: {
                 colors: {
-                  brand: 'hsl(var(--procarni-primary))', // Usar Rojo Italia para el brand
-                  brandAccent: 'hsl(var(--procarni-primary-foreground))', // Ajustar el acento si es necesario
+                  // Usar Hex color para mayor robustez en Supabase Auth UI
+                  brand: '#880a0a', // Procarni Primary Red
+                  brandAccent: '#660808', // Rojo ligeramente más oscuro para hover/focus
                 },
               },
             },
-            className: {
-              button: 'w-full py-2 px-4 bg-procarni-primary hover:bg-procarni-primary/90 text-white font-medium rounded-md transition-colors', // Botón Rojo Italia
-            },
+            // Eliminamos la clase personalizada del botón para que ThemeSupa aplique el color 'brand'
           }}
           theme="light" // Puedes cambiar a 'dark' si tu app soporta tema oscuro
           redirectTo={window.location.origin} // Redirige a la raíz después del login
