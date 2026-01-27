@@ -79,10 +79,10 @@ serve(async (req) => {
     let y = height - margin;
     const fontSize = 10;
     const lineHeight = fontSize * 1.2;
-    const tableHeaderBgColor = rgb(0.9, 0.9, 0.9);
+    // const tableHeaderBgColor = rgb(0.9, 0.9, 0.9); // Removed background color
     const borderColor = rgb(0.8, 0.8, 0.8);
     const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
-    const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Very light gray for table rows
+    // const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Removed background color
 
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
@@ -111,7 +111,7 @@ serve(async (req) => {
         y: y - lineHeight,
         width: tableWidth,
         height: lineHeight,
-        color: tableHeaderBgColor,
+        // color: tableHeaderBgColor, // Removed background color
         borderColor: borderColor,
         borderWidth: 1,
       });
@@ -201,7 +201,7 @@ serve(async (req) => {
       checkPageBreak(lineHeight); // Check before drawing each row
 
       // Alternate row colors for better readability
-      const rowColor = i % 2 === 0 ? rgb(1, 1, 1) : tableRowBgColor;
+      const rowColor = rgb(1, 1, 1); // Always white background
 
       let currentX = tableX;
       page.drawRectangle({
