@@ -481,16 +481,25 @@ serve(async (req) => {
       color: LIGHT_GRAY,
     });
     
-    y -= lineHeight; // Espacio después de la tabla
+    y -= lineHeight * 2; // Espacio después de la tabla
 
-    // --- Totals ---
+    // --- Totals Table ---
     const calculatedTotals = calculateTotals(items);
     const totalSectionWidth = 200;
     const totalSectionX = width - margin - totalSectionWidth; 
-    const totalSectionHeight = lineHeight * 3 + 10; // Height for 3 lines + padding
+    
+    // Determine height needed for totals table (4 rows: Base, IVA, Total, USD Total if applicable)
+    let totalRows = 3;
+    let hasUsdTotal = false;
+    if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
+      totalRows = 4;
+      hasUsdTotal = true;
+    }
+    
+    const totalSectionHeight = lineHeight * totalRows + 10; // Height for rows + padding
 
     // Check for page break before drawing totals
-    checkPageBreak(totalSectionHeight + lineHeight * 3); // 3 lines for totals, 1 for USD total, 1 for amount in words, 2 for spacing
+    checkPageBreak(totalSectionHeight + lineHeight * 3); // Ensure space for totals and amount in words
 
     // Draw red border around totals box
     drawBorderedRect(totalSectionX, y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
@@ -499,32 +508,50 @@ serve(async (req) => {
     });
     
     let currentY = y - 5; // Start drawing text inside the box
+    const totalColWidth = totalSectionWidth / 2;
 
-    // Draw totals with right alignment
-    const drawTotalLine = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
-      const labelWidth = font.widthOfTextAtSize(label, size);
-      const valueWidth = (isBold ? boldFont : font).widthOfTextAtSize(value, size);
+    // Draw totals table content
+    const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
+      const fontToUse = isBold ? boldFont : font;
       
-      drawText(label, totalSectionX + 5, currentY - (lineHeight - size) / 2, { font: isBold ? boldFont : font, size, color });
-      drawText(value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (lineHeight - size) / 2, { font: isBold ? boldFont : font, size, color });
+      // Draw Label (Left side)
+      drawText(label, totalSectionX + 5, currentY - (lineHeight - size) / 2, { font: fontToUse, size, color });
+      
+      // Draw Value (Right side, right aligned)
+      const valueWidth = fontToUse.widthOfTextAtSize(value, size);
+      drawText(value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (lineHeight - size) / 2, { font: fontToUse, size, color });
+      
       currentY -= lineHeight;
     };
 
-    drawTotalLine('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
-    drawTotalLine('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
-    drawTotalLine('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, fontSize + 2);
+    // Draw internal separator lines
+    const drawInternalSeparator = () => {
+      page.drawLine({
+        start: { x: totalSectionX, y: currentY + lineHeight - 5 },
+        end: { x: totalSectionX + totalSectionWidth, y: currentY + lineHeight - 5 },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
+      });
+    };
 
-    y = currentY - lineHeight; // Update main Y position after totals box
+    // 1. Base Imponible
+    drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+    drawInternalSeparator();
 
-    // NEW: Total in USD if applicable
-    if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
-      const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
-      const usdText = `TOTAL (USD): USD ${totalInUSD}`;
-      drawText(usdText, totalSectionX, y, { font: boldFont, size: fontSize + 1, color: BLUE_ACCENT }); 
-      y -= lineHeight * 2;
-    } else {
-      y -= lineHeight; // Maintain spacing if USD total is skipped
+    // 2. Monto IVA
+    drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+    drawInternalSeparator();
+
+    // 3. TOTAL
+    drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, fontSize + 2);
+    
+    if (hasUsdTotal) {
+      // 4. TOTAL (USD)
+      const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
+      drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, BLUE_ACCENT, fontSize + 1);
     }
+
+    y = y - totalSectionHeight - lineHeight; // Update main Y position after totals box
 
     // Monto en palabras
     const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
