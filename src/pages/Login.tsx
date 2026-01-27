@@ -7,6 +7,13 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/Sis-Prov.png" 
+            alt="Sis-Prov Logo" 
+            className="h-20 w-auto object-contain drop-shadow-md" 
+          />
+        </div>
         <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-6">
           Procarni System
         </h1>
@@ -18,13 +25,13 @@ const Login = () => {
             variables: {
               default: {
                 colors: {
-                  brand: 'hsl(var(--primary))',
-                  brandAccent: 'hsl(var(--primary-foreground))',
+                  brand: 'hsl(var(--procarni-primary))', // Usar Rojo Italia para el brand
+                  brandAccent: 'hsl(var(--procarni-primary-foreground))', // Ajustar el acento si es necesario
                 },
               },
             },
             className: {
-              button: 'w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors',
+              button: 'w-full py-2 px-4 bg-procarni-primary hover:bg-procarni-primary/90 text-white font-medium rounded-md transition-colors', // Botón Rojo Italia
             },
           }}
           theme="light" // Puedes cambiar a 'dark' si tu app soporta tema oscuro
