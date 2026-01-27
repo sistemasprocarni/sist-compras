@@ -301,7 +301,7 @@ const PurchaseOrderDetails = () => {
           >
             <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
           </Button>
-          <Button asChild className="bg-procarni-secondary hover:bg-green-700">
+          <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
             <Link to={`/purchase-orders/edit/${order.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Orden
             </Link>

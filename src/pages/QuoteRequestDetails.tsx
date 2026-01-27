@@ -265,12 +265,12 @@ const QuoteRequestDetails = () => {
           >
             <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
           </Button>
-          <Button asChild className="bg-procarni-secondary hover:bg-green-700">
+          <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
             <Link to={`/quote-requests/edit/${request.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
             </Link>
           </Button>
-          <Button onClick={handleConvertToPurchaseOrder} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleConvertToPurchaseOrder} className="bg-procarni-secondary hover:bg-green-700">
             <ShoppingCart className="mr-2 h-4 w-4" /> Convertir a OC
           </Button>
         </div>
