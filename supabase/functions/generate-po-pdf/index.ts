@@ -444,7 +444,7 @@ serve(async (req) => {
     const totalSectionX = width - margin - 200; // Alineado a la derecha
 
     // Check for page break before drawing totals
-    checkPageBreak(lineHeight * 5); // 3 lines for totals, 1 for amount in words, 1 for spacing
+    checkPageBreak(lineHeight * 7); // 3 lines for totals, 1 for USD total, 1 for amount in words, 2 for spacing
 
     // Draw totals with right alignment and improved styling
     const baseImponibleText = `Subtotal: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`;
@@ -459,7 +459,18 @@ serve(async (req) => {
 
     y -= lineHeight * 3;
 
-    // Monto en palabras - FIX: Use calculatedTotals.total
+    // NEW: Total in USD if applicable
+    if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
+      const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
+      const usdText = `TOTAL (USD): USD ${totalInUSD}`;
+      const usdTextWidth = boldFont.widthOfTextAtSize(usdText, fontSize + 1);
+      drawText(usdText, totalSectionX + 200 - usdTextWidth, y, { font: boldFont, size: fontSize + 1, color: rgb(0.1, 0.4, 0.8) }); // Blue color
+      y -= lineHeight * 2;
+    } else {
+      y -= lineHeight; // Maintain spacing if USD total is skipped
+    }
+
+    // Monto en palabras
     const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
     drawText(`Monto en Letras: ${amountInWords}`, margin, y, { font: italicFont });
     y -= lineHeight * 3;
@@ -477,11 +488,10 @@ serve(async (req) => {
 
     const pdfBytes = await pdfDoc.save();
 
-    // Format filename as: OC, "NOMBRE DEL PROVEEDOR" "FECHA ACTUAL"
+    // Format filename as: OC-YYYY-MM-XXX-PROVEEDOR.pdf
     const supplierName = order.suppliers?.name || 'Proveedor';
-    const currentDate = new Date().toLocaleDateString('es-VE').replace(/\//g, '-');
     const safeSupplierName = supplierName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-    const filename = `OC_${formatSequenceNumber(order.sequence_number, order.created_at)}_${safeSupplierName}.pdf`;
+    const filename = `${formattedSequence}-${safeSupplierName}.pdf`;
 
     return new Response(pdfBytes, {
       headers: {

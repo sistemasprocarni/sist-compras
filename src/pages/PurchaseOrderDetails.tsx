@@ -105,6 +105,13 @@ const PurchaseOrderDetails = () => {
   const totals = calculateTotals(itemsForCalculation);
   const amountInWords = order ? numberToWords(totals.total, order.currency) : '';
 
+  const totalInUSD = useMemo(() => {
+    if (order?.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
+      return (totals.total / order.exchange_rate).toFixed(2);
+    }
+    return null;
+  }, [order, totals.total]);
+
   const displayPaymentTerms = () => {
     if (order?.payment_terms === 'Otro' && order.custom_payment_terms) {
       return order.custom_payment_terms;
@@ -118,8 +125,9 @@ const PurchaseOrderDetails = () => {
   const generateFileName = () => {
     if (!order) return '';
     const sequence = formatSequenceNumber(order.sequence_number, order.created_at);
+    // Clean supplier name for filename
     const supplierName = order.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
-    return `${sequence}_${supplierName}.pdf`;
+    return `${sequence}-${supplierName}.pdf`;
   };
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -401,6 +409,12 @@ const PurchaseOrderDetails = () => {
               <span className="mr-2">TOTAL:</span>
               <span>{order.currency} {totals.total.toFixed(2)}</span>
             </div>
+            {totalInUSD && order.currency === 'VES' && (
+              <div className="flex justify-end items-center text-lg font-bold text-blue-600 mt-1">
+                <span className="mr-2">TOTAL (USD):</span>
+                <span>USD {totalInUSD}</span>
+              </div>
+            )}
             <p className="text-sm italic mt-2 text-right">({amountInWords})</p>
           </div>
         </CardContent>

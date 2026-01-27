@@ -185,6 +185,7 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
 
     const link = document.createElement('a');
     link.href = pdfUrl;
+    // Use a generic draft filename for the preview component
     link.download = `orden_compra_draft_${orderData.supplier_id.substring(0, 8)}.pdf`;
     document.body.appendChild(link);
     link.click();
