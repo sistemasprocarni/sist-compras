@@ -80,23 +80,23 @@ const SearchManagement = () => {
             <Button 
               variant="outline" 
               onClick={() => navigate('/generate-po')}
-              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
             >
-              <FilePlus className="mr-2 h-5 w-5" /> + Nueva Orden de Compra
+              <FilePlus className="mr-2 h-4 w-4" /> + Nueva Orden de Compra
             </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate('/generate-quote')}
-              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
             >
-              <ClipboardPlus className="mr-2 h-5 w-5" /> + Nueva Cotización
+              <ClipboardPlus className="mr-2 h-4 w-4" /> + Nueva Cotización
             </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate('/price-comparison')}
-              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
             >
-              <BarChart2 className="mr-2 h-5 w-5" /> 🔍 Comparar Precios
+              <BarChart2 className="mr-2 h-4 w-4" /> 🔍 Comparar Precios
             </Button>
           </div>
         </CardContent>
