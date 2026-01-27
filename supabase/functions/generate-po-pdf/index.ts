@@ -459,8 +459,8 @@ serve(async (req) => {
 
     y -= lineHeight * 3;
 
-    // Monto en palabras
-    const amountInWords = numberToWords(totals.total, order.currency as 'VES' | 'USD');
+    // Monto en palabras - FIX: Use calculatedTotals.total
+    const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
     drawText(`Monto en Letras: ${amountInWords}`, margin, y, { font: italicFont });
     y -= lineHeight * 3;
 
@@ -477,11 +477,17 @@ serve(async (req) => {
 
     const pdfBytes = await pdfDoc.save();
 
+    // Format filename as: OC, "NOMBRE DEL PROVEEDOR" "FECHA ACTUAL"
+    const supplierName = order.suppliers?.name || 'Proveedor';
+    const currentDate = new Date().toLocaleDateString('es-VE').replace(/\//g, '-');
+    const safeSupplierName = supplierName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const filename = `OC_${formatSequenceNumber(order.sequence_number, order.created_at)}_${safeSupplierName}.pdf`;
+
     return new Response(pdfBytes, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="orden_compra_${order.sequence_number}.pdf"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
 
