@@ -92,18 +92,18 @@ const PriceComparison = () => {
           supplierName: entry.suppliers.name,
           supplierCode: entry.suppliers.code,
           prices: [],
-          latestPrice: entry,
+          latestEntry: entry, // Store the original entry
         };
       }
       acc[supplierId].prices.push(convertedPrice);
       
       // Determine the latest price based on recorded_at timestamp
-      if (new Date(entry.recorded_at) > new Date(acc[supplierId].latestPrice.recorded_at)) {
-        acc[supplierId].latestPrice = entry;
+      if (new Date(entry.recorded_at) > new Date(acc[supplierId].latestEntry.recorded_at)) {
+        acc[supplierId].latestEntry = entry;
       }
 
       return acc;
-    }, {} as Record<string, { supplierName: string; supplierCode?: string; prices: number[]; latestPrice: PriceHistoryEntry }>);
+    }, {} as Record<string, { supplierName: string; supplierCode?: string; prices: number[]; latestEntry: PriceHistoryEntry }>);
 
     return Object.values(grouped).map(group => {
       const prices = group.prices;
@@ -112,12 +112,13 @@ const PriceComparison = () => {
       const avgPrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
 
       // Convert the latest price to the base currency for display
-      const latestPriceConverted = convertPriceToBase(group.latestPrice, baseCurrency);
+      const latestPriceConverted = convertPriceToBase(group.latestEntry, baseCurrency);
 
       return {
         supplierName: group.supplierName,
         supplierCode: group.supplierCode,
-        latestPrice: latestPriceConverted,
+        latestPrice: latestPriceConverted, // Converted price
+        latestEntry: group.latestEntry, // Original entry for date/currency info
         minPrice: minPrice,
         maxPrice: maxPrice,
         avgPrice: avgPrice,
@@ -126,6 +127,11 @@ const PriceComparison = () => {
       };
     });
   }, [priceHistory, baseCurrency]);
+
+  const isValidDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
+  };
 
   const renderComparisonTable = () => {
     if (isLoading) {
@@ -141,7 +147,7 @@ const PriceComparison = () => {
     }
 
     const formatPrice = (price: number | null, currency: string) => {
-      if (price === null) return 'N/A';
+      if (price === null || isNaN(price)) return 'N/A';
       return `${currency} ${price.toFixed(2)}`;
     };
 
@@ -153,7 +159,10 @@ const PriceComparison = () => {
               <CardTitle className="text-lg mb-2">{data.supplierName}</CardTitle>
               <CardDescription className="mb-2">Cód: {data.supplierCode || 'N/A'}</CardDescription>
               <div className="text-sm space-y-1">
-                <p><strong>Último Precio ({data.baseCurrency}):</strong> {formatPrice(data.latestPrice, data.baseCurrency)} ({format(new Date(data.latestPrice.recorded_at), 'dd/MM/yy')})</p>
+                <p>
+                  <strong>Último Precio ({data.baseCurrency}):</strong> {formatPrice(data.latestPrice, data.baseCurrency)} 
+                  {data.latestEntry.recorded_at && isValidDate(data.latestEntry.recorded_at) && ` (${format(new Date(data.latestEntry.recorded_at), 'dd/MM/yy')})`}
+                </p>
                 <p><strong>Precio Mínimo ({data.baseCurrency}):</strong> {formatPrice(data.minPrice, data.baseCurrency)}</p>
                 <p><strong>Precio Máximo ({data.baseCurrency}):</strong> {formatPrice(data.maxPrice, data.baseCurrency)}</p>
                 <p><strong>Promedio ({data.baseCurrency}):</strong> {formatPrice(data.avgPrice, data.baseCurrency)}</p>
@@ -188,7 +197,11 @@ const PriceComparison = () => {
                 <TableCell>
                   {formatPrice(data.latestPrice, data.baseCurrency)}
                 </TableCell>
-                <TableCell>{format(new Date(data.latestPrice.recorded_at), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>
+                  {data.latestEntry.recorded_at && isValidDate(data.latestEntry.recorded_at) 
+                    ? format(new Date(data.latestEntry.recorded_at), 'dd/MM/yyyy') 
+                    : 'N/A'}
+                </TableCell>
                 <TableCell className="text-green-600">{formatPrice(data.minPrice, data.baseCurrency)}</TableCell>
                 <TableCell className="text-red-600">{formatPrice(data.maxPrice, data.baseCurrency)}</TableCell>
                 <TableCell>{formatPrice(data.avgPrice, data.baseCurrency)}</TableCell>
@@ -270,7 +283,11 @@ const PriceComparison = () => {
                         <TableCell>{entry.unit_price.toFixed(2)}</TableCell>
                         <TableCell>{entry.currency}</TableCell>
                         <TableCell>{entry.exchange_rate ? entry.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                        <TableCell>{format(new Date(entry.recorded_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                        <TableCell>
+                          {entry.recorded_at && isValidDate(entry.recorded_at) 
+                            ? format(new Date(entry.recorded_at), 'dd/MM/yyyy HH:mm') 
+                            : 'N/A'}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
