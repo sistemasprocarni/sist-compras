@@ -14,24 +14,27 @@ const Layout = () => {
   const isMobile = useIsMobile();
 
   const SidebarHeader = () => (
-    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-white dark:bg-gray-900">
+    <div className="flex h-auto items-center justify-center border-b border-gray-200 px-4 py-8 bg-background dark:bg-gray-900">
       <NavLink to="/" className="flex items-center gap-2 font-semibold text-procarni-primary dark:text-white">
-        <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-10 w-auto object-contain" />
-        <span className="text-lg">Procarni System</span>
+        <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-12 w-auto object-contain" />
       </NavLink>
     </div>
   );
 
+  const SidebarFooter = () => (
+    <div className="mt-auto p-4 border-t border-white/20">
+      <UserDropdown />
+      <MadeWithDyad />
+    </div>
+  );
+
   const Sidebar = () => (
-    <div className="flex h-full max-h-screen flex-col gap-0 bg-sidebar text-sidebar-foreground border-r border-border">
+    <div className="flex h-full max-h-screen flex-col gap-0 bg-procarni-primary text-white border-r border-border">
       <SidebarHeader />
       <div className="flex-1 overflow-y-auto p-2">
         <SidebarNav />
       </div>
-      <div className="mt-auto p-4 border-t border-sidebar-border">
-        <UserDropdown />
-      </div>
-      <MadeWithDyad />
+      <SidebarFooter />
     </div>
   );
 
@@ -44,14 +47,12 @@ const Layout = () => {
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="flex flex-col bg-sidebar text-sidebar-foreground">
+        <SheetContent side="left" className="flex flex-col bg-procarni-primary text-white">
           <SidebarHeader />
           <div className="flex-1 overflow-y-auto p-2">
             <SidebarNav />
           </div>
-          <div className="mt-auto p-4 border-t border-sidebar-border">
-            <UserDropdown />
-          </div>
+          <SidebarFooter />
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
