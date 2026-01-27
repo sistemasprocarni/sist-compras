@@ -76,7 +76,7 @@ const Layout = () => {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <MobileHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>
@@ -84,7 +84,10 @@ const Layout = () => {
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen w-full rounded-lg border overflow-hidden">
+    <ResizablePanelGroup 
+      direction="horizontal" 
+      className="flex h-screen w-full rounded-lg border overflow-hidden" // Aplicado flex h-screen overflow-hidden
+    >
       <ResizablePanel defaultSize={15} minSize={10} maxSize={20}>
         <Sidebar />
       </ResizablePanel>
@@ -105,7 +108,7 @@ const Layout = () => {
               </form>
             </div>
           </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto h-full">
             <Outlet />
           </main>
         </div>
