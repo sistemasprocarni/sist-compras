@@ -291,7 +291,13 @@ serve(async (req) => {
       }
     };
 
-    // --- Header with Company Logo and Details (Reintroduced, small size) ---
+    // --- Header: Company Logo & Name (Left) and Document Title & Number (Right) ---
+    
+    const companyNameFontSize = 12;
+    const logoWidth = 50;
+    const logoHeight = 50;
+    const headerHeight = logoHeight + lineHeight; // Minimum height for the header block
+
     let companyLogoImage = null;
     if (order.companies?.logo_url) {
       try {
@@ -305,13 +311,8 @@ serve(async (req) => {
       }
     }
 
-    // Draw company logo and details
-    const companyNameFontSize = 12; // Small size
-    const companyNameLineHeight = companyNameFontSize * 1.2;
-
+    // 1. Draw Company Logo and Name (Top Left)
     if (companyLogoImage) {
-      const logoWidth = 50;
-      const logoHeight = 50;
       const logoX = margin;
       const logoY = y - logoHeight;
 
@@ -323,21 +324,31 @@ serve(async (req) => {
       });
 
       // Draw company name (smaller and bold)
-      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: companyNameFontSize, color: PROC_RED });
-
-      // Draw company details (slightly smaller and lighter color)
-      const detailsY = y - companyNameLineHeight;
-      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: DARK_GRAY });
-      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: DARK_GRAY });
-      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: DARK_GRAY });
-      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: DARK_GRAY });
-
-      y -= logoHeight + lineHeight * 4;
+      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y - (logoHeight / 2) + (companyNameFontSize / 2), { 
+        font: boldFont, 
+        size: companyNameFontSize, 
+        color: PROC_RED 
+      });
     } else {
       // Fallback: Draw company name as text
       drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: companyNameFontSize, color: PROC_RED });
-      y -= lineHeight * 2;
     }
+
+    // 2. Draw Document Title and Number (Top Right)
+    const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
+    const titleY = y;
+    const dateY = y - lineHeight;
+    const numberY = y - lineHeight * 2;
+    
+    // Document Title
+    drawText('ORDEN DE COMPRA', width - margin - 150, titleY, { font: boldFont, size: 16, color: PROC_RED });
+    
+    // Document Number and Date
+    drawText(`Nº: ${formattedSequence}`, width - margin - 150, numberY, { font: boldFont, size: 10 }); 
+    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 150, dateY, { size: 10 });
+
+    // Update Y position based on the tallest element in the header (logo/details or title/number)
+    y -= Math.max(headerHeight, lineHeight * 3);
     
     // Separator line (Red, 2pt)
     page.drawLine({
@@ -347,17 +358,6 @@ serve(async (req) => {
       color: PROC_RED,
     });
     y -= lineHeight * 2;
-
-    // Draw document title centered (Red and bold)
-    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16, color: PROC_RED });
-    y -= lineHeight * 2;
-    
-    // Use the standardized format for the sequence number
-    const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
-    drawText(`Nº: ${formattedSequence}`, width - margin - 100, y, { font: boldFont, size: 10 }); 
-    
-    drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
-    y -= lineHeight * 3;
 
     // --- Detalles del Proveedor ---
     drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
