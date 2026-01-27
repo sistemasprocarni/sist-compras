@@ -14,10 +14,14 @@ const Layout = () => {
   const isMobile = useIsMobile();
 
   const SidebarHeader = () => (
-    <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6 bg-white dark:bg-gray-900">
-      <NavLink to="/" className="flex items-center gap-2 font-semibold text-procarni-primary dark:text-white">
-        <img src="/Sis-Prov.png" alt="Sis-Prov Logo" className="h-10 w-auto object-contain" />
-        <span className="text-lg">Procarni System</span>
+    <div className="flex flex-col items-center justify-center py-8 border-b border-gray-200 bg-background dark:bg-gray-900">
+      <NavLink to="/" className="flex flex-col items-center gap-2 font-semibold text-procarni-primary dark:text-white">
+        <img 
+          src="/Sis-Prov.png" 
+          alt="Sis-Prov Logo" 
+          className="h-12 w-auto object-contain drop-shadow-md" 
+        />
+        <span className="text-lg mt-2">Procarni System</span>
       </NavLink>
     </div>
   );
@@ -28,7 +32,7 @@ const Layout = () => {
       <div className="flex-1 overflow-y-auto p-2">
         <SidebarNav />
       </div>
-      <div className="mt-auto p-4 border-t border-sidebar-border">
+      <div className="mt-auto p-2 border-t border-gray-200 dark:border-gray-700">
         <UserDropdown />
       </div>
       <MadeWithDyad />
@@ -49,7 +53,7 @@ const Layout = () => {
           <div className="flex-1 overflow-y-auto p-2">
             <SidebarNav />
           </div>
-          <div className="mt-auto p-4 border-t border-sidebar-border">
+          <div className="mt-auto p-2 border-t border-gray-200 dark:border-gray-700">
             <UserDropdown />
           </div>
         </SheetContent>
@@ -81,13 +85,13 @@ const Layout = () => {
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full rounded-lg border">
+    <ResizablePanelGroup direction="horizontal" className="h-screen w-full rounded-lg border overflow-hidden">
       <ResizablePanel defaultSize={15} minSize={10} maxSize={20}>
         <Sidebar />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={85}>
-        <div className="flex flex-col">
+        <div className="flex flex-col h-full">
           <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
             <div className="w-full flex-1">
               <form>
@@ -102,7 +106,7 @@ const Layout = () => {
               </form>
             </div>
           </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
             <Outlet />
           </main>
         </div>
