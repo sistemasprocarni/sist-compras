@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
+import PDFDownloadButton from './PDFDownloadButton'; // Importar el botón de descarga
 
 interface PurchaseOrderPDFViewerProps {
   orderId: string;
   onClose: () => void;
+  fileName: string; // Nuevo: Nombre de archivo para la descarga
 }
 
-const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId, onClose }) => {
+const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId, onClose, fileName }) => {
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
-  const [successToastId, setSuccessToastId] = useState<string | null>(null); // New state for success toast ID
+  const [successToastId, setSuccessToastId] = useState<string | null>(null);
 
   const generatePdf = async () => {
     if (!session) {
@@ -26,6 +28,7 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
     setLoadingToastId(toastId);
 
     try {
+      // Usamos la función Edge para generar el PDF
       const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-po-pdf`, {
         method: 'POST',
         headers: {
@@ -44,17 +47,14 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
       
-      // Dismiss loading toast and show success message
       if (loadingToastId) {
         dismissToast(loadingToastId);
         setLoadingToastId(null);
       }
 
-      // Show success toast that will auto-dismiss
       const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
       setSuccessToastId(successId);
 
-      // Auto-dismiss the success toast after 2 seconds
       setTimeout(() => {
         if (successId) {
           dismissToast(successId);
@@ -74,26 +74,15 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
     }
   };
 
-  const handleDownload = () => {
-    if (!pdfUrl) return;
-
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = `orden_compra_${orderId.substring(0, 8)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleClose = () => {
-    // Clear all toasts when closing the modal
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
+    }
     if (loadingToastId) {
       dismissToast(loadingToastId);
-      setLoadingToastId(null);
     }
     if (successToastId) {
       dismissToast(successToastId);
-      setSuccessToastId(null);
     }
     onClose();
   };
@@ -106,22 +95,25 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       }
       if (loadingToastId) {
         dismissToast(loadingToastId);
-        setLoadingToastId(null);
       }
       if (successToastId) {
         dismissToast(successToastId);
-        setSuccessToastId(null);
       }
     };
   }, [orderId]);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Moved buttons to the top for better visibility */}
       <div className="flex justify-end gap-2 mb-4">
-        <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
-          Descargar PDF
-        </Button>
+        {/* Usar PDFDownloadButton para la descarga consistente */}
+        <PDFDownloadButton
+          orderId={orderId}
+          fileName={fileName}
+          endpoint="generate-po-pdf"
+          label="Descargar PDF"
+          variant="outline"
+          disabled={isLoadingPdf}
+        />
         <Button onClick={handleClose} variant="outline">
           Cerrar
         </Button>

@@ -87,6 +87,14 @@ const QuoteRequestDetails = () => {
     });
   };
 
+  const generateFileName = () => {
+    if (!request) return '';
+    const supplierName = request.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
+    const date = new Date(request.created_at).toLocaleDateString('es-VE').replace(/\//g, '-');
+    // Formato: SC_ID_PROVEEDOR_FECHA.pdf
+    return `SC_${request.id.substring(0, 8)}_${supplierName}_${date}.pdf`;
+  };
+
   const blobToBase64 = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -153,7 +161,7 @@ const QuoteRequestDetails = () => {
           subject: `Solicitud de Cotización #${request.id.substring(0, 8)} - ${request.companies?.name}`,
           body: emailBody,
           attachmentBase64: pdfBase64,
-          attachmentFilename: `SC_${request.id.substring(0, 8)}.pdf`,
+          attachmentFilename: generateFileName(),
         }),
       });
 
@@ -213,8 +221,6 @@ const QuoteRequestDetails = () => {
     );
   }
 
-  const fileName = `SC_${request.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_')}_${format(new Date(request.created_at), 'dd-MM-yyyy')}.pdf`;
-
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -235,12 +241,13 @@ const QuoteRequestDetails = () => {
               <QuoteRequestPreviewModal
                 requestId={request.id}
                 onClose={() => setIsModalOpen(false)}
+                fileName={generateFileName()} // Pasar el nombre de archivo generado
               />
             </DialogContent>
           </Dialog>
           <PDFDownloadButton
             requestId={request.id}
-            fileName={fileName}
+            fileNameGenerator={generateFileName}
             endpoint="generate-qr-pdf"
             label="Descargar PDF"
           />

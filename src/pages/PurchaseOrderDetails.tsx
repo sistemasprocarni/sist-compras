@@ -277,6 +277,7 @@ const PurchaseOrderDetails = () => {
               <PurchaseOrderPDFViewer
                 orderId={order.id}
                 onClose={() => setIsModalOpen(false)}
+                fileName={generateFileName()} // Pasar el nombre de archivo generado
               />
             </DialogContent>
           </Dialog>

@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
+import PDFDownloadButton from './PDFDownloadButton'; // Importar el botón de descarga
 
 interface QuoteRequestPreviewModalProps {
   requestId: string;
   onClose: () => void;
+  fileName: string; // Nuevo: Nombre de archivo para la descarga
 }
 
-const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ requestId, onClose }) => {
+const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ requestId, onClose, fileName }) => {
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
@@ -74,26 +76,16 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
     }
   };
 
-  const handleDownload = () => {
-    if (!pdfUrl) return;
-
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.download = `solicitud_cotizacion_${requestId.substring(0, 8)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleClose = () => {
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
+    }
     // Clear all toasts when closing the modal
     if (loadingToastId) {
       dismissToast(loadingToastId);
-      setLoadingToastId(null);
     }
     if (successToastId) {
       dismissToast(successToastId);
-      setSuccessToastId(null);
     }
     onClose();
   };
@@ -106,11 +98,9 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       }
       if (loadingToastId) {
         dismissToast(loadingToastId);
-        setLoadingToastId(null);
       }
       if (successToastId) {
         dismissToast(successToastId);
-        setSuccessToastId(null);
       }
     };
   }, [requestId]);
@@ -118,9 +108,15 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
   return (
     <div className="flex flex-col h-full">
       <div className="flex justify-end gap-2 mb-4">
-        <Button onClick={handleDownload} variant="outline" disabled={!pdfUrl}>
-          Descargar PDF
-        </Button>
+        {/* Usar PDFDownloadButton para la descarga consistente */}
+        <PDFDownloadButton
+          requestId={requestId}
+          fileName={fileName}
+          endpoint="generate-qr-pdf"
+          label="Descargar PDF"
+          variant="outline"
+          disabled={isLoadingPdf}
+        />
         <Button onClick={handleClose} variant="outline">
           Cerrar
         </Button>
