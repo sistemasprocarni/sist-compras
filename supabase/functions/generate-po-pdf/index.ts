@@ -291,60 +291,8 @@ serve(async (req) => {
       }
     };
 
-    // --- Header with Company Logo and Details ---
-    let companyLogoImage = null;
-    if (order.companies?.logo_url) {
-      try {
-        const logoResponse = await fetch(order.companies.logo_url);
-        if (logoResponse.ok) {
-          const logoBytes = await logoResponse.arrayBuffer();
-          companyLogoImage = await pdfDoc.embedPng(logoBytes);
-        }
-      } catch (logoError) {
-        console.warn(`[generate-po-pdf] Could not load company logo:`, logoError);
-      }
-    }
-
-    // Draw company logo and details
-    if (companyLogoImage) {
-      const logoWidth = 50;
-      const logoHeight = 50;
-      const logoX = margin;
-      const logoY = y - logoHeight;
-
-      page.drawImage(companyLogoImage, {
-        x: logoX,
-        y: logoY,
-        width: logoWidth,
-        height: logoHeight,
-      });
-
-      // Draw company name (larger and bold)
-      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14, color: PROC_RED });
-
-      // Draw company details (slightly smaller and lighter color)
-      const detailsY = y - lineHeight;
-      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: DARK_GRAY });
-      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: DARK_GRAY });
-      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: DARK_GRAY });
-      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: DARK_GRAY });
-
-      y -= logoHeight + lineHeight * 4;
-    } else {
-      // Fallback: Draw company name as text
-      drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14, color: PROC_RED });
-      y -= lineHeight * 2;
-    }
+    // --- Header: Only Document Title and Number ---
     
-    // Separator line (Red, 2pt)
-    page.drawLine({
-      start: { x: margin, y: y },
-      end: { x: width - margin, y: y },
-      thickness: 2,
-      color: PROC_RED,
-    });
-    y -= lineHeight * 2;
-
     // Draw document title centered (Red and bold)
     drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16, color: PROC_RED });
     y -= lineHeight * 2;
@@ -355,6 +303,15 @@ serve(async (req) => {
     
     drawText(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
+
+    // Separator line (Red, 2pt) - Moved down
+    page.drawLine({
+      start: { x: margin, y: y },
+      end: { x: width - margin, y: y },
+      thickness: 2,
+      color: PROC_RED,
+    });
+    y -= lineHeight * 2;
 
     // --- Detalles del Proveedor ---
     drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
@@ -380,6 +337,8 @@ serve(async (req) => {
     });
     y -= lineHeight;
     
+    drawText(`Empresa de Origen: ${order.companies?.name || 'N/A'}`, margin, y); // Keep company name here for context
+    y -= lineHeight;
     drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`Condición de Pago: ${formatPaymentTerms(order)}`, margin, y);
@@ -501,7 +460,7 @@ serve(async (req) => {
     // Check for page break before drawing totals
     checkPageBreak(totalSectionHeight + lineHeight * 3); 
 
-    // Draw light gray border around totals box (removed red border)
+    // Draw light gray border around totals box
     drawBorderedRect(totalSectionX, y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
       borderColor: LIGHT_GRAY,
       borderWidth: 1,
@@ -510,7 +469,7 @@ serve(async (req) => {
     let currentY = y - 5; // Start drawing text inside the box
 
     // Draw totals with right alignment
-    const drawTotalLine = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
+    const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
       const fontToUse = isBold ? boldFont : font;
       
       // Draw Label (Left side)
@@ -534,20 +493,20 @@ serve(async (req) => {
     };
 
     // 1. Base Imponible (Normal font, default size)
-    drawTotalLine('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+    drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
     drawInternalSeparator();
 
     // 2. Monto IVA (Normal font, default size)
-    drawTotalLine('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+    drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
     drawInternalSeparator();
 
     // 3. TOTAL (Bold, default size, black color)
-    drawTotalLine('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), fontSize);
+    drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), fontSize);
     
     if (hasUsdTotal) {
       // 4. TOTAL (USD) (Bold, default size, black color)
       const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
-      drawTotalLine('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), fontSize);
+      drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), fontSize);
     }
 
     y = y - totalSectionHeight - lineHeight; // Update main Y position after totals box

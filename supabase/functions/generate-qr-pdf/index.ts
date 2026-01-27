@@ -146,6 +146,9 @@ serve(async (req) => {
     }
 
     // Draw company logo and details
+    const companyNameFontSize = 12; // Reduced from 14
+    const companyNameLineHeight = companyNameFontSize * 1.2;
+
     if (companyLogoImage) {
       const logoWidth = 50;
       const logoHeight = 50;
@@ -159,11 +162,11 @@ serve(async (req) => {
         height: logoHeight,
       });
 
-      // Draw company name (larger and bold)
-      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14, color: PROC_RED });
+      // Draw company name (smaller and bold)
+      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: companyNameFontSize, color: PROC_RED });
 
       // Draw company details (slightly smaller and lighter color)
-      const detailsY = y - lineHeight;
+      const detailsY = y - companyNameLineHeight;
       drawText(`RIF: ${request.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: DARK_GRAY });
       drawText(`Dirección: ${request.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: DARK_GRAY });
       drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: DARK_GRAY });
@@ -172,7 +175,7 @@ serve(async (req) => {
       y -= logoHeight + lineHeight * 4;
     } else {
       // Fallback: Draw company name as text
-      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14, color: PROC_RED });
+      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: companyNameFontSize, color: PROC_RED });
       y -= lineHeight * 2;
     }
     
