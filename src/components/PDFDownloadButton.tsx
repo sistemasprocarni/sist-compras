@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { showError, showLoading, dismissToast } from '@/utils/toast';
+import { showError, showLoading, dismissToast, showSuccess } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 
 interface PDFDownloadButtonProps {
@@ -12,6 +12,7 @@ interface PDFDownloadButtonProps {
   endpoint: string; // e.g., 'generate-qr-pdf' or 'generate-po-pdf'
   label?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined;
+  disabled?: boolean; // Added disabled prop
 }
 
 const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
@@ -22,6 +23,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
   endpoint,
   label = 'Descargar PDF',
   variant = 'outline',
+  disabled = false,
 }) => {
   const { session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -90,7 +92,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
   return (
     <Button
       onClick={handleDownload}
-      disabled={isDownloading}
+      disabled={isDownloading || disabled}
       variant={variant}
       className="flex items-center gap-2"
     >
