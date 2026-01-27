@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, FileText, Download, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getPurchaseOrderDetails } from '@/integrations/supabase/data';
+import { getPurchaseOrderDetails, updatePurchaseOrderStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -53,7 +53,7 @@ interface PurchaseOrderDetailsData {
   companies: CompanyDetails;
   currency: 'USD' | 'VES';
   exchange_rate?: number | null;
-  status: string;
+  status: 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'Archived';
   created_at: string;
   created_by?: string;
   user_id: string;
@@ -81,6 +81,7 @@ const PurchaseOrderDetails = () => {
   const navigate = useNavigate();
   const { session } = useSession();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -144,6 +145,29 @@ const PurchaseOrderDetails = () => {
       };
       reader.readAsDataURL(blob);
     });
+  };
+
+  const handleApproveOrder = async () => {
+    if (!order || order.status === 'Approved') return;
+
+    const confirmation = window.confirm(`¿Estás seguro de que deseas aprobar la Orden de Compra ${formatSequenceNumber(order.sequence_number, order.created_at)}?`);
+    if (!confirmation) return;
+
+    const toastId = showLoading('Aprobando orden...');
+    try {
+      const success = await updatePurchaseOrderStatus(order.id, 'Approved');
+      if (success) {
+        showSuccess('Orden de Compra aprobada exitosamente.');
+        queryClient.invalidateQueries({ queryKey: ['purchaseOrderDetails', id] });
+        queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      } else {
+        throw new Error('Fallo al actualizar el estado.');
+      }
+    } catch (error: any) {
+      showError(error.message || 'Error al aprobar la orden.');
+    } finally {
+      dismissToast(toastId);
+    }
   };
 
   const handleSendEmail = async (customMessage: string, sendWhatsApp: boolean, phone?: string) => {
@@ -301,6 +325,14 @@ const PurchaseOrderDetails = () => {
           >
             <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
           </Button>
+          {order.status !== 'Approved' && order.status !== 'Archived' && (
+            <Button 
+              onClick={handleApproveOrder} 
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Aprobar Orden
+            </Button>
+          )}
           <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
             <Link to={`/purchase-orders/edit/${order.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Orden
@@ -324,6 +356,7 @@ const PurchaseOrderDetails = () => {
             <p><strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
             <p><strong>Condición de Pago:</strong> {displayPaymentTerms()}</p>
             <p><strong>Creado por:</strong> {order.created_by || 'N/A'}</p>
+            <p><strong>Estado:</strong> <span className={`font-bold ${order.status === 'Approved' ? 'text-green-600' : order.status === 'Draft' ? 'text-yellow-600' : 'text-blue-600'}`}>{order.status}</span></p>
           </div>
 
           {order.observations && (

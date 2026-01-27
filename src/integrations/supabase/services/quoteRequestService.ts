@@ -117,6 +117,20 @@ const QuoteRequestService = {
 
     return updatedRequest;
   },
+  
+  updateStatus: async (id: string, newStatus: 'Draft' | 'Sent' | 'Archived' | 'Approved'): Promise<boolean> => {
+    const { error } = await supabase
+      .from('quote_requests')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      console.error(`[QuoteRequestService.updateStatus] Error updating status to ${newStatus}:`, error);
+      showError(`Error al actualizar el estado de la solicitud a ${newStatus}.`);
+      return false;
+    }
+    return true;
+  },
 
   archive: async (id: string): Promise<boolean> => {
     const { error } = await supabase
@@ -184,4 +198,5 @@ export const {
   getById: getQuoteRequestDetails,
   archive: archiveQuoteRequest,
   unarchive: unarchiveQuoteRequest,
+  updateStatus: updateQuoteRequestStatus,
 } = QuoteRequestService;

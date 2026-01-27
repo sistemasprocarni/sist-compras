@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getQuoteRequestDetails } from '@/integrations/supabase/data';
+import { getQuoteRequestDetails, updateQuoteRequestStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -52,7 +52,7 @@ interface QuoteRequestDetailsData {
   companies: CompanyDetails;
   currency: string;
   exchange_rate?: number | null;
-  status: string;
+  status: 'Draft' | 'Sent' | 'Archived' | 'Approved';
   created_at: string;
   created_by?: string;
   user_id: string;
@@ -64,6 +64,7 @@ const QuoteRequestDetails = () => {
   const navigate = useNavigate();
   const { session } = useSession();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -73,7 +74,7 @@ const QuoteRequestDetails = () => {
       if (!id) throw new Error('Quote Request ID is missing.');
       const details = await getQuoteRequestDetails(id);
       if (!details) throw new Error('Quote Request not found.');
-      return details;
+      return details as QuoteRequestDetailsData;
     },
     enabled: !!id,
   });
@@ -85,6 +86,29 @@ const QuoteRequestDetails = () => {
         quoteRequest: request,
       },
     });
+  };
+
+  const handleApproveRequest = async () => {
+    if (!request || request.status === 'Approved') return;
+
+    const confirmation = window.confirm(`¿Estás seguro de que deseas aprobar la Solicitud de Cotización #${request.id.substring(0, 8)}?`);
+    if (!confirmation) return;
+
+    const toastId = showLoading('Aprobando solicitud...');
+    try {
+      const success = await updateQuoteRequestStatus(request.id, 'Approved');
+      if (success) {
+        showSuccess('Solicitud de Cotización aprobada exitosamente.');
+        queryClient.invalidateQueries({ queryKey: ['quoteRequestDetails', id] });
+        queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Active'] });
+      } else {
+        throw new Error('Fallo al actualizar el estado.');
+      }
+    } catch (error: any) {
+      showError(error.message || 'Error al aprobar la solicitud.');
+    } finally {
+      dismissToast(toastId);
+    }
   };
 
   const generateFileName = () => {
@@ -265,6 +289,14 @@ const QuoteRequestDetails = () => {
           >
             <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
           </Button>
+          {request.status !== 'Approved' && request.status !== 'Archived' && (
+            <Button 
+              onClick={handleApproveRequest} 
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Aprobar Solicitud
+            </Button>
+          )}
           <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
             <Link to={`/quote-requests/edit/${request.id}`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
@@ -289,6 +321,7 @@ const QuoteRequestDetails = () => {
             {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
             <p><strong>Fecha de Creación:</strong> {new Date(request.created_at).toLocaleDateString()} {new Date(request.created_at).toLocaleTimeString()}</p>
             <p><strong>Creado por:</strong> {request.created_by || 'N/A'}</p>
+            <p><strong>Estado:</strong> <span className={`font-bold ${request.status === 'Approved' ? 'text-green-600' : request.status === 'Draft' ? 'text-yellow-600' : 'text-blue-600'}`}>{request.status}</span></p>
           </div>
 
           <h3 className="text-lg font-semibold mt-8 mb-4">Ítems Solicitados</h3>

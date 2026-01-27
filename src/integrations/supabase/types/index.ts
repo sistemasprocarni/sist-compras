@@ -47,7 +47,7 @@ export interface QuoteRequest {
   company_id: string;
   currency: string;
   exchange_rate?: number | null;
-  status: 'Draft' | 'Sent' | 'Archived'; // Updated status type
+  status: 'Draft' | 'Sent' | 'Archived' | 'Approved'; // Updated status type
   created_at: string;
   created_by?: string;
   user_id: string;

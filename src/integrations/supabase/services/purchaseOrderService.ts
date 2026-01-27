@@ -169,6 +169,20 @@ const PurchaseOrderService = {
 
     return updatedOrder;
   },
+  
+  updateStatus: async (id: string, newStatus: 'Draft' | 'Sent' | 'Approved' | 'Rejected' | 'Archived'): Promise<boolean> => {
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (error) {
+      console.error(`[PurchaseOrderService.updateStatus] Error updating status to ${newStatus}:`, error);
+      showError(`Error al actualizar el estado de la orden a ${newStatus}.`);
+      return false;
+    }
+    return true;
+  },
 
   archive: async (id: string): Promise<boolean> => {
     const { error } = await supabase
@@ -236,4 +250,5 @@ export const {
   getById: getPurchaseOrderDetails,
   archive: archivePurchaseOrder,
   unarchive: unarchivePurchaseOrder,
+  updateStatus: updatePurchaseOrderStatus,
 } = PurchaseOrderService;

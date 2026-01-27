@@ -24,6 +24,7 @@ import {
   getQuoteRequestDetails,
   archiveQuoteRequest, // Exported
   unarchiveQuoteRequest, // Exported
+  updateQuoteRequestStatus, // NEW
   getAllPurchaseOrders,
   createPurchaseOrder,
   updatePurchaseOrder,
@@ -31,6 +32,7 @@ import {
   getPurchaseOrderDetails,
   archivePurchaseOrder,
   unarchivePurchaseOrder,
+  updatePurchaseOrderStatus, // NEW
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
@@ -118,6 +120,7 @@ export {
   getQuoteRequestDetails,
   archiveQuoteRequest,
   unarchiveQuoteRequest,
+  updateQuoteRequestStatus, // NEW
   getAllPurchaseOrders,
   createPurchaseOrder,
   updatePurchaseOrder,
@@ -125,11 +128,12 @@ export {
   getPurchaseOrderDetails,
   archivePurchaseOrder,
   unarchivePurchaseOrder,
+  updatePurchaseOrderStatus, // NEW
   createSupplierMaterialRelation,
   uploadFichaTecnica,
   getAllFichasTecnicas,
   deleteFichaTecnica,
   getFichaTecnicaBySupplierAndProduct,
   getPriceHistoryByMaterialId,
-  getAllAuditLogs, // NEW: Exported
+  getAllAuditLogs,
 };
