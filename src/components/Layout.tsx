@@ -23,7 +23,7 @@ const Layout = () => {
   );
 
   const Sidebar = () => (
-    <div className="flex h-full max-h-screen flex-col gap-0 bg-sidebar text-sidebar-foreground">
+    <div className="flex h-full max-h-screen flex-col gap-0 bg-sidebar text-sidebar-foreground border-r border-border">
       <SidebarHeader />
       <div className="flex-1 overflow-y-auto p-2">
         <SidebarNav />
