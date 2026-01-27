@@ -1,11 +1,15 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button'; // Import Button
+import { Clock, Users, Zap, FilePlus, ClipboardPlus, BarChart2 } from 'lucide-react'; // Import new icons
 import { useQuery } from '@tanstack/react-query';
 import { getAllPurchaseOrders, getAllSuppliers } from '@/integrations/supabase/data';
 import { PurchaseOrder, Supplier } from '@/integrations/supabase/types';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const SearchManagement = () => {
+  const navigate = useNavigate(); // Initialize useNavigate hook
+
   // 1. Fetch Purchase Orders for Pending Count
   const { data: purchaseOrders, isLoading: isLoadingOrders } = useQuery<PurchaseOrder[]>({
     queryKey: ['purchaseOrders', 'Active'],
@@ -63,6 +67,40 @@ const SearchManagement = () => {
           </Card>
         ))}
       </div>
+
+      {/* Quick Actions Section */}
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-procarni-primary flex items-center">
+            <Zap className="mr-2 h-4 w-4" /> Acciones Rápidas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/generate-po')}
+              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+            >
+              <FilePlus className="mr-2 h-5 w-5" /> + Nueva Orden de Compra
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/generate-quote')}
+              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+            >
+              <ClipboardPlus className="mr-2 h-5 w-5" /> + Nueva Cotización
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/price-comparison')}
+              className="flex items-center justify-center py-6 text-base hover:bg-procarni-primary/10"
+            >
+              <BarChart2 className="mr-2 h-5 w-5" /> 🔍 Comparar Precios
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Original Content */}
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-4 min-h-[300px]">
