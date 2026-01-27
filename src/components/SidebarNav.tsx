@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp } from 'lucide-react';
+import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign } from 'lucide-react';
 
 const navItems = [
   {
@@ -18,6 +18,7 @@ const navItems = [
     category: 'Procesos',
     items: [
       { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
+      { to: '/price-comparison', icon: <DollarSign className="h-5 w-5" />, label: 'Comparación de Precios' }, // NEW LINK
       { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
       { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
       { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },

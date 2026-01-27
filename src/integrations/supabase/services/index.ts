@@ -7,3 +7,4 @@ export * from './quoteRequestService';
 export * from './purchaseOrderService';
 export * from './supplierMaterialService';
 export * from './fichaTecnicaService';
+export * from './priceHistoryService';

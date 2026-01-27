@@ -23,6 +23,7 @@ interface Company {
 
 interface PurchaseOrderItemForm {
   id?: string;
+  material_id?: string; // NEW: Added material_id
   material_name: string;
   supplier_code?: string;
   quantity: number;
@@ -94,6 +95,7 @@ const EditPurchaseOrder = () => {
 
       setItems(initialOrder.purchase_order_items.map(item => ({
         id: item.id,
+        material_id: item.material_id, // IMPORTANT: Load material ID
         material_name: item.material_name,
         supplier_code: item.supplier_code || '',
         quantity: item.quantity,
@@ -106,7 +108,7 @@ const EditPurchaseOrder = () => {
   }, [initialOrder]);
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG' }]);
+    setItems((prevItems) => [...prevItems, { material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG' }]);
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseOrderItemForm, value: any) => {
@@ -120,6 +122,7 @@ const EditPurchaseOrder = () => {
   };
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
+    handleItemChange(index, 'material_id', material.id); // IMPORTANT: Capture material ID
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
@@ -158,8 +161,8 @@ const EditPurchaseOrder = () => {
       showError('La tasa de cambio es requerida y debe ser mayor que cero para órdenes en Bolívares.');
       return;
     }
-    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || item.unit_price <= 0)) {
-      showError('Por favor, añade al menos un ítem válido con cantidad y precio mayores a cero.');
+    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || item.unit_price <= 0 || !item.material_id)) {
+      showError('Por favor, añade al menos un ítem válido con cantidad, precio mayores a cero y material seleccionado.');
       return;
     }
     if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {
@@ -314,6 +317,7 @@ const EditPurchaseOrder = () => {
                     status: initialOrder.status,
                     created_by: userEmail || 'unknown',
                     user_id: userId || '',
+                    // Pass new fields for preview
                     delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
                     payment_terms: paymentTerms,
                     custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,

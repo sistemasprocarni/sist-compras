@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface PurchaseOrderItemForm {
   id?: string;
+  material_id?: string; // NEW: Added material_id
   material_name: string;
   supplier_code?: string;
   quantity: number;

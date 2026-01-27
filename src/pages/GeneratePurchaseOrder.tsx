@@ -89,6 +89,7 @@ const GeneratePurchaseOrder = () => {
       clearCart();
       quoteRequest.quote_request_items.forEach((item: any) => {
         addItem({
+          material_id: undefined, // Must be selected later
           material_name: item.material_name,
           supplier_code: '', // No supplier code in quote request
           quantity: item.quantity,
@@ -114,6 +115,7 @@ const GeneratePurchaseOrder = () => {
     if (materialData) {
       // Add the material as the first item
       addItem({
+        material_id: materialData.id, // Include material ID
         material_name: materialData.name,
         supplier_code: '',
         quantity: 0,
@@ -148,8 +150,9 @@ const GeneratePurchaseOrder = () => {
   }, [supplierDetails]);
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
-    // Update material_name, unit, and is_exempt based on selected material
+    // Update material_name, unit, is_exempt, and material_id based on selected material
     updateItem(index, {
+      material_id: material.id, // IMPORTANT: Capture material ID
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
@@ -162,7 +165,7 @@ const GeneratePurchaseOrder = () => {
   };
 
   const handleAddItem = () => {
-    addItem({ material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0] });
+    addItem({ material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0] });
   };
 
   const handleItemChange = (index: number, field: keyof typeof items[0], value: any) => {
@@ -202,8 +205,8 @@ const GeneratePurchaseOrder = () => {
       showError('La tasa de cambio es requerida y debe ser mayor que cero para órdenes en Bolívares.');
       return;
     }
-    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || item.unit_price <= 0)) {
-      showError('Por favor, añade al menos un ítem válido con cantidad y precio mayores a cero.');
+    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || item.unit_price <= 0 || !item.material_id)) {
+      showError('Por favor, añade al menos un ítem válido con cantidad, precio mayores a cero y material seleccionado.');
       return;
     }
     if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {

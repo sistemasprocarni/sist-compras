@@ -45,13 +45,14 @@ const PurchaseOrderService = {
     if (items && items.length > 0) {
       const orderItems = items.map(item => ({
         order_id: newOrder.id,
+        material_id: item.material_id, // Include material_id
         material_name: item.material_name,
-        supplier_code: item.supplier_code, // Incluir supplier_code
+        supplier_code: item.supplier_code,
         quantity: item.quantity,
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
-        unit: item.unit, // Added unit field
+        unit: item.unit,
       }));
 
       const { error: itemsError } = await supabase
@@ -62,6 +63,30 @@ const PurchaseOrderService = {
         console.error('[PurchaseOrderService.create] Error al crear ítems:', itemsError);
         showError('Error al crear los ítems de la orden.');
         return null;
+      }
+      
+      // --- Record Price History ---
+      const priceHistoryEntries = items
+        .filter(item => item.material_id && item.unit_price > 0) // Only record valid prices for linked materials
+        .map(item => ({
+          material_id: item.material_id,
+          supplier_id: newOrder.supplier_id,
+          unit_price: item.unit_price,
+          currency: newOrder.currency,
+          exchange_rate: newOrder.exchange_rate,
+          purchase_order_id: newOrder.id,
+          user_id: newOrder.user_id,
+        }));
+
+      if (priceHistoryEntries.length > 0) {
+        const { error: historyError } = await supabase
+          .from('price_history')
+          .insert(priceHistoryEntries);
+
+        if (historyError) {
+          console.error('[PurchaseOrderService.create] Error al registrar historial de precios:', historyError);
+          // Note: We don't fail the PO creation if history logging fails, but we log the error.
+        }
       }
     }
 
@@ -98,13 +123,14 @@ const PurchaseOrderService = {
     if (items && items.length > 0) {
       const orderItems = items.map(item => ({
         order_id: id,
+        material_id: item.material_id, // Include material_id
         material_name: item.material_name,
         supplier_code: item.supplier_code,
         quantity: item.quantity,
         unit_price: item.unit_price,
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
-        unit: item.unit, // Added unit field
+        unit: item.unit,
       }));
 
       const { error: itemsError } = await supabase
@@ -115,6 +141,29 @@ const PurchaseOrderService = {
         console.error('[PurchaseOrderService.update] Error al crear nuevos ítems:', itemsError);
         showError('Error al actualizar los ítems de la orden.');
         return null;
+      }
+      
+      // --- Record Price History (Only if price or material changed significantly, but for simplicity, we record on every update) ---
+      const priceHistoryEntries = items
+        .filter(item => item.material_id && item.unit_price > 0)
+        .map(item => ({
+          material_id: item.material_id,
+          supplier_id: updatedOrder.supplier_id,
+          unit_price: item.unit_price,
+          currency: updatedOrder.currency,
+          exchange_rate: updatedOrder.exchange_rate,
+          purchase_order_id: updatedOrder.id,
+          user_id: updatedOrder.user_id,
+        }));
+
+      if (priceHistoryEntries.length > 0) {
+        const { error: historyError } = await supabase
+          .from('price_history')
+          .insert(priceHistoryEntries);
+
+        if (historyError) {
+          console.error('[PurchaseOrderService.update] Error al registrar historial de precios:', historyError);
+        }
       }
     }
 

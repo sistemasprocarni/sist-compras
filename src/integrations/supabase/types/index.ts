@@ -91,6 +91,7 @@ export interface QuoteRequestItem {
 export interface PurchaseOrderItem {
   id?: string;
   order_id?: string;
+  material_id?: string; // NEW: Link to materials table
   material_name: string;
   supplier_code?: string; // Nuevo campo
   quantity: number;

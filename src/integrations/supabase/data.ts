@@ -36,6 +36,7 @@ import {
   getAllFichasTecnicas,
   deleteFichaTecnica,
   getFichaTecnicaBySupplierAndProduct, // Exported
+  getPriceHistoryByMaterialId, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -128,4 +129,5 @@ export {
   getAllFichasTecnicas,
   deleteFichaTecnica,
   getFichaTecnicaBySupplierAndProduct,
+  getPriceHistoryByMaterialId, // NEW: Exported
 };
