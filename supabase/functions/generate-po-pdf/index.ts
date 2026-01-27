@@ -7,6 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Define colores corporativos y de borde
+const PROC_RED = rgb(0.533, 0.039, 0.039); // #880a0a
+const LIGHT_GRAY = rgb(0.9, 0.9, 0.9); // Borde de tabla muy fino
+const DARK_GRAY = rgb(0.5, 0.5, 0.5); // Detalles de la empresa
+const BLUE_ACCENT = rgb(0.1, 0.4, 0.8); // Color para total USD
+
 // Re-implementación de las utilidades de cálculo para el entorno Deno
 const calculateTotals = (items: Array<{ quantity: number; unit_price: number; tax_rate?: number; is_exempt?: boolean }>) => {
   let baseImponible = 0;
@@ -200,7 +206,7 @@ serve(async (req) => {
 
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
+    let page = pdfDoc.addPage(); 
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -211,11 +217,7 @@ serve(async (req) => {
     let y = height - margin;
     const fontSize = 10;
     const lineHeight = fontSize * 1.2;
-    // const tableHeaderBgColor = rgb(0.9, 0.9, 0.9); // Removed background color
-    const borderColor = rgb(0.8, 0.8, 0.8);
-    const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
-    // const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Removed background color
-
+    
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
       // Ensure text is a string before drawing
@@ -230,14 +232,14 @@ serve(async (req) => {
       });
     };
 
-    // Helper para dibujar rectángulo con borde
+    // Helper para dibujar rectángulo con borde (usado para totales)
     const drawBorderedRect = (x: number, y: number, width: number, height: number, options: any = {}) => {
       page.drawRectangle({
         x,
         y,
         width,
         height,
-        borderColor: options.borderColor || borderColor,
+        borderColor: options.borderColor || LIGHT_GRAY,
         borderWidth: options.borderWidth || 1,
         color: options.color || rgb(1, 1, 1),
       });
@@ -246,7 +248,6 @@ serve(async (req) => {
     // Table column configuration - Improved layout
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    // Updated column widths for better spacing
     const colWidths = [
       tableWidth * 0.30,  // Material
       tableWidth * 0.10,  // Cantidad
@@ -257,22 +258,24 @@ serve(async (req) => {
     ];
     const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
-    // Function to draw table headers with improved styling
+    // Function to draw table headers (Red text, thin gray bottom border)
     const drawTableHeader = () => {
       let currentX = tableX;
       
-      // Draw header background
-      drawBorderedRect(tableX, y - lineHeight, tableWidth, lineHeight, {
-        // color: tableHeaderBgColor, // Removed background color
-        borderColor: borderColor,
-        borderWidth: 1
+      // Draw thin gray line below header row
+      page.drawLine({
+        start: { x: tableX, y: y - lineHeight },
+        end: { x: tableX + tableWidth, y: y - lineHeight },
+        thickness: 1,
+        color: LIGHT_GRAY,
       });
       
       // Draw header text
       for (let i = 0; i < colHeaders.length; i++) {
         drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { 
           font: boldFont, 
-          size: 10 
+          size: 10,
+          color: PROC_RED // Red header text
         });
         currentX += colWidths[i];
       }
@@ -289,7 +292,6 @@ serve(async (req) => {
     };
 
     // --- Header with Company Logo and Details ---
-    // Try to fetch and embed the company logo if available
     let companyLogoImage = null;
     if (order.companies?.logo_url) {
       try {
@@ -318,24 +320,33 @@ serve(async (req) => {
       });
 
       // Draw company name (larger and bold)
-      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
+      drawText(order.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14, color: PROC_RED });
 
       // Draw company details (slightly smaller and lighter color)
       const detailsY = y - lineHeight;
-      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: companyDetailsColor });
-      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: companyDetailsColor });
-      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: companyDetailsColor });
-      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: companyDetailsColor });
+      drawText(`RIF: ${order.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: DARK_GRAY });
+      drawText(`Dirección: ${order.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: DARK_GRAY });
+      drawText(`Teléfono: ${order.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: DARK_GRAY });
+      drawText(`Email: ${order.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: DARK_GRAY });
 
       y -= logoHeight + lineHeight * 4;
     } else {
       // Fallback: Draw company name as text
-      drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14 });
+      drawText(order.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14, color: PROC_RED });
       y -= lineHeight * 2;
     }
+    
+    // Separator line (Red, 2pt)
+    page.drawLine({
+      start: { x: margin, y: y },
+      end: { x: width - margin, y: y },
+      thickness: 2,
+      color: PROC_RED,
+    });
+    y -= lineHeight * 2;
 
-    // Draw document title centered (slightly smaller)
-    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16 });
+    // Draw document title centered (Red and bold)
+    drawText('ORDEN DE COMPRA', width / 2 - 100, y, { font: boldFont, size: 16, color: PROC_RED });
     y -= lineHeight * 2;
     
     // Use the standardized format for the sequence number
@@ -346,7 +357,13 @@ serve(async (req) => {
     y -= lineHeight * 3;
 
     // --- Detalles del Proveedor ---
-    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12 });
+    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+    page.drawLine({
+      start: { x: margin, y: y - lineHeight + 2 },
+      end: { x: width - margin, y: y - lineHeight + 2 },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
     y -= lineHeight;
     drawText(`Nombre: ${order.suppliers?.name || 'N/A'}`, margin, y);
     y -= lineHeight;
@@ -354,7 +371,13 @@ serve(async (req) => {
     y -= lineHeight * 2;
 
     // --- Detalles de la Orden ---
-    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12 });
+    drawText('DETALLES DE LA ORDEN:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+    page.drawLine({
+      start: { x: margin, y: y - lineHeight + 2 },
+      end: { x: width - margin, y: y - lineHeight + 2 },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
     y -= lineHeight;
     
     drawText(`Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, margin, y);
@@ -364,13 +387,18 @@ serve(async (req) => {
 
     // --- Observaciones ---
     if (order.observations) {
-      drawText('OBSERVACIONES:', margin, y, { font: boldFont, size: 12 });
+      drawText('OBSERVACIONES:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+      page.drawLine({
+        start: { x: margin, y: y - lineHeight + 2 },
+        end: { x: width - margin, y: y - lineHeight + 2 },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
+      });
       y -= lineHeight;
       
       const observationsText = order.observations;
-      const maxCharsPerLine = 100; // Approximation for font size 10
+      const maxCharsPerLine = 100; 
       
-      // Use the manual wrapText function
       const textRuns = wrapText(observationsText, maxCharsPerLine);
       
       for (const run of textRuns) {
@@ -378,25 +406,32 @@ serve(async (req) => {
         drawText(run, margin, y);
         y -= lineHeight;
       }
-      y -= lineHeight; // Extra space after observations
+      y -= lineHeight; 
     }
 
-    // --- Tabla de Ítems (Enhanced Styling) ---
+    // --- Tabla de Ítems ---
+    drawText('ÍTEMS DE LA ORDEN:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+    page.drawLine({
+      start: { x: margin, y: y - lineHeight + 2 },
+      end: { x: width - margin, y: y - lineHeight + 2 },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
+    y -= lineHeight;
+    
     drawTableHeader(); // Draw initial table header
 
-    // Dibujar filas de ítems con estilo mejorado
+    // Dibujar filas de ítems
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      checkPageBreak(lineHeight + 10); // Check before drawing each row
+      checkPageBreak(lineHeight + 10); 
 
-      // Alternate row colors for better readability
-      const rowColor = rgb(1, 1, 1); // Always white background
-
-      // Draw row background
-      drawBorderedRect(tableX, y - lineHeight, tableWidth, lineHeight, {
-        color: rowColor,
-        borderColor: borderColor,
-        borderWidth: 1
+      // Draw thin gray line above the row content (to separate rows)
+      page.drawLine({
+        start: { x: tableX, y: y },
+        end: { x: tableX + tableWidth, y: y },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
       });
 
       // Calculate values
@@ -416,7 +451,7 @@ serve(async (req) => {
       drawText(quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[1];
 
-      // Unidad (assuming unit is available, using a placeholder if not)
+      // Unidad
       const unitText = item.unit || 'UND';
       drawText(unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
@@ -437,34 +472,55 @@ serve(async (req) => {
 
       y -= lineHeight;
     }
+    
+    // Draw final bottom border for the table
+    page.drawLine({
+      start: { x: tableX, y: y },
+      end: { x: tableX + tableWidth, y: y },
+      thickness: 1,
+      color: LIGHT_GRAY,
+    });
+    
     y -= lineHeight; // Espacio después de la tabla
 
     // --- Totals ---
     const calculatedTotals = calculateTotals(items);
-    const totalSectionX = width - margin - 200; // Alineado a la derecha
+    const totalSectionWidth = 200;
+    const totalSectionX = width - margin - totalSectionWidth; 
+    const totalSectionHeight = lineHeight * 3 + 10; // Height for 3 lines + padding
 
     // Check for page break before drawing totals
-    checkPageBreak(lineHeight * 7); // 3 lines for totals, 1 for USD total, 1 for amount in words, 2 for spacing
+    checkPageBreak(totalSectionHeight + lineHeight * 3); // 3 lines for totals, 1 for USD total, 1 for amount in words, 2 for spacing
 
-    // Draw totals with right alignment and improved styling
-    const baseImponibleText = `Subtotal: ${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`;
-    drawText(baseImponibleText, totalSectionX, y);
+    // Draw red border around totals box
+    drawBorderedRect(totalSectionX, y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
+      borderColor: PROC_RED,
+      borderWidth: 1,
+    });
+    
+    let currentY = y - 5; // Start drawing text inside the box
 
-    const montoIVAText = `IVA (16%): ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`;
-    drawText(montoIVAText, totalSectionX, y - lineHeight);
+    // Draw totals with right alignment
+    const drawTotalLine = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = fontSize) => {
+      const labelWidth = font.widthOfTextAtSize(label, size);
+      const valueWidth = (isBold ? boldFont : font).widthOfTextAtSize(value, size);
+      
+      drawText(label, totalSectionX + 5, currentY - (lineHeight - size) / 2, { font: isBold ? boldFont : font, size, color });
+      drawText(value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (lineHeight - size) / 2, { font: isBold ? boldFont : font, size, color });
+      currentY -= lineHeight;
+    };
 
-    const totalText = `TOTAL: ${order.currency} ${calculatedTotals.total.toFixed(2)}`;
-    const totalTextWidth = boldFont.widthOfTextAtSize(totalText, fontSize + 2); // Use boldFont for width calculation
-    drawText(totalText, totalSectionX + 200 - totalTextWidth, y - lineHeight * 2, { font: boldFont, size: fontSize + 2 });
+    drawTotalLine('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+    drawTotalLine('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+    drawTotalLine('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, fontSize + 2);
 
-    y -= lineHeight * 3;
+    y = currentY - lineHeight; // Update main Y position after totals box
 
     // NEW: Total in USD if applicable
     if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
       const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
       const usdText = `TOTAL (USD): USD ${totalInUSD}`;
-      const usdTextWidth = boldFont.widthOfTextAtSize(usdText, fontSize + 1);
-      drawText(usdText, totalSectionX + 200 - usdTextWidth, y, { font: boldFont, size: fontSize + 1, color: rgb(0.1, 0.4, 0.8) }); // Blue color
+      drawText(usdText, totalSectionX, y, { font: boldFont, size: fontSize + 1, color: BLUE_ACCENT }); 
       y -= lineHeight * 2;
     } else {
       y -= lineHeight; // Maintain spacing if USD total is skipped
@@ -481,7 +537,7 @@ serve(async (req) => {
       start: { x: width / 2 - 100, y: footerY + lineHeight },
       end: { x: width / 2 + 100, y: footerY + lineHeight },
       thickness: 1,
-      color: rgb(0, 0, 0),
+      color: DARK_GRAY, // Use dark gray for signature line
     });
     drawText('Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
     drawText(`Generado por: ${order.created_by || user.email}`, margin, footerY + lineHeight * 2);

@@ -7,6 +7,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Define colores corporativos y de borde
+const PROC_RED = rgb(0.533, 0.039, 0.039); // #880a0a
+const LIGHT_GRAY = rgb(0.9, 0.9, 0.9); // Borde de tabla muy fino
+const DARK_GRAY = rgb(0.5, 0.5, 0.5); // Detalles de la empresa
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -69,21 +74,17 @@ serve(async (req) => {
 
     // --- Generación de PDF con pdf-lib ---
     const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage(); // Use 'let' because it will be reassigned
+    let page = pdfDoc.addPage(); 
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     const { width, height } = page.getSize();
-    const margin = 30; // Reduced margin from 50 to 30
+    const margin = 30; 
     let y = height - margin;
     const fontSize = 10;
     const lineHeight = fontSize * 1.2;
-    // const tableHeaderBgColor = rgb(0.9, 0.9, 0.9); // Removed background color
-    const borderColor = rgb(0.8, 0.8, 0.8);
-    const companyDetailsColor = rgb(0.5, 0.5, 0.5); // Lighter gray color for company details
-    // const tableRowBgColor = rgb(0.95, 0.95, 0.95); // Removed background color
-
+    
     // Helper para dibujar texto
     const drawText = (text: string, x: number, yPos: number, options: any = {}) => {
       page.drawText(text, {
@@ -99,24 +100,23 @@ serve(async (req) => {
     // Table column configuration
     const tableX = margin;
     const tableWidth = width - 2 * margin;
-    // Adjusted column widths: Material, Cantidad, Unidad, Descripción
     const colWidths = [tableWidth * 0.3, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.4];
     const colHeaders = ['Material', 'Cantidad', 'Unidad', 'Descripción'];
 
-    // Function to draw table headers
+    // Function to draw table headers (Red text, thin gray bottom border)
     const drawTableHeader = () => {
       let currentX = tableX;
-      page.drawRectangle({
-        x: tableX,
-        y: y - lineHeight,
-        width: tableWidth,
-        height: lineHeight,
-        // color: tableHeaderBgColor, // Removed background color
-        borderColor: borderColor,
-        borderWidth: 1,
+      
+      // Draw thin gray line below header row
+      page.drawLine({
+        start: { x: tableX, y: y - lineHeight },
+        end: { x: tableX + tableWidth, y: y - lineHeight },
+        thickness: 1,
+        color: LIGHT_GRAY,
       });
+
       for (let i = 0; i < colHeaders.length; i++) {
-        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont, size: 12 });
+        drawText(colHeaders[i], currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2, { font: boldFont, size: 10, color: PROC_RED });
         currentX += colWidths[i];
       }
       y -= lineHeight;
@@ -124,7 +124,7 @@ serve(async (req) => {
 
     // Function to check for page breaks and add new page if necessary
     const checkPageBreak = (requiredSpace: number) => {
-      if (y - requiredSpace < margin) { // If not enough space for next content block
+      if (y - requiredSpace < margin) { 
         page = pdfDoc.addPage();
         y = height - margin;
         drawTableHeader(); // Redraw headers on new page
@@ -132,7 +132,6 @@ serve(async (req) => {
     };
 
     // --- Header with Company Logo and Details ---
-    // Try to fetch and embed the company logo if available
     let companyLogoImage = null;
     if (request.companies?.logo_url) {
       try {
@@ -161,60 +160,80 @@ serve(async (req) => {
       });
 
       // Draw company name (larger and bold)
-      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14 });
+      drawText(request.companies?.name || 'N/A', logoX + logoWidth + 10, y, { font: boldFont, size: 14, color: PROC_RED });
 
       // Draw company details (slightly smaller and lighter color)
       const detailsY = y - lineHeight;
-      drawText(`RIF: ${request.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: companyDetailsColor });
-      drawText(`Dirección: ${request.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: companyDetailsColor });
-      drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: companyDetailsColor });
-      drawText(`Email: ${request.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: companyDetailsColor });
+      drawText(`RIF: ${request.companies?.rif || 'N/A'}`, logoX + logoWidth + 10, detailsY, { size: 9, color: DARK_GRAY });
+      drawText(`Dirección: ${request.companies?.address || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight, { size: 9, color: DARK_GRAY });
+      drawText(`Teléfono: ${request.companies?.phone || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 2, { size: 9, color: DARK_GRAY });
+      drawText(`Email: ${request.companies?.email || 'N/A'}`, logoX + logoWidth + 10, detailsY - lineHeight * 3, { size: 9, color: DARK_GRAY });
 
       y -= logoHeight + lineHeight * 4;
     } else {
       // Fallback: Draw company name as text
-      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14 });
+      drawText(request.companies?.name || 'N/A', margin, y, { font: boldFont, size: 14, color: PROC_RED });
       y -= lineHeight * 2;
     }
+    
+    // Separator line (Red, 2pt)
+    page.drawLine({
+      start: { x: margin, y: y },
+      end: { x: width - margin, y: y },
+      thickness: 2,
+      color: PROC_RED,
+    });
+    y -= lineHeight * 2;
 
-    // Draw document title centered (slightly smaller)
-    drawText('SOLICITUD DE COTIZACIÓN', width / 2 - 100, y, { font: boldFont, size: 16 });
+    // Draw document title centered (Red and bold)
+    drawText('SOLICITUD DE COTIZACIÓN', width / 2 - 100, y, { font: boldFont, size: 16, color: PROC_RED });
     y -= lineHeight * 2;
     drawText(`Nº: ${request.id.substring(0, 8)}`, width - margin - 100, y, { font: boldFont, size: 10 });
     drawText(`Fecha: ${new Date(request.created_at).toLocaleDateString('es-VE')}`, width - margin - 100, y - lineHeight);
     y -= lineHeight * 3;
 
     // --- Detalles del Proveedor ---
-    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12 });
+    drawText('DATOS DEL PROVEEDOR:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+    page.drawLine({
+      start: { x: margin, y: y - lineHeight + 2 },
+      end: { x: width - margin, y: y - lineHeight + 2 },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
     y -= lineHeight;
     drawText(`Nombre: ${request.suppliers?.name || 'N/A'}`, margin, y);
     y -= lineHeight;
     drawText(`RIF: ${request.suppliers?.rif || 'N/A'}`, margin, y);
     y -= lineHeight * 2;
 
-    // --- Tabla de Ítems Solicitados (Enhanced Styling) ---
-    drawTableHeader(); // Draw initial table header
+    // --- Tabla de Ítems Solicitados ---
+    drawText('ÍTEMS SOLICITADOS:', margin, y, { font: boldFont, size: 12, color: PROC_RED });
+    page.drawLine({
+      start: { x: margin, y: y - lineHeight + 2 },
+      end: { x: width - margin, y: y - lineHeight + 2 },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
+    y -= lineHeight;
+    
+    drawTableHeader(); // Draw table header (already includes bottom border)
 
-    // Dibujar filas de ítems con estilo mejorado
+    // Dibujar filas de ítems
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      checkPageBreak(lineHeight); // Check before drawing each row
-
-      // Alternate row colors for better readability
-      const rowColor = rgb(1, 1, 1); // Always white background
+      checkPageBreak(lineHeight); 
 
       let currentX = tableX;
-      page.drawRectangle({
-        x: tableX,
-        y: y - lineHeight,
-        width: tableWidth,
-        height: lineHeight,
-        color: rowColor,
-        borderColor: borderColor,
-        borderWidth: 1,
+      
+      // Draw thin gray line above the row content (to separate rows)
+      page.drawLine({
+        start: { x: tableX, y: y },
+        end: { x: tableX + tableWidth, y: y },
+        thickness: 0.5,
+        color: LIGHT_GRAY,
       });
 
-      // Draw item data with better alignment
+      // Draw item data
       drawText(item.material_name, currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[0];
 
@@ -227,16 +246,24 @@ serve(async (req) => {
       drawText(unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, fontSize), y - lineHeight + (lineHeight - fontSize) / 2);
       currentX += colWidths[2];
 
-      // Left-align description (can be longer)
+      // Left-align description
       drawText(item.description || 'N/A', currentX + 5, y - lineHeight + (lineHeight - fontSize) / 2);
-      // currentX += colWidths[3]; // No need to update currentX after the last column
 
       y -= lineHeight;
     }
-    y -= lineHeight * 2; // Espacio después de la tabla
+    
+    // Draw final bottom border for the table
+    page.drawLine({
+      start: { x: tableX, y: y },
+      end: { x: tableX + tableWidth, y: y },
+      thickness: 1,
+      color: LIGHT_GRAY,
+    });
+    
+    y -= lineHeight * 2; 
 
-    // --- Footer (without signature line) ---
-    const footerY = margin; // Fixed position from bottom
+    // --- Footer ---
+    const footerY = margin; 
     drawText(`Generado por: ${request.created_by || user.email}`, margin, footerY + lineHeight * 2);
 
     const pdfBytes = await pdfDoc.save();
@@ -249,7 +276,6 @@ serve(async (req) => {
 
     console.log(`[generate-qr-pdf] Generated PDF with filename: ${filename}`);
 
-    // Force download with the correct filename
     const response = new Response(pdfBytes, {
       headers: {
         ...corsHeaders,
