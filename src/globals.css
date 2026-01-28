@@ -98,6 +98,10 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  #root {
+    min-height: 100%;
+  }
   
   /* Utility class for alert border on cards */
   .card-alert-border {
