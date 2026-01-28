@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, CheckCircle } from 'lucide-react'; // Import CheckCircle
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterialsBySupplier } from '@/integrations/supabase/data';
 import AddMaterialToSupplierDialog from '@/components/AddMaterialToSupplierDialog';
@@ -71,6 +71,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   const renderItemRow = (item: PurchaseOrderItemForm, index: number) => {
     const subtotal = item.quantity * item.unit_price;
     const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+    const isMaterialSelected = !!item.material_id; // Check if material ID is present
 
     if (isMobile) {
       return (
@@ -88,13 +89,17 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           </div>
           
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Producto</label>
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground flex items-center">
+                Producto
+                {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+              </label>
               <SmartSearch
                 placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
                 onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
                 fetchFunction={searchSupplierMaterials}
                 displayValue={item.material_name}
+                selectedId={item.material_id} // Pass selected ID
                 disabled={!supplierId}
               />
             </div>
@@ -165,14 +170,16 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
     // Desktop/Tablet View (Original Table)
     return (
       <tr key={index}>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap flex items-center">
           <SmartSearch
             placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
             onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
             fetchFunction={searchSupplierMaterials}
             displayValue={item.material_name}
+            selectedId={item.material_id} // Pass selected ID
             disabled={!supplierId}
           />
+          {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
         </td>
         <td className="px-2 py-2 whitespace-nowrap">
           <Input

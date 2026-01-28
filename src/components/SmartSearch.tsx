@@ -17,26 +17,28 @@ interface SmartSearchProps {
   onSelect: (item: SearchResult) => void;
   fetchFunction: (query: string) => Promise<SearchResult[]>;
   displayValue?: string; // Optional prop to control the displayed value
+  selectedId?: string; // NEW: Optional prop to indicate the currently selected ID
   disabled?: boolean; // New prop
 }
 
-const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue, disabled = false }) => {
+const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchFunction, displayValue, selectedId, disabled = false }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
 
-  // Update internal state if displayValue changes from parent
+  // Update internal state if displayValue or selectedId changes from parent
   useEffect(() => {
     if (displayValue) {
       setQuery(displayValue);
-      setSelectedItem({ id: '', name: displayValue }); // Placeholder item for display
+      // Synchronize selectedItem based on displayValue and selectedId
+      setSelectedItem({ id: selectedId || '', name: displayValue }); 
     } else {
       setQuery('');
       setSelectedItem(null);
     }
-  }, [displayValue]);
+  }, [displayValue, selectedId]);
 
   const debouncedFetch = useCallback(async (searchQuery: string) => {
     try {
@@ -109,7 +111,8 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedItem?.id === item.id ? "opacity-100" : "opacity-0"
+                      // Check if the current item being rendered matches the selected ID from the parent
+                      selectedId === item.id ? "opacity-100" : "opacity-0"
                     )}
                   />
                   {item.name}
