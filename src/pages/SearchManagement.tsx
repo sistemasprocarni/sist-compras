@@ -1,11 +1,13 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button'; // Import Button
-import { Clock, Users, Zap, FilePlus, ClipboardPlus, BarChart2 } from 'lucide-react'; // Import new icons
+import { Clock, Users, Zap, FilePlus, ClipboardPlus, BarChart2, TrendingUp } from 'lucide-react'; // Import new icons
 import { useQuery } from '@tanstack/react-query';
 import { getAllPurchaseOrders, getAllSuppliers } from '@/integrations/supabase/data';
 import { PurchaseOrder, Supplier } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import TopSuppliersList from '@/components/TopSuppliersList';
+import TopMaterialsList from '@/components/TopMaterialsList';
 
 const SearchManagement = () => {
   const navigate = useNavigate(); // Initialize useNavigate hook
@@ -102,18 +104,21 @@ const SearchManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Original Content */}
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-4 min-h-[300px]">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h3 className="text-2xl font-bold tracking-tight">
-            Búsqueda y Gestión
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Aquí podrás buscar y gestionar proveedores, materiales y órdenes existentes.
-          </p>
-          {/* Futuro componente de búsqueda inteligente */}
-        </div>
-      </div>
+      {/* Analysis Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold tracking-tight flex items-center text-procarni-primary">
+            <BarChart2 className="mr-2 h-5 w-5" /> Análisis de Compras
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TopSuppliersList />
+            <TopMaterialsList />
+          </div>
+        </CardContent>
+      </Card>
+      
       <MadeWithDyad />
     </div>
   );

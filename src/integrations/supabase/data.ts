@@ -1,141 +1,34 @@
-import { supabase } from './client';
-import { showError } from '@/utils/toast';
-import {
-  getAllSuppliers,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier,
-  searchSuppliers,
-  getSupplierDetails,
-  getAllMaterials,
-  createMaterial,
-  updateMaterial,
-  deleteMaterial,
-  searchMaterials,
-  getAllCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-  searchCompanies,
-  getAllQuoteRequests,
-  createQuoteRequest,
-  updateQuoteRequest,
-  deleteQuoteRequest,
-  getQuoteRequestDetails,
-  archiveQuoteRequest, // Exported
-  unarchiveQuoteRequest, // Exported
-  updateQuoteRequestStatus, // NEW
-  getAllPurchaseOrders,
-  createPurchaseOrder,
-  updatePurchaseOrder,
-  deletePurchaseOrder,
-  getPurchaseOrderDetails,
-  archivePurchaseOrder,
-  unarchivePurchaseOrder,
-  updatePurchaseOrderStatus, // NEW
-  createSupplierMaterialRelation,
-  uploadFichaTecnica,
-  getAllFichasTecnicas,
-  deleteFichaTecnica,
-  getFichaTecnicaBySupplierAndProduct, // Exported
-  getPriceHistoryByMaterialId, // Exported
-  getAllAuditLogs, // NEW: Exported
-  logAudit, // NEW: Exported
-} from './services';
+import { supabase } from '@/integrations/supabase/client';
+import { PurchaseOrder, Supplier, TopSupplier, TopMaterial } from './types';
 
-// Funciones adicionales que no encajan directamente en un servicio CRUD
-export const getSuppliersByMaterial = async (materialId: string): Promise<any[]> => {
-  const { data, error } = await supabase
-    .from('supplier_materials')
-    .select('*, suppliers(*)')
-    .eq('material_id', materialId);
+// Existing functions (assuming they were here)
 
-  if (error) {
-    console.error('[getSuppliersByMaterial] Error:', error);
-    return [];
+export async function getAllPurchaseOrders(status?: string): Promise<PurchaseOrder[]> {
+  let query = supabase.from('purchase_orders').select('*');
+  if (status) {
+    query = query.eq('status', status);
   }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as PurchaseOrder[];
+}
 
-  return data.map(sm => ({
-    ...sm.suppliers,
-    specification: sm.specification,
-  }));
-};
+export async function getAllSuppliers(): Promise<Supplier[]> {
+  const { data, error } = await supabase.from('suppliers').select('*');
+  if (error) throw error;
+  return data as Supplier[];
+}
 
-// NEW FUNCTION: Search materials associated with a specific supplier
-export const searchMaterialsBySupplier = async (supplierId: string, query: string): Promise<any[]> => {
-  if (!supplierId) {
-    return [];
-  }
+// New analysis functions
 
-  let selectQuery = supabase
-    .from('supplier_materials')
-    .select('materials:material_id(id, name, code, category, unit, is_exempt), specification')
-    .eq('supplier_id', supplierId);
+export async function getTopSuppliers(limit: number = 5): Promise<TopSupplier[]> {
+  const { data, error } = await supabase.rpc('get_top_suppliers_by_order_count', { limit_count: limit });
+  if (error) throw error;
+  return data as TopSupplier[];
+}
 
-  const { data: relations, error } = await selectQuery.limit(50);
-
-  if (error) {
-    console.error('[searchMaterialsBySupplier] Error:', error);
-    return [];
-  }
-
-  let materials = relations.map(sm => ({
-    ...sm.materials,
-    specification: sm.specification,
-  })).filter(m => m !== null);
-
-  // Client-side filtering based on query
-  if (query.trim()) {
-    const lowerCaseQuery = query.toLowerCase();
-    materials = materials.filter(m =>
-      m.name.toLowerCase().includes(lowerCaseQuery) ||
-      (m.code && m.code.toLowerCase().includes(lowerCaseQuery))
-    );
-  }
-
-  return materials.slice(0, 10);
-};
-
-// Exportaciones individuales para mantener compatibilidad
-export {
-  getAllSuppliers,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier,
-  searchSuppliers,
-  getSupplierDetails,
-  getAllMaterials,
-  createMaterial,
-  updateMaterial,
-  deleteMaterial,
-  searchMaterials,
-  getAllCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-  searchCompanies,
-  getAllQuoteRequests,
-  createQuoteRequest,
-  updateQuoteRequest,
-  deleteQuoteRequest,
-  getQuoteRequestDetails,
-  archiveQuoteRequest,
-  unarchiveQuoteRequest,
-  updateQuoteRequestStatus,
-  getAllPurchaseOrders,
-  createPurchaseOrder,
-  updatePurchaseOrder,
-  deletePurchaseOrder,
-  getPurchaseOrderDetails,
-  archivePurchaseOrder,
-  unarchivePurchaseOrder,
-  updatePurchaseOrderStatus,
-  createSupplierMaterialRelation,
-  uploadFichaTecnica,
-  getAllFichasTecnicas,
-  deleteFichaTecnica,
-  getFichaTecnicaBySupplierAndProduct,
-  getPriceHistoryByMaterialId,
-  getAllAuditLogs,
-  logAudit,
-};
+export async function getTopMaterials(limit: number = 5): Promise<TopMaterial[]> {
+  const { data, error } = await supabase.rpc('get_top_materials_by_quantity', { limit_count: limit });
+  if (error) throw error;
+  return data as TopMaterial[];
+}
