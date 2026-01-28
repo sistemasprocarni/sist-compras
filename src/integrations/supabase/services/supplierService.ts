@@ -196,10 +196,13 @@ const SupplierService = {
       return data;
     }
 
+    // Sanitizar query: reemplazar comas y puntos con espacios para evitar romper la sintaxis OR de PostgREST
+    const sanitizedQuery = query.replace(/[,.]/g, ' ');
+
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
-      .or(`name.ilike.%${query}%,rif.ilike.%${query}%`)
+      .or(`name.ilike.%${sanitizedQuery}%,rif.ilike.%${sanitizedQuery}%`)
       .limit(10);
 
     if (error) {
