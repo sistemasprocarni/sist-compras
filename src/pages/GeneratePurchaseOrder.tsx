@@ -205,10 +205,34 @@ const GeneratePurchaseOrder = () => {
       showError('La tasa de cambio es requerida y debe ser mayor que cero para órdenes en Bolívares.');
       return;
     }
-    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || item.unit_price <= 0 || !item.material_id)) {
-      showError('Por favor, añade al menos un ítem válido con cantidad, precio mayores a cero y material seleccionado.');
+    
+    // --- Refined Item Validation ---
+    const invalidItem = items.find(item => 
+      !item.material_id || 
+      !item.material_name || 
+      item.quantity <= 0 || 
+      item.unit_price <= 0
+    );
+
+    if (items.length === 0) {
+      showError('Por favor, añade al menos un ítem a la orden.');
       return;
     }
+
+    if (invalidItem) {
+      let specificError = 'Por favor, revisa los ítems: ';
+      if (!invalidItem.material_id) {
+        specificError += `El material "${invalidItem.material_name || 'Nuevo Ítem'}" no ha sido seleccionado correctamente (falta ID).`;
+      } else if (invalidItem.quantity <= 0) {
+        specificError += `La cantidad del material "${invalidItem.material_name}" debe ser mayor a cero.`;
+      } else if (invalidItem.unit_price <= 0) {
+        specificError += `El precio unitario del material "${invalidItem.material_name}" debe ser mayor a cero.`;
+      }
+      showError(specificError);
+      return;
+    }
+    // --- End Refined Item Validation ---
+
     if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {
       showError('Debe especificar los términos de pago personalizados.');
       return;
