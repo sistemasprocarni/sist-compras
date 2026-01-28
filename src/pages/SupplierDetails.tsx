@@ -3,14 +3,16 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails, getFichaTecnicaBySupplierAndProduct } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FichaTecnica } from '@/integrations/supabase/types';
+import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,20 +109,48 @@ const SupplierDetails = () => {
     );
   }
 
+  const ActionButtons = () => (
+    <>
+      <Button 
+        onClick={handleGenerateSC} 
+        className={cn("bg-procarni-secondary hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
+      >
+        <PlusCircle className="mr-2 h-4 w-4" /> Generar SC
+      </Button>
+      <Button 
+        onClick={handleGenerateOC} 
+        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
+      >
+        <ShoppingCart className="mr-2 h-4 w-4" /> Generar OC
+      </Button>
+    </>
+  );
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Button onClick={handleGenerateSC} className="bg-procarni-secondary hover:bg-green-700">
-            <PlusCircle className="mr-2 h-4 w-4" /> Generar SC
-          </Button>
-          <Button onClick={handleGenerateOC} className="bg-blue-600 hover:bg-blue-700">
-            <ShoppingCart className="mr-2 h-4 w-4" /> Generar OC
-          </Button>
-        </div>
+        
+        {isMobile ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Acciones de Proveedor</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <ActionButtons />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex gap-2 flex-wrap justify-end">
+            <ActionButtons />
+          </div>
+        )}
       </div>
 
       <Card className="mb-6">

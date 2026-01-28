@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, Mail } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, Mail, MoreVertical, CheckCircle } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getPurchaseOrderDetails, updatePurchaseOrderStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
@@ -17,6 +17,8 @@ import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface PurchaseOrderItem {
   id: string;
@@ -281,64 +283,88 @@ const PurchaseOrderDetails = () => {
     );
   }
 
+  const ActionButtons = () => (
+    <>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogTrigger asChild>
+          <Button variant="secondary" className={isMobile ? 'w-full justify-start' : ''}>
+            <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
+          </DialogHeader>
+          <PurchaseOrderPDFViewer
+            orderId={order.id}
+            onClose={() => setIsModalOpen(false)}
+            fileName={generateFileName()}
+          />
+        </DialogContent>
+      </Dialog>
+      <PDFDownloadButton
+        orderId={order.id}
+        fileNameGenerator={generateFileName}
+        endpoint="generate-po-pdf"
+        label="Descargar PDF"
+        variant={isMobile ? 'secondary' : 'outline'}
+        className={isMobile ? 'w-full justify-start' : ''}
+      />
+      <WhatsAppSenderButton
+        recipientPhone={order.suppliers?.phone}
+        documentType="Orden de Compra"
+        documentId={order.id}
+        documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
+        companyName={order.companies?.name || ''}
+      />
+      <Button
+        onClick={() => setIsEmailModalOpen(true)}
+        disabled={!order.suppliers?.email}
+        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
+      >
+        <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
+      </Button>
+      {order.status !== 'Approved' && order.status !== 'Archived' && (
+        <Button 
+          onClick={handleApproveOrder} 
+          className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
+        >
+          <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
+        </Button>
+      )}
+      <Button asChild className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}>
+        <Link to={`/purchase-orders/edit/${order.id}`}>
+          <Edit className="mr-2 h-4 w-4" /> Editar Orden
+        </Link>
+      </Button>
+    </>
+  );
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="secondary">
-                <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+        
+        {isMobile ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon">
+                <MoreVertical className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Previsualización de Orden de Compra</DialogTitle>
-              </DialogHeader>
-              <PurchaseOrderPDFViewer
-                orderId={order.id}
-                onClose={() => setIsModalOpen(false)}
-                fileName={generateFileName()} // Pasar el nombre de archivo generado
-              />
-            </DialogContent>
-          </Dialog>
-          <PDFDownloadButton
-            orderId={order.id}
-            fileNameGenerator={generateFileName}
-            endpoint="generate-po-pdf"
-            label="Descargar PDF"
-          />
-          <WhatsAppSenderButton
-            recipientPhone={order.suppliers?.phone}
-            documentType="Orden de Compra"
-            documentId={order.id}
-            documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
-            companyName={order.companies?.name || ''}
-          />
-          <Button
-            onClick={() => setIsEmailModalOpen(true)}
-            disabled={!order.suppliers?.email}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
-          </Button>
-          {order.status !== 'Approved' && order.status !== 'Archived' && (
-            <Button 
-              onClick={handleApproveOrder} 
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Aprobar Orden
-            </Button>
-          )}
-          <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
-            <Link to={`/purchase-orders/edit/${order.id}`}>
-              <Edit className="mr-2 h-4 w-4" /> Editar Orden
-            </Link>
-          </Button>
-        </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Acciones de Orden</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <ActionButtons />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex gap-2 flex-wrap justify-end">
+            <ActionButtons />
+          </div>
+        )}
       </div>
 
       <Card className="mb-6">

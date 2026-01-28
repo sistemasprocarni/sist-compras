@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail, MoreVertical, CheckCircle } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails, updateQuoteRequestStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface QuoteRequestItem {
   id: string;
@@ -245,67 +246,91 @@ const QuoteRequestDetails = () => {
     );
   }
 
+  const ActionButtons = () => (
+    <>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogTrigger asChild>
+          <Button variant="secondary" className={isMobile ? 'w-full justify-start' : ''}>
+            <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
+          </DialogHeader>
+          <QuoteRequestPreviewModal
+            requestId={request.id}
+            onClose={() => setIsModalOpen(false)}
+            fileName={generateFileName()}
+          />
+        </DialogContent>
+      </Dialog>
+      <PDFDownloadButton
+        requestId={request.id}
+        fileNameGenerator={generateFileName}
+        endpoint="generate-qr-pdf"
+        label="Descargar PDF"
+        variant={isMobile ? 'secondary' : 'outline'}
+        className={isMobile ? 'w-full justify-start' : ''}
+      />
+      <WhatsAppSenderButton
+        recipientPhone={request.suppliers?.phone}
+        documentType="Solicitud de Cotización"
+        documentId={request.id}
+        documentNumber={request.id.substring(0, 8)}
+        companyName={request.companies?.name || ''}
+      />
+      <Button
+        onClick={() => setIsEmailModalOpen(true)}
+        disabled={!request.suppliers?.email}
+        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
+      >
+        <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
+      </Button>
+      {request.status !== 'Approved' && request.status !== 'Archived' && (
+        <Button 
+          onClick={handleApproveRequest} 
+          className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
+        >
+          <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
+        </Button>
+      )}
+      <Button asChild className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}>
+        <Link to={`/quote-requests/edit/${request.id}`}>
+          <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
+        </Link>
+      </Button>
+      <Button onClick={handleConvertToPurchaseOrder} className={cn("bg-procarni-secondary hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}>
+        <ShoppingCart className="mr-2 h-4 w-4" /> Convertir a OC
+      </Button>
+    </>
+  );
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="secondary">
-                <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+        
+        {isMobile ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon">
+                <MoreVertical className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
-              </DialogHeader>
-              <QuoteRequestPreviewModal
-                requestId={request.id}
-                onClose={() => setIsModalOpen(false)}
-                fileName={generateFileName()} // Pasar el nombre de archivo generado
-              />
-            </DialogContent>
-          </Dialog>
-          <PDFDownloadButton
-            requestId={request.id}
-            fileNameGenerator={generateFileName}
-            endpoint="generate-qr-pdf"
-            label="Descargar PDF"
-          />
-          <WhatsAppSenderButton
-            recipientPhone={request.suppliers?.phone}
-            documentType="Solicitud de Cotización"
-            documentId={request.id}
-            documentNumber={request.id.substring(0, 8)}
-            companyName={request.companies?.name || ''}
-          />
-          <Button
-            onClick={() => setIsEmailModalOpen(true)}
-            disabled={!request.suppliers?.email}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
-          </Button>
-          {request.status !== 'Approved' && request.status !== 'Archived' && (
-            <Button 
-              onClick={handleApproveRequest} 
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Aprobar Solicitud
-            </Button>
-          )}
-          <Button asChild className="bg-procarni-primary hover:bg-procarni-primary/90">
-            <Link to={`/quote-requests/edit/${request.id}`}>
-              <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
-            </Link>
-          </Button>
-          <Button onClick={handleConvertToPurchaseOrder} className="bg-procarni-secondary hover:bg-green-700">
-            <ShoppingCart className="mr-2 h-4 w-4" /> Convertir a OC
-          </Button>
-        </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <ActionButtons />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex gap-2 flex-wrap justify-end">
+            <ActionButtons />
+          </div>
+        )}
       </div>
 
       <Card className="mb-6">
@@ -372,7 +397,7 @@ const QuoteRequestDetails = () => {
       <EmailSenderModal
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
-        onSend={handleSendEmail}
+        onSend={(message, sendWhatsApp) => handleSendEmail(message, sendWhatsApp, request.suppliers?.phone)}
         recipientEmail={request.suppliers?.email || ''}
         recipientPhone={request.suppliers?.phone}
         documentType="Solicitud de Cotización"
