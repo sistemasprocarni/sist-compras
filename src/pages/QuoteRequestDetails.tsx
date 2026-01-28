@@ -17,6 +17,7 @@ import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils'; // <-- ADDED IMPORT
 
 interface QuoteRequestItem {
   id: string;
@@ -323,7 +324,9 @@ const QuoteRequestDetails = () => {
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <ActionButtons />
+              <div className="flex flex-col gap-1 p-1">
+                <ActionButtons />
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
