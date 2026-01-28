@@ -103,10 +103,13 @@ const CompanyService = {
       return data;
     }
 
+    // Sanitize query: replace commas (which break PostgREST 'or' filter) with spaces
+    const sanitizedQuery = query.replace(/,/g, ' ');
+
     const { data, error } = await supabase
       .from('companies')
       .select('*')
-      .or(`name.ilike.%${query}%,rif.ilike.%${query}%`)
+      .or(`name.ilike.%${sanitizedQuery}%,rif.ilike.%${sanitizedQuery}%`)
       .limit(10);
 
     if (error) {
