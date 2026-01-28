@@ -14,6 +14,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Material {
   id: string;
@@ -52,6 +53,7 @@ const MaterialManagement = () => {
   const { session } = useSession();
   const userId = session?.user?.id;
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -240,47 +242,81 @@ const MaterialManagement = () => {
           </div>
 
           {filteredMaterials && filteredMaterials.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Unidad</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMaterials.map((material) => (
-                    <TableRow key={material.id}>
-                      <TableCell>{material.code}</TableCell>
-                      <TableCell>{material.name}</TableCell>
-                      <TableCell>{material.category || 'N/A'}</TableCell>
-                      <TableCell>{material.unit || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditMaterial(material)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => confirmDeleteMaterial(material.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
+            isMobile ? (
+              <div className="grid gap-4">
+                {filteredMaterials.map((material) => (
+                  <Card key={material.id} className="p-4">
+                    <CardTitle className="text-lg mb-2">{material.name}</CardTitle>
+                    <CardDescription className="mb-2">Código: {material.code}</CardDescription>
+                    <div className="text-sm space-y-1">
+                      <p>Categoría: {material.category || 'N/A'}</p>
+                      <p>Unidad: {material.unit || 'N/A'}</p>
+                      <p>Exento de IVA: {material.is_exempt ? 'Sí' : 'No'}</p>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleEditMaterial(material); }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); confirmDeleteMaterial(material.id); }}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Unidad</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMaterials.map((material) => (
+                      <TableRow key={material.id}>
+                        <TableCell>{material.code}</TableCell>
+                        <TableCell>{material.name}</TableCell>
+                        <TableCell>{material.category || 'N/A'}</TableCell>
+                        <TableCell>{material.unit || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditMaterial(material)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => confirmDeleteMaterial(material.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <div className="text-center text-muted-foreground p-8">
               No hay materiales registrados o no se encontraron resultados para tu búsqueda/filtro.
