@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -268,15 +268,16 @@ const SupplierManagement = () => {
               {filteredSuppliers.length > 0 ? (
                 filteredSuppliers.map((supplier) => (
                   <Card key={supplier.id} className="p-4">
-                    <CardTitle className="text-lg mb-2">{supplier.name}</CardTitle>
-                    <CardDescription className="mb-2">RIF: {supplier.rif}</CardDescription>
-                    <div className="text-sm space-y-1">
+                    <CardTitle className="text-lg mb-1">{supplier.name}</CardTitle>
+                    <CardDescription className="mb-2">Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}</CardDescription>
+                    <div className="text-sm space-y-1 mt-2">
                       {supplier.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></p>}
-                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>}
+                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 1: {supplier.phone}</p>}
                       {supplier.phone_2 && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 2: {supplier.phone_2}</p>}
-                      <p>Términos de Pago: {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
-                      <p>Días de Crédito: {supplier.credit_days}</p>
-                      <p>Estado: {supplier.status}</p>
+                      {supplier.instagram && <p className="flex items-center"><Instagram className="mr-1 h-3 w-3" /> Instagram: {supplier.instagram}</p>}
+                      <p><strong>Términos de Pago:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
+                      <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
+                      <p><strong>Estado:</strong> {supplier.status}</p>
                     </div>
                     <div className="flex justify-end gap-2 mt-4">
                       <Button
