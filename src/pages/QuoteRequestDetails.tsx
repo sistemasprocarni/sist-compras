@@ -16,8 +16,15 @@ import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils'; // <-- ADDED IMPORT
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger,
+  DropdownMenuLabel // <-- ADDED
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface QuoteRequestItem {
   id: string;

@@ -11,7 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FichaTecnica } from '@/integrations/supabase/types';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger,
+  DropdownMenuLabel // <-- ADDED
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 const SupplierDetails = () => {
@@ -143,7 +150,9 @@ const SupplierDetails = () => {
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>Acciones de Proveedor</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <ActionButtons />
+              <div className="flex flex-col gap-1 p-1">
+                <ActionButtons />
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
