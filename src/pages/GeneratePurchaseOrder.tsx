@@ -76,30 +76,60 @@ const GeneratePurchaseOrder = () => {
 
   // Effect to prefill form from quote request
   React.useEffect(() => {
-    if (quoteRequest) {
-      setCompanyId(quoteRequest.company_id);
-      setCompanyName(quoteRequest.companies?.name || '');
-      setSupplierId(quoteRequest.supplier_id);
-      setSupplierName(quoteRequest.suppliers?.name || '');
-      setCurrency(quoteRequest.currency as 'USD' | 'VES');
-      setExchangeRate(quoteRequest.exchange_rate || undefined);
-      setObservations(`Generado desde Solicitud de Cotización: ${quoteRequest.id.substring(0, 8)}`);
+    const loadQuoteRequestItems = async () => {
+      if (quoteRequest) {
+        setCompanyId(quoteRequest.company_id);
+        setCompanyName(quoteRequest.companies?.name || '');
+        setSupplierId(quoteRequest.supplier_id);
+        setSupplierName(quoteRequest.suppliers?.name || '');
+        setCurrency(quoteRequest.currency as 'USD' | 'VES');
+        setExchangeRate(quoteRequest.exchange_rate || undefined);
+        setObservations(`Generado desde Solicitud de Cotización: ${quoteRequest.id.substring(0, 8)}`);
 
-      // Clear existing items and add items from quote request
-      clearCart();
-      quoteRequest.quote_request_items.forEach((item: any) => {
-        addItem({
-          material_id: undefined, // Must be selected later
-          material_name: item.material_name,
-          supplier_code: '', // No supplier code in quote request
-          quantity: item.quantity,
-          unit_price: 0, // Price needs to be entered
-          tax_rate: 0.16,
-          is_exempt: false,
-          unit: item.unit || MATERIAL_UNITS[0],
-        });
-      });
-    }
+        clearCart();
+        
+        const supplierIdForSearch = quoteRequest.supplier_id;
+        
+        // Process items from quote request
+        for (const item of quoteRequest.quote_request_items) {
+          let materialId: string | undefined = undefined;
+          let supplierCode: string = '';
+          let isExempt: boolean = false;
+          
+          // Attempt to find the material ID and supplier code by name and supplier ID
+          if (supplierIdForSearch) {
+            try {
+              // Search materials associated with the supplier by the material name
+              const associatedMaterials = await searchMaterialsBySupplier(supplierIdForSearch, item.material_name);
+              
+              // Find an exact match by name
+              const exactMatch = associatedMaterials.find(m => m.name.toLowerCase() === item.material_name.toLowerCase());
+              
+              if (exactMatch) {
+                materialId = exactMatch.id;
+                supplierCode = exactMatch.code || '';
+                isExempt = exactMatch.is_exempt || false;
+              }
+            } catch (e) {
+              console.error("Error searching material ID during QR conversion:", e);
+            }
+          }
+
+          addItem({
+            material_id: materialId, // Will be undefined if not found, forcing manual selection/entry
+            material_name: item.material_name,
+            supplier_code: supplierCode,
+            quantity: item.quantity,
+            unit_price: 0, // Price needs to be entered
+            tax_rate: 0.16,
+            is_exempt: isExempt,
+            unit: item.unit || MATERIAL_UNITS[0],
+          });
+        }
+      }
+    };
+
+    loadQuoteRequestItems();
   }, [quoteRequest]);
 
   // Effect to prefill form from supplier data
@@ -156,6 +186,7 @@ const GeneratePurchaseOrder = () => {
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
+      supplier_code: material.code || '', // Use material code as supplier code if available
       // tax_rate remains 0.16 by default, calculation handles is_exempt
     });
     // Import specification into description if available
