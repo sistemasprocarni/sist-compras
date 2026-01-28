@@ -169,5 +169,4 @@ export {
   getPriceHistoryByMaterialId,
   getAllAuditLogs,
   logAudit,
-  getApprovedOrdersForAnalytics, // NEW EXPORT
 };
