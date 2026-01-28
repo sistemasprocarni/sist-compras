@@ -2,45 +2,43 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ChevronsUpDown, Check } from 'lucide-react';
-import { useMaterials } from '@/integrations/supabase/hooks/materials/useMaterials';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Search } from 'lucide-react';
+import SmartSearch from '@/components/SmartSearch';
+import { searchMaterials } from '@/integrations/supabase/data/materials';
+
+interface SearchResult {
+  id: string;
+  name: string;
+}
 
 const MaterialSearchQuickAccess: React.FC = () => {
   const navigate = useNavigate();
-  const { data: materials, isLoading } = useMaterials();
   
+  // State for free text search
   const [searchTerm, setSearchTerm] = useState('');
-  const [open, setOpen] = useState(false);
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  
+  // State for SmartSearch selection
+  const [selectedMaterial, setSelectedMaterial] = useState<SearchResult | null>(null);
 
-  const materialOptions = materials?.map(m => ({
-    value: m.id,
-    label: m.name,
-  })) || [];
-
-  const selectedMaterial = materialOptions.find(m => m.value === selectedMaterialId);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = selectedMaterial ? selectedMaterial.label : searchTerm;
-    
-    if (query.trim()) {
-      // Navigate to the dedicated search page
-      navigate(`/search-suppliers-by-material?query=${encodeURIComponent(query.trim())}`);
-    }
+  // Function to adapt searchMaterials for SmartSearch
+  const fetchMaterialsForSmartSearch = async (query: string): Promise<SearchResult[]> => {
+    // searchMaterials returns Material[], which is compatible with SearchResult { id, name }
+    return searchMaterials(query);
   };
 
-  const handleMaterialSelect = (materialId: string) => {
-    setSelectedMaterialId(materialId);
-    setOpen(false);
-    const material = materialOptions.find(m => m.value === materialId);
-    if (material) {
-      // Automatically navigate when a material is selected from the dropdown
-      navigate(`/search-suppliers-by-material?query=${encodeURIComponent(material.label)}`);
+  const handleSmartSelect = (item: SearchResult) => {
+    setSelectedMaterial(item);
+    setSearchTerm(''); // Clear free text search if smart search is used
+    
+    // Navigate immediately upon selection
+    navigate(`/search-suppliers-by-material?query=${encodeURIComponent(item.name)}`);
+  };
+
+  const handleFreeTextSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setSelectedMaterial(null); // Clear smart selection if free text is used
+      navigate(`/search-suppliers-by-material?query=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
@@ -54,51 +52,16 @@ const MaterialSearchQuickAccess: React.FC = () => {
       </p>
       
       <div className="space-y-4">
-        {/* 1. Combobox Search (Intelligent Search) */}
+        {/* 1. Smart Search (Intelligent Search) */}
         <div className="flex flex-col space-y-2">
           <label className="text-sm font-medium">Seleccionar Material Existente:</label>
-          {isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                >
-                  {selectedMaterial
-                    ? selectedMaterial.label
-                    : "Selecciona un material..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
-                <Command>
-                  <CommandInput placeholder="Buscar material..." />
-                  <CommandEmpty>No se encontró el material.</CommandEmpty>
-                  <CommandGroup>
-                    {materialOptions.map((material) => (
-                      <CommandItem
-                        key={material.value}
-                        value={material.label}
-                        onSelect={() => handleMaterialSelect(material.value)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedMaterialId === material.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {material.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          )}
+          <SmartSearch
+            placeholder="Buscar o seleccionar un material..."
+            onSelect={handleSmartSelect}
+            fetchFunction={fetchMaterialsForSmartSearch}
+            selectedId={selectedMaterial?.id}
+            displayValue={selectedMaterial?.name}
+          />
         </div>
 
         <div className="flex items-center">
@@ -108,14 +71,14 @@ const MaterialSearchQuickAccess: React.FC = () => {
         </div>
 
         {/* 2. Free Text Search */}
-        <form onSubmit={handleSearch} className="flex space-x-2">
+        <form onSubmit={handleFreeTextSearch} className="flex space-x-2">
           <Input
             type="text"
             placeholder="Escribe el nombre del material (Búsqueda libre)..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setSelectedMaterialId(null); // Clear selection if user starts typing
+              setSelectedMaterial(null); // Clear smart selection if user starts typing
             }}
             className="flex-1"
           />
