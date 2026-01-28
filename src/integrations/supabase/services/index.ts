@@ -9,4 +9,3 @@ export * from './supplierMaterialService';
 export * from './fichaTecnicaService';
 export * from './priceHistoryService';
 export * from './auditLogService';
-export * from './dashboardService'; // NEW EXPORT

@@ -222,28 +222,6 @@ const SupplierService = {
     }
     return data;
   },
-  
-  getSuppliersByMaterial: async (materialId: string): Promise<any[]> => {
-    const { data, error } = await supabase
-      .from('supplier_materials')
-      .select(`
-        specification,
-        suppliers (id, name, rif, email, phone, phone_2, instagram, payment_terms, credit_days, status)
-      `)
-      .eq('material_id', materialId);
-
-    if (error) {
-      console.error('[SupplierService.getSuppliersByMaterial] Error:', error);
-      showError('Error al buscar proveedores por material.');
-      return [];
-    }
-
-    // Flatten the result structure for the frontend components
-    return data.map(item => ({
-      ...item.suppliers,
-      specification: item.specification,
-    }));
-  },
 };
 
 export const {
@@ -253,5 +231,4 @@ export const {
   delete: deleteSupplier,
   search: searchSuppliers,
   getById: getSupplierDetails,
-  getSuppliersByMaterial, // Export the new function
 } = SupplierService;
