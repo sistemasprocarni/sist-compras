@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterials, getSuppliersByMaterial } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'; // Import useSearchParams
 import { Button } from '@/components/ui/button';
-import { Phone, Instagram, PlusCircle, Eye } from 'lucide-react'; // Importar iconos
+import { Phone, Instagram, PlusCircle, Eye } from 'lucide-react';
 
 interface Material {
   id: string;
@@ -22,8 +22,8 @@ interface SupplierResult {
   rif: string;
   email?: string;
   phone?: string;
-  phone_2?: string; // Añadido
-  instagram?: string; // Añadido
+  phone_2?: string;
+  instagram?: string;
   payment_terms: string;
   credit_days: number;
   status: string;
@@ -32,9 +32,12 @@ interface SupplierResult {
 
 const SearchSuppliersByMaterial = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // Hook para leer parámetros de URL
+  
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
+  const [initialQuery, setInitialQuery] = useState<string | null>(null); // State to hold initial query from URL
 
   const formatPhoneNumberForWhatsApp = (phone: string) => {
     const digitsOnly = phone.replace(/\D/g, '');
@@ -44,12 +47,11 @@ const SearchSuppliersByMaterial = () => {
     return digitsOnly;
   };
 
-  const handleMaterialSelect = async (material: Material) => {
-    setSelectedMaterial(material);
+  const fetchSuppliers = async (materialId: string) => {
     setIsLoadingSuppliers(true);
     setSuppliers([]);
     try {
-      const fetchedSuppliers = await getSuppliersByMaterial(material.id);
+      const fetchedSuppliers = await getSuppliersByMaterial(materialId);
       setSuppliers(fetchedSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers by material:', error);
@@ -58,6 +60,39 @@ const SearchSuppliersByMaterial = () => {
       setIsLoadingSuppliers(false);
     }
   };
+
+  const handleMaterialSelect = async (material: Material) => {
+    setSelectedMaterial(material);
+    // Clear initial query once a selection is made via SmartSearch
+    setInitialQuery(null); 
+    await fetchSuppliers(material.id);
+  };
+
+  // Effect to handle initial load from URL query parameter
+  useEffect(() => {
+    const queryFromUrl = searchParams.get('query');
+    if (queryFromUrl) {
+      setInitialQuery(queryFromUrl);
+      // We need to search for the material ID using the query name
+      const searchAndLoad = async () => {
+        try {
+          const results = await searchMaterials(queryFromUrl);
+          if (results.length > 0) {
+            // Assuming the first result is the intended material
+            const material = results[0];
+            setSelectedMaterial(material);
+            await fetchSuppliers(material.id);
+          } else {
+            showError(`No se encontró un material que coincida con "${queryFromUrl}".`);
+          }
+        } catch (error) {
+          console.error('Error searching material on initial load:', error);
+          showError('Error al buscar el material inicial.');
+        }
+      };
+      searchAndLoad();
+    }
+  }, [searchParams]); // Dependencia de searchParams para ejecutar solo al cargar la URL
 
   const handleCreateQuoteRequest = (supplier: SupplierResult) => {
     if (!selectedMaterial) {
@@ -91,7 +126,9 @@ const SearchSuppliersByMaterial = () => {
               placeholder="Buscar material por nombre o código"
               onSelect={handleMaterialSelect}
               fetchFunction={searchMaterials}
-              displayValue={selectedMaterial?.name || ''}
+              // Use selectedMaterial.name for display, or initialQuery if loading
+              displayValue={selectedMaterial?.name || initialQuery || ''} 
+              selectedId={selectedMaterial?.id}
             />
             {selectedMaterial && (
               <p className="text-sm text-muted-foreground mt-2">
