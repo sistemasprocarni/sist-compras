@@ -96,7 +96,7 @@ const SearchManagement = () => {
               onClick={() => navigate('/price-comparison')}
               className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
             >
-              <BarChart2 className="mr-2 h-4 w-4" /> 🔍 Comparar Precios
+              <BarChart2 className="mr-2 h-4 w-4" /> Comparar Precios
             </Button>
           </div>
         </CardContent>
