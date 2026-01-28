@@ -96,37 +96,6 @@ export const searchMaterialsBySupplier = async (supplierId: string, query: strin
   return materials.slice(0, 10);
 };
 
-// NEW FUNCTION: Fetch approved orders with items and material categories for analytics
-export const getApprovedOrdersForAnalytics = async (): Promise<any[]> => {
-  const { data, error } = await supabase
-    .from('purchase_orders')
-    .select(`
-      id,
-      supplier_id,
-      suppliers (name),
-      currency,
-      exchange_rate,
-      purchase_order_items (
-        quantity,
-        unit_price,
-        tax_rate,
-        is_exempt,
-        material_id,
-        materials (category)
-      )
-    `)
-    .eq('status', 'Approved')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[getApprovedOrdersForAnalytics] Error:', error);
-    showError('Error al cargar datos de órdenes aprobadas para análisis.');
-    return [];
-  }
-  return data;
-};
-
-
 // Exportaciones individuales para mantener compatibilidad
 export {
   getAllSuppliers,
@@ -169,5 +138,4 @@ export {
   getPriceHistoryByMaterialId,
   getAllAuditLogs,
   logAudit,
-  getApprovedOrdersForAnalytics, // NEW EXPORT
 };
