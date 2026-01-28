@@ -93,7 +93,6 @@
 
   html, body, #root { /* Asegura que html, body y el div raíz ocupen el 100% de la altura y no se desborden */
     height: 100%;
-    overflow: hidden;
   }
 
   body {
