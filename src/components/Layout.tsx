@@ -59,7 +59,7 @@ const Layout = () => {
       </Sheet>
       {/* Eliminada la barra de búsqueda genérica */}
       <div className="w-full flex-1">
-        <h1 className="text-lg font-semibold text-procarni-primary">Procarni System</h1>
+        <h1 className="text-lg font-semibold text-procarni-primary"></h1>
       </div>
     </header>
   );
@@ -89,7 +89,7 @@ const Layout = () => {
           <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">
             {/* Eliminada la barra de búsqueda genérica */}
             <div className="w-full flex-1">
-              <h1 className="text-lg font-semibold text-procarni-primary">Gestión de Suministros</h1>
+              <h1 className="text-lg font-semibold text-procarni-primary"></h1>
             </div>
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto h-full">
