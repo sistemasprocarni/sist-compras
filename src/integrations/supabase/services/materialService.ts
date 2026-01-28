@@ -115,6 +115,48 @@ const MaterialService = {
     }
     return data;
   },
+  
+  searchBySupplier: async (supplierId: string, query: string): Promise<any[]> => {
+    let selectQuery = supabase
+      .from('supplier_materials')
+      .select(`
+        material_id:materials!inner(
+          id, 
+          name, 
+          code, 
+          category, 
+          unit, 
+          is_exempt
+        ),
+        specification
+      `)
+      .eq('supplier_id', supplierId);
+
+    if (query.trim()) {
+      selectQuery = selectQuery.or(`material_id.name.ilike.%${query}%,material_id.code.ilike.%${query}%`);
+    }
+    
+    selectQuery = selectQuery.limit(10);
+
+    const { data, error } = await selectQuery;
+
+    if (error) {
+      console.error('[MaterialService.searchBySupplier] Error:', error);
+      showError('Error al buscar materiales asociados al proveedor.');
+      return [];
+    }
+    
+    // Flatten the result structure for the frontend components
+    return data.map(item => ({
+      id: item.material_id.id,
+      name: item.material_id.name,
+      code: item.material_id.code,
+      category: item.material_id.category,
+      unit: item.material_id.unit,
+      is_exempt: item.material_id.is_exempt,
+      specification: item.specification,
+    }));
+  },
 };
 
 export const {
@@ -123,4 +165,5 @@ export const {
   update: updateMaterial,
   delete: deleteMaterial,
   search: searchMaterials,
+  searchBySupplier: searchMaterialsBySupplier,
 } = MaterialService;
