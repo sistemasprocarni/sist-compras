@@ -87,7 +87,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className={cn("w-full justify-between", "min-w-[150px] md:min-w-[200px] lg:min-w-[250px]")}
           disabled={disabled}
         >
           {selectedItem ? selectedItem.name : placeholder}
