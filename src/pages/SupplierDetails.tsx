@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails, getFichaTecnicaBySupplierAndProduct } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -49,6 +49,17 @@ interface SupplierDetailsData {
   user_id: string;
   materials?: MaterialAssociation[];
 }
+
+// Custom hook to check if a Ficha Tecnica exists for a material/supplier pair
+const useFichaTecnicaStatus = (supplierId: string, materialName: string) => {
+  return useQuery({
+    queryKey: ['fichaTecnicaStatus', supplierId, materialName],
+    queryFn: () => getFichaTecnicaBySupplierAndProduct(supplierId, materialName),
+    select: (data) => !!data, // Returns true if data exists
+    enabled: !!supplierId && !!materialName,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+};
 
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -240,21 +251,32 @@ const SupplierDetails = () => {
           {supplier.materials && supplier.materials.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
-                {supplier.materials.map((sm, index) => (
-                  <Card key={sm.id || index} className="p-3">
-                    <p className="font-semibold text-procarni-primary">{sm.materials.name}</p>
-                    <div className="text-sm mt-1 space-y-0.5">
-                      <p><strong>Código:</strong> {sm.materials.code || 'N/A'}</p>
-                      <p><strong>Categoría:</strong> {sm.materials.category || 'N/A'}</p>
-                      <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
-                    </div>
-                    <div className="mt-3 flex justify-end">
-                      <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)}>
-                        <FileText className="mr-2 h-4 w-4" /> Ver Ficha Técnica
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                {supplier.materials.map((sm, index) => {
+                  // eslint-disable-next-line react-hooks/rules-of-hooks
+                  const { data: hasFicha, isLoading: isLoadingFicha } = useFichaTecnicaStatus(supplier.id, sm.materials.name);
+                  
+                  return (
+                    <Card key={sm.id || index} className="p-3">
+                      <p className="font-semibold text-procarni-primary">{sm.materials.name}</p>
+                      <div className="text-sm mt-1 space-y-0.5">
+                        <p><strong>Código:</strong> {sm.materials.code || 'N/A'}</p>
+                        <p><strong>Categoría:</strong> {sm.materials.category || 'N/A'}</p>
+                        <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)}>
+                          <FileText className="mr-2 h-4 w-4" /> 
+                          Ver Ficha Técnica
+                          {isLoadingFicha ? (
+                            <span className="ml-2 text-xs text-muted-foreground">...</span>
+                          ) : hasFicha ? (
+                            <Check className="ml-2 h-4 w-4 text-green-600" />
+                          ) : null}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -269,19 +291,29 @@ const SupplierDetails = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {supplier.materials.map((sm, index) => (
-                      <TableRow key={sm.id || index}>
-                        <TableCell>{sm.materials.code || 'N/A'}</TableCell>
-                        <TableCell>{sm.materials.name}</TableCell>
-                        <TableCell>{sm.materials.category || 'N/A'}</TableCell>
-                        <TableCell>{sm.specification || 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)}>
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {supplier.materials.map((sm, index) => {
+                      // eslint-disable-next-line react-hooks/rules-of-hooks
+                      const { data: hasFicha, isLoading: isLoadingFicha } = useFichaTecnicaStatus(supplier.id, sm.materials.name);
+                      
+                      return (
+                        <TableRow key={sm.id || index}>
+                          <TableCell>{sm.materials.code || 'N/A'}</TableCell>
+                          <TableCell>{sm.materials.name}</TableCell>
+                          <TableCell>{sm.materials.category || 'N/A'}</TableCell>
+                          <TableCell>{sm.specification || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)}>
+                              <FileText className="h-4 w-4" />
+                              {isLoadingFicha ? (
+                                <span className="ml-1 text-xs text-muted-foreground">...</span>
+                              ) : hasFicha ? (
+                                <Check className="ml-1 h-4 w-4 text-green-600" />
+                              ) : null}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
