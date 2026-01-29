@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check } from 'lucide-react';
@@ -10,14 +10,14 @@ import { showError } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FichaTecnica } from '@/integrations/supabase/types';
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger,
-  DropdownMenuLabel // <-- ADDED
+  DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -50,17 +50,6 @@ interface SupplierDetailsData {
   materials?: MaterialAssociation[];
 }
 
-// Custom hook to check if a Ficha Tecnica exists for a material/supplier pair
-const useFichaTecnicaStatus = (supplierId: string, materialName: string) => {
-  return useQuery({
-    queryKey: ['fichaTecnicaStatus', supplierId, materialName],
-    queryFn: () => getFichaTecnicaBySupplierAndProduct(supplierId, materialName),
-    select: (data) => !!data, // Returns true if data exists
-    enabled: !!supplierId && !!materialName,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
-};
-
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -79,6 +68,19 @@ const SupplierDetails = () => {
     },
     enabled: !!id,
   });
+
+  // --- Fetch Ficha Tecnica Status for all materials using useQueries ---
+  const materialQueries = supplier?.materials?.map(sm => ({
+    queryKey: ['fichaTecnicaStatus', supplier.id, sm.materials.name],
+    queryFn: () => getFichaTecnicaBySupplierAndProduct(supplier.id, sm.materials.name),
+    select: (data: FichaTecnica | null) => !!data, // Transform result to boolean (hasFicha)
+    enabled: !!supplier.id && !!sm.materials.name,
+    staleTime: 1000 * 60 * 5,
+  })) || [];
+
+  const fichaStatusResults = useQueries({ queries: materialQueries });
+  const isLoadingFichaStatus = fichaStatusResults.some(result => result.isLoading);
+  // --------------------------------------------------------------------
 
   const formatPhoneNumberForWhatsApp = (phone: string) => {
     const digitsOnly = phone.replace(/\D/g, '');
@@ -125,7 +127,7 @@ const SupplierDetails = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingFichaStatus) {
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
         Cargando detalles del proveedor...
@@ -252,8 +254,7 @@ const SupplierDetails = () => {
             isMobile ? (
               <div className="space-y-3">
                 {supplier.materials.map((sm, index) => {
-                  // eslint-disable-next-line react-hooks/rules-of-hooks
-                  const { data: hasFicha, isLoading: isLoadingFicha } = useFichaTecnicaStatus(supplier.id, sm.materials.name);
+                  const { data: hasFicha, isLoading: isLoadingFicha } = fichaStatusResults[index];
                   
                   return (
                     <Card key={sm.id || index} className="p-3">
@@ -264,7 +265,7 @@ const SupplierDetails = () => {
                         <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
                       </div>
                       <div className="mt-3 flex justify-end">
-                        <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)}>
+                        <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)} disabled={isLoadingFicha}>
                           <FileText className="mr-2 h-4 w-4" /> 
                           Ver Ficha Técnica
                           {isLoadingFicha ? (
@@ -292,8 +293,7 @@ const SupplierDetails = () => {
                   </TableHeader>
                   <TableBody>
                     {supplier.materials.map((sm, index) => {
-                      // eslint-disable-next-line react-hooks/rules-of-hooks
-                      const { data: hasFicha, isLoading: isLoadingFicha } = useFichaTecnicaStatus(supplier.id, sm.materials.name);
+                      const { data: hasFicha, isLoading: isLoadingFicha } = fichaStatusResults[index];
                       
                       return (
                         <TableRow key={sm.id || index}>
@@ -302,7 +302,7 @@ const SupplierDetails = () => {
                           <TableCell>{sm.materials.category || 'N/A'}</TableCell>
                           <TableCell>{sm.specification || 'N/A'}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)} disabled={isLoadingFicha}>
                               <FileText className="h-4 w-4" />
                               {isLoadingFicha ? (
                                 <span className="ml-1 text-xs text-muted-foreground">...</span>
