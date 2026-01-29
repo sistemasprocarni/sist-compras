@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { showError, showLoading, dismissToast, showSuccess } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
+import { cn } from '@/lib/utils'; // Import cn for conditional class application
 
 interface PDFDownloadButtonProps {
   requestId?: string; // For quote requests
@@ -96,21 +97,17 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
       onClick={handleDownload}
       disabled={isDownloading || disabled}
       variant={variant}
-      className="flex items-center gap-2"
-      asChild={asChild} // Pass asChild down to Button
+      asChild={asChild}
+      // When asChild is true, the parent (DropdownMenuItem) handles the layout, 
+      // but we keep the class here for when it's used as a standalone button (asChild=false)
+      className={cn("flex items-center gap-2", asChild ? "w-full justify-start" : "")} 
     >
-      {/* If asChild is true, the children (Download icon and label) will be rendered inside the DropdownMenuItem */}
-      {asChild ? (
-        <>
-          <Download className="h-4 w-4" />
-          {isDownloading ? 'Descargando...' : label}
-        </>
-      ) : (
-        <>
-          <Download className="h-4 w-4" />
-          {isDownloading ? 'Descargando...' : label}
-        </>
-      )}
+      {/* Wrap content in a single span element to ensure it's a single child element, 
+          which satisfies the requirement of components using Radix Slot/asChild pattern. */}
+      <span className="flex items-center gap-2">
+        <Download className="h-4 w-4" />
+        {isDownloading ? 'Descargando...' : label}
+      </span>
     </Button>
   );
 };

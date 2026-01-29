@@ -303,7 +303,9 @@ const PurchaseOrderDetails = () => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogTrigger asChild>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
-            <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+            <span className="flex items-center">
+              <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+            </span>
           </DropdownMenuItem>
         </DialogTrigger>
         <DialogContent className="max-w-5xl h-[95vh] flex flex-col">

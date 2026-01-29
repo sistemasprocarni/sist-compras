@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageSquare } from 'lucide-react'; // Usar MessageSquare en lugar de WhatsApp
 import { showError } from '@/utils/toast';
+import { cn } from '@/lib/utils';
 
 interface WhatsAppSenderButtonProps {
   recipientPhone?: string;
@@ -44,9 +45,12 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
       disabled={!recipientPhone}
       variant={variant}
       asChild={asChild}
-      className={!asChild ? "bg-green-600 hover:bg-green-700" : ""} // Apply custom color only if not rendering as child (i.e., not inside dropdown)
+      className={cn("flex items-center gap-2", !asChild ? "bg-green-600 hover:bg-green-700" : "w-full justify-start")} // Apply custom color only if not rendering as child (i.e., not inside dropdown)
     >
-      <MessageSquare className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+      {/* Wrap content in a single span element to ensure it's a single child element */}
+      <span className="flex items-center gap-2">
+        <MessageSquare className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+      </span>
     </Button>
   );
 };
