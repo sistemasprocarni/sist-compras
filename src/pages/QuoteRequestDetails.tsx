@@ -22,8 +22,9 @@ import {
   DropdownMenuItem, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger,
-  DropdownMenuLabel // <-- ADDED
+  DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
 interface QuoteRequestItem {
@@ -76,6 +77,8 @@ const QuoteRequestDetails = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false); // Nuevo estado para confirmación de aprobación
+  const [isApproving, setIsApproving] = useState(false); // Estado de carga para aprobación
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -100,16 +103,17 @@ const QuoteRequestDetails = () => {
   const handleApproveRequest = async () => {
     if (!request || request.status === 'Approved') return;
 
-    const confirmation = window.confirm(`¿Estás seguro de que deseas aprobar la Solicitud de Cotización #${request.id.substring(0, 8)}?`);
-    if (!confirmation) return;
-
+    setIsApproveConfirmOpen(false); // Close dialog immediately
+    setIsApproving(true);
     const toastId = showLoading('Aprobando solicitud...');
+    
     try {
       const success = await updateQuoteRequestStatus(request.id, 'Approved');
       if (success) {
         showSuccess('Solicitud de Cotización aprobada exitosamente.');
         queryClient.invalidateQueries({ queryKey: ['quoteRequestDetails', id] });
         queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Active'] });
+        queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Approved'] });
       } else {
         throw new Error('Fallo al actualizar el estado.');
       }
@@ -117,6 +121,7 @@ const QuoteRequestDetails = () => {
       showError(error.message || 'Error al aprobar la solicitud.');
     } finally {
       dismissToast(toastId);
+      setIsApproving(false);
     }
   };
 
@@ -297,7 +302,8 @@ const QuoteRequestDetails = () => {
       </Button>
       {request.status !== 'Approved' && request.status !== 'Archived' && (
         <Button 
-          onClick={handleApproveRequest} 
+          onClick={() => setIsApproveConfirmOpen(true)} // Abrir diálogo de confirmación
+          disabled={isApproving}
           className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
         >
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
@@ -413,6 +419,24 @@ const QuoteRequestDetails = () => {
         documentType="Solicitud de Cotización"
         documentId={request.id}
       />
+
+      {/* AlertDialog for Approval Confirmation */}
+      <AlertDialog open={isApproveConfirmOpen} onOpenChange={setIsApproveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Aprobación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas aprobar esta Solicitud de Cotización? Esto marcará la solicitud como finalizada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isApproving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApproveRequest} disabled={isApproving} className="bg-green-600 hover:bg-green-700">
+              {isApproving ? 'Aprobando...' : 'Aprobar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

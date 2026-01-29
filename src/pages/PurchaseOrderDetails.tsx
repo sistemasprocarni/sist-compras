@@ -23,8 +23,9 @@ import {
   DropdownMenuItem, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger,
-  DropdownMenuLabel // <-- ADDED
+  DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
 interface PurchaseOrderItem {
@@ -93,6 +94,8 @@ const PurchaseOrderDetails = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false); // Nuevo estado para confirmación de aprobación
+  const [isApproving, setIsApproving] = useState(false); // Estado de carga para aprobación
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
@@ -159,16 +162,17 @@ const PurchaseOrderDetails = () => {
   const handleApproveOrder = async () => {
     if (!order || order.status === 'Approved') return;
 
-    const confirmation = window.confirm(`¿Estás seguro de que deseas aprobar la Orden de Compra ${formatSequenceNumber(order.sequence_number, order.created_at)}?`);
-    if (!confirmation) return;
-
+    setIsApproveConfirmOpen(false); // Close dialog immediately
+    setIsApproving(true);
     const toastId = showLoading('Aprobando orden...');
+    
     try {
       const success = await updatePurchaseOrderStatus(order.id, 'Approved');
       if (success) {
         showSuccess('Orden de Compra aprobada exitosamente.');
         queryClient.invalidateQueries({ queryKey: ['purchaseOrderDetails', id] });
         queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+        queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Approved'] });
       } else {
         throw new Error('Fallo al actualizar el estado.');
       }
@@ -176,6 +180,7 @@ const PurchaseOrderDetails = () => {
       showError(error.message || 'Error al aprobar la orden.');
     } finally {
       dismissToast(toastId);
+      setIsApproving(false);
     }
   };
 
@@ -333,7 +338,8 @@ const PurchaseOrderDetails = () => {
       </Button>
       {order.status !== 'Approved' && order.status !== 'Archived' && (
         <Button 
-          onClick={handleApproveOrder} 
+          onClick={() => setIsApproveConfirmOpen(true)} // Abrir diálogo de confirmación
+          disabled={isApproving}
           className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
         >
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
@@ -492,13 +498,31 @@ const PurchaseOrderDetails = () => {
 
       <EmailSenderModal
         isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
+        onClose={() => setIsEmailModalModalOpen(false)}
         onSend={(message, sendWhatsApp) => handleSendEmail(message, sendWhatsApp, order.suppliers?.phone)}
         recipientEmail={order.suppliers?.email || ''}
         recipientPhone={order.suppliers?.phone}
         documentType="Orden de Compra"
         documentId={order.id}
       />
+
+      {/* AlertDialog for Approval Confirmation */}
+      <AlertDialog open={isApproveConfirmOpen} onOpenChange={setIsApproveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Aprobación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas aprobar esta Orden de Compra? Esto marcará la orden como finalizada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isApproving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApproveOrder} disabled={isApproving} className="bg-green-600 hover:bg-green-700">
+              {isApproving ? 'Aprobando...' : 'Aprobar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
