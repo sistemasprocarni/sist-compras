@@ -17,7 +17,7 @@ interface PDFDownloadButtonProps {
   asChild?: boolean; // NEW: Added asChild prop
 }
 
-const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
+const PDFDownloadButton = React.forwardRef<HTMLButtonElement, PDFDownloadButtonProps>(({
   requestId,
   orderId,
   fileName,
@@ -27,7 +27,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
   variant = 'outline',
   disabled = false,
   asChild = false, // Default to false
-}) => {
+}, ref) => {
   const { session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -101,6 +101,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
       // When asChild is true, the parent (DropdownMenuItem) handles the layout, 
       // but we keep the class here for when it's used as a standalone button (asChild=false)
       className={cn("flex items-center gap-2", asChild ? "w-full justify-start" : "")} 
+      ref={ref} // Forward the ref to the Button component
     >
       {/* Wrap content in a single span element to ensure it's a single child element, 
           which satisfies the requirement of components using Radix Slot/asChild pattern. */}
@@ -110,6 +111,8 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
       </span>
     </Button>
   );
-};
+});
+
+PDFDownloadButton.displayName = "PDFDownloadButton";
 
 export default PDFDownloadButton;

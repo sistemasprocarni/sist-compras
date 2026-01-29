@@ -14,7 +14,7 @@ interface WhatsAppSenderButtonProps {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined; // NEW: Added variant prop
 }
 
-const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
+const WhatsAppSenderButton = React.forwardRef<HTMLButtonElement, WhatsAppSenderButtonProps>(({
   recipientPhone,
   documentType,
   documentId,
@@ -22,7 +22,7 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
   companyName,
   asChild = false,
   variant = 'default',
-}) => {
+}, ref) => {
   const handleSendWhatsApp = () => {
     if (!recipientPhone) {
       showError('No se encontró el número de teléfono del proveedor.');
@@ -46,6 +46,7 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
       variant={variant}
       asChild={asChild}
       className={cn("flex items-center gap-2", !asChild ? "bg-green-600 hover:bg-green-700" : "w-full justify-start")} // Apply custom color only if not rendering as child (i.e., not inside dropdown)
+      ref={ref} // Forward the ref to the Button component
     >
       {/* Wrap content in a single span element to ensure it's a single child element */}
       <span className="flex items-center gap-2">
@@ -53,6 +54,8 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
       </span>
     </Button>
   );
-};
+});
+
+WhatsAppSenderButton.displayName = "WhatsAppSenderButton";
 
 export default WhatsAppSenderButton;
