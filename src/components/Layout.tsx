@@ -9,6 +9,7 @@ import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDropdown from './UserDropdown';
 import SidebarNav from './SidebarNav';
+import ScrollToTopButton from './ScrollToTopButton'; // NEW IMPORT
 
 const Layout = () => {
   const isMobile = useIsMobile();
@@ -71,6 +72,7 @@ const Layout = () => {
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
           <Outlet />
         </main>
+        <ScrollToTopButton /> {/* NEW: Add button for mobile */}
       </div>
     );
   }
@@ -97,6 +99,7 @@ const Layout = () => {
           </main>
         </div>
       </ResizablePanel>
+      <ScrollToTopButton /> {/* NEW: Add button for desktop */}
     </ResizablePanelGroup>
   );
 };
