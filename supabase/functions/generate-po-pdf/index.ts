@@ -219,15 +219,14 @@ serve(async (req) => {
     // Table column configuration (Original 6 columns)
     const tableWidth = width - 2 * MARGIN;
     const originalColWidths = [
-      tableWidth * 0.30,  // 1. Descripción
+      tableWidth * 0.30,  // 1. Material/Description
       tableWidth * 0.10,  // 2. Cantidad
       tableWidth * 0.10,  // 3. Unidad
       tableWidth * 0.15,  // 4. P. Unitario
       tableWidth * 0.15,  // 5. IVA
       tableWidth * 0.20   // 6. Total
     ];
-    // CHANGE 1: Update column header
-    const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+    const colHeaders = ['Material / Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
     // PDF State Management
     interface PDFState {
@@ -311,6 +310,7 @@ serve(async (req) => {
         }
       }
 
+      const headerBlockHeight = LOGO_SIZE + LINE_HEIGHT;
       const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
 
       // 1. Draw Company Logo and Name (Top Left)
@@ -430,17 +430,15 @@ serve(async (req) => {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         
-        // CHANGE 2: Update logic for materialContent
+        // Combine material name and description for the first column
         let materialContent = item.material_name;
         
-        // Add item description if available
-        if (item.description) {
-            materialContent += ` - ${item.description}`;
-        }
-        
-        // Add supplier code if available
-        if (item.supplier_code) {
-            materialContent += ` (Cód. Prov: ${item.supplier_code})`;
+        // Add supplier code and description if available
+        if (item.supplier_code || item.description) {
+            materialContent += `\n(Cód. Prov: ${item.supplier_code || 'N/A'})`;
+            if (item.description) {
+                materialContent += ` ${item.description}`;
+            }
         }
         
         // Wrap the combined content for the first column (30% width, approx 35 chars per line)
