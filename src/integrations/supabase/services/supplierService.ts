@@ -4,6 +4,8 @@ import { supabase } from '../client';
 import { showError } from '@/utils/toast';
 import { Supplier, SupplierMaterialPayload } from '../types';
 import { logAudit } from './auditLogService';
+import { bulkArchiveQuoteRequestsBySupplier } from './quoteRequestService'; // Import bulk archive QR
+import { bulkArchivePurchaseOrdersBySupplier } from './purchaseOrderService'; // Import bulk archive PO
 
 const SupplierService = {
   getAll: async (): Promise<Supplier[]> => {
@@ -94,6 +96,18 @@ const SupplierService = {
       showError('Error al actualizar el proveedor.');
       return null;
     }
+
+    // --- CONDITIONAL ARCHIVE LOGIC ---
+    if (updates.status === 'Inactive') {
+      const archivedQRs = await bulkArchiveQuoteRequestsBySupplier(id);
+      const archivedPOs = await bulkArchivePurchaseOrdersBySupplier(id);
+      
+      if (archivedQRs > 0 || archivedPOs > 0) {
+        console.log(`[SupplierService.update] Archived ${archivedQRs} QRs and ${archivedPOs} POs for inactive supplier ${id}.`);
+        showError(`Advertencia: Se archivaron ${archivedQRs} Solicitudes de Cotización y ${archivedPOs} Órdenes de Compra activas para este proveedor.`);
+      }
+    }
+    // ---------------------------------
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_SUPPLIER', { 

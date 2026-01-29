@@ -169,6 +169,32 @@ const QuoteRequestService = {
     return QuoteRequestService.updateStatus(id, 'Draft');
   },
 
+  bulkArchiveBySupplier: async (supplierId: string): Promise<number> => {
+    // Archiva todas las solicitudes que no estén ya en estado 'Archived' o 'Approved'
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .update({ status: 'Archived' })
+      .eq('supplier_id', supplierId)
+      .not('status', 'in', '("Archived", "Approved")')
+      .select('id');
+
+    if (error) {
+      console.error('[QuoteRequestService.bulkArchiveBySupplier] Error:', error);
+      return 0;
+    }
+    
+    // --- AUDIT LOG ---
+    if (data.length > 0) {
+      logAudit('BULK_ARCHIVE_QUOTE_REQUESTS', { 
+        supplier_id: supplierId, 
+        count: data.length 
+      });
+    }
+    // -----------------
+
+    return data.length;
+  },
+
   delete: async (id: string): Promise<boolean> => {
     // Mantener la función de eliminación física por si acaso, pero no se usará en la UI de gestión.
     const { error } = await supabase
@@ -213,4 +239,5 @@ export const {
   archive: archiveQuoteRequest,
   unarchive: unarchiveQuoteRequest,
   updateStatus: updateQuoteRequestStatus,
+  bulkArchiveBySupplier: bulkArchiveQuoteRequestsBySupplier, // Export the new function
 } = QuoteRequestService;

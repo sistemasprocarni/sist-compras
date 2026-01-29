@@ -223,6 +223,32 @@ const PurchaseOrderService = {
     return PurchaseOrderService.updateStatus(id, 'Draft');
   },
 
+  bulkArchiveBySupplier: async (supplierId: string): Promise<number> => {
+    // Archiva todas las órdenes que no estén ya en estado 'Archived' o 'Approved'
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .update({ status: 'Archived' })
+      .eq('supplier_id', supplierId)
+      .not('status', 'in', '("Archived", "Approved")')
+      .select('id');
+
+    if (error) {
+      console.error('[PurchaseOrderService.bulkArchiveBySupplier] Error:', error);
+      return 0;
+    }
+    
+    // --- AUDIT LOG ---
+    if (data.length > 0) {
+      logAudit('BULK_ARCHIVE_PURCHASE_ORDERS', { 
+        supplier_id: supplierId, 
+        count: data.length 
+      });
+    }
+    // -----------------
+
+    return data.length;
+  },
+
   delete: async (id: string): Promise<boolean> => {
     const { error } = await supabase
       .from('purchase_orders')
@@ -266,4 +292,5 @@ export const {
   archive: archivePurchaseOrder,
   unarchive: unarchivePurchaseOrder,
   updateStatus: updatePurchaseOrderStatus,
+  bulkArchiveBySupplier: bulkArchivePurchaseOrdersBySupplier, // Export the new function
 } = PurchaseOrderService;
