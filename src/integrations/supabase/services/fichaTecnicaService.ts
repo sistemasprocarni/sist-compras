@@ -119,8 +119,8 @@ const FichaTecnicaService = {
 
     if (dbError) {
       console.error('[FichaTecnicaService.delete] DB Delete Error:', dbError);
-      showError('Error al eliminar el registro de la base de datos.');
-      return false;
+      // Throwing an error ensures the useMutation onError handler is triggered.
+      throw new Error(`Error al eliminar el registro de la base de datos: ${dbError.message}`);
     }
 
     // --- AUDIT LOG ---
