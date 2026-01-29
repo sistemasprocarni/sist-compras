@@ -155,6 +155,34 @@ const PurchaseOrderManagement = () => {
     );
   }
 
+  const renderActions = (order: PurchaseOrder) => {
+    const isEditable = order.status !== 'Approved' && order.status !== 'Archived';
+    const isArchived = order.status === 'Archived';
+
+    return (
+      <TableCell className="text-right">
+        <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        {isEditable && (
+          <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+        )}
+        {!isArchived && (
+          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+            <Archive className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+        {isArchived && (
+          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
+            <RotateCcw className="h-4 w-4 text-procarni-secondary" />
+          </Button>
+        )}
+      </TableCell>
+    );
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -213,9 +241,11 @@ const PurchaseOrderManagement = () => {
                           <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {order.status !== 'Approved' && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
                             <Archive className="h-4 w-4 text-muted-foreground" />
                           </Button>
@@ -246,17 +276,7 @@ const PurchaseOrderManagement = () => {
                             <TableCell>{order.currency}</TableCell>
                             <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TableCell>
+                            {renderActions(order)}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -331,14 +351,7 @@ const PurchaseOrderManagement = () => {
                             <TableCell>{order.currency}</TableCell>
                             <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TableCell>
+                            {renderActions(order)}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -412,14 +425,7 @@ const PurchaseOrderManagement = () => {
                             <TableCell>{order.currency}</TableCell>
                             <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
-                                <RotateCcw className="h-4 w-4 text-procarni-secondary" />
-                              </Button>
-                            </TableCell>
+                            {renderActions(order)}
                           </TableRow>
                         ))}
                       </TableBody>

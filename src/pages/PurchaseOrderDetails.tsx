@@ -295,6 +295,8 @@ const PurchaseOrderDetails = () => {
     );
   }
 
+  const isEditable = order.status !== 'Approved' && order.status !== 'Archived';
+
   const ActionButtons = () => (
     <>
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -336,7 +338,7 @@ const PurchaseOrderDetails = () => {
       >
         <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
       </Button>
-      {order.status !== 'Approved' && order.status !== 'Archived' && (
+      {isEditable && (
         <Button 
           onClick={() => setIsApproveConfirmOpen(true)} // Abrir diálogo de confirmación
           disabled={isApproving}
@@ -345,7 +347,11 @@ const PurchaseOrderDetails = () => {
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
         </Button>
       )}
-      <Button asChild className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}>
+      <Button 
+        asChild 
+        disabled={!isEditable}
+        className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}
+      >
         <Link to={`/purchase-orders/edit/${order.id}`}>
           <Edit className="mr-2 h-4 w-4" /> Editar Orden
         </Link>
@@ -498,7 +504,7 @@ const PurchaseOrderDetails = () => {
 
       <EmailSenderModal
         isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalModalOpen(false)}
+        onClose={() => setIsEmailModalOpen(false)}
         onSend={(message, sendWhatsApp) => handleSendEmail(message, sendWhatsApp, order.suppliers?.phone)}
         recipientEmail={order.suppliers?.email || ''}
         recipientPhone={order.suppliers?.phone}
