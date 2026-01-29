@@ -87,6 +87,7 @@ export type PurchaseOrderItem = {
   supplier_code: string | null;
   unit: string | null;
   material_id: string | null;
+  description: string | null; // ADDED
 };
 
 export type QuoteRequest = {

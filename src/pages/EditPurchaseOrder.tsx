@@ -31,6 +31,7 @@ interface PurchaseOrderItemForm {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string;
+  description?: string; // ADDED
 }
 
 interface MaterialSearchResult {
@@ -103,12 +104,13 @@ const EditPurchaseOrder = () => {
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
         unit: item.unit || 'KG',
+        description: item.description || '', // ADDED description
       })));
     }
   }, [initialOrder]);
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG' }]);
+    setItems((prevItems) => [...prevItems, { material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG', description: '' }]);
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseOrderItemForm, value: any) => {

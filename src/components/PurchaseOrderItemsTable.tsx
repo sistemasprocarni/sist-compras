@@ -8,6 +8,7 @@ import SmartSearch from '@/components/SmartSearch';
 import { searchMaterialsBySupplier } from '@/integrations/supabase/data';
 import MaterialCreationDialog from '@/components/MaterialCreationDialog';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 
 interface PurchaseOrderItemForm {
   id?: string;
@@ -19,6 +20,7 @@ interface PurchaseOrderItemForm {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string;
+  description?: string; // ADDED
 }
 
 interface MaterialSearchResult {
@@ -150,6 +152,15 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 className="h-9"
               />
             </div>
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Descripción Adicional</label>
+              <Textarea
+                value={item.description || ''}
+                onChange={(e) => onItemChange(index, 'description', e.target.value)}
+                placeholder="Detalles adicionales del ítem"
+                rows={2}
+              />
+            </div>
             <div className="flex flex-col justify-end">
               <div className="flex items-center justify-between p-2 border rounded-md">
                 <label className="text-xs font-medium text-muted-foreground">Exento IVA</label>
@@ -173,7 +184,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
     // Desktop/Tablet View (Original Table)
     return (
       <tr key={index}>
-        <td className="px-2 py-2 whitespace-nowrap flex items-center">
+        <td className="px-2 py-2 whitespace-nowrap flex items-center w-[15%]">
           <SmartSearch
             placeholder={supplierId ? "Buscar material asociado" : "Selecciona proveedor"}
             onSelect={(material) => onMaterialSelect(index, material as MaterialSearchResult)}
@@ -184,16 +195,16 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           />
           {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
           <Input
             type="text"
             value={item.supplier_code || ''}
             onChange={(e) => onItemChange(index, 'supplier_code', e.target.value)}
-            placeholder="Código Prov."
+            placeholder="Cód. Prov."
             className="h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
           <Input
             type="number"
             value={item.quantity}
@@ -202,7 +213,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             className="h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
           <Select value={item.unit} onValueChange={(value) => onItemChange(index, 'unit', value)}>
             <SelectTrigger className="h-8">
               <SelectValue placeholder="Unidad" />
@@ -214,7 +225,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap">
+        <td className="px-2 py-2 whitespace-nowrap w-[10%]">
           <Input
             type="number"
             step="0.01"
@@ -224,20 +235,29 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             className="h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium">
+        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium w-[10%]">
           {currency} {subtotal.toFixed(2)}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-center text-sm">
+        <td className="px-2 py-2 whitespace-nowrap text-center text-sm w-[8%]">
           {currency} {itemIva.toFixed(2)}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-center">
+        <td className="px-2 py-2 whitespace-nowrap text-center w-[8%]">
           <Switch
             checked={item.is_exempt}
             onCheckedChange={(checked) => onItemChange(index, 'is_exempt', checked)}
             disabled={!item.material_name}
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-right">
+        <td className="px-2 py-2 whitespace-nowrap w-[15%]">
+          <Textarea
+            value={item.description || ''}
+            onChange={(e) => onItemChange(index, 'description', e.target.value)}
+            placeholder="Detalles adicionales"
+            rows={1}
+            className="h-8 min-h-8"
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap text-right w-[10%]">
           <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
             <PlusCircle className="h-4 w-4" />
           </Button>
@@ -261,14 +281,15 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">Producto</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Código Prov.</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Cantidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Unidad</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Producto</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Código Prov.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Cantidad</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Unidad</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">IVA</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Exento</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">IVA</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Exento</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Descripción</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
               </tr>
             </thead>

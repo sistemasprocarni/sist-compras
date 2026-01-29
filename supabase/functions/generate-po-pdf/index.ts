@@ -216,17 +216,17 @@ serve(async (req) => {
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-    // Table column configuration
+    // Table column configuration (Original 6 columns)
     const tableWidth = width - 2 * MARGIN;
-    const colWidths = [
-      tableWidth * 0.30,  // Material
-      tableWidth * 0.10,  // Cantidad
-      tableWidth * 0.10,  // Unidad
-      tableWidth * 0.15,  // P. Unitario
-      tableWidth * 0.15,  // IVA
-      tableWidth * 0.20   // Total
+    const originalColWidths = [
+      tableWidth * 0.30,  // 1. Material/Description
+      tableWidth * 0.10,  // 2. Cantidad
+      tableWidth * 0.10,  // 3. Unidad
+      tableWidth * 0.15,  // 4. P. Unitario
+      tableWidth * 0.15,  // 5. IVA
+      tableWidth * 0.20   // 6. Total
     ];
-    const colHeaders = ['Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+    const colHeaders = ['Material / Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
     // PDF State Management
     interface PDFState {
@@ -278,13 +278,14 @@ serve(async (req) => {
           size: 10,
           color: PROC_RED
         });
-        currentX += colWidths[i];
+        currentX += originalColWidths[i];
       }
       state.y -= LINE_HEIGHT;
       return state;
     };
 
     const checkPageBreak = (state: PDFState, requiredSpace: number): PDFState => {
+      // Check if required space pushes content below the footer area
       if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 6) {
         state.page = pdfDoc.addPage();
         state.y = height - MARGIN;
@@ -341,7 +342,7 @@ serve(async (req) => {
       drawText(state, `Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, titleX, state.y - LINE_HEIGHT, { size: 10 });
 
       // Update Y position based on the tallest element in the header
-      state.y -= Math.max(headerBlockHeight, LINE_HEIGHT * 3);
+      state.y -= Math.max(companyLogoImage ? LOGO_SIZE : LINE_HEIGHT * 3, LINE_HEIGHT * 3);
       
       // Separator line (Red, 2pt)
       state.page.drawLine({
@@ -428,8 +429,26 @@ serve(async (req) => {
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        state = checkPageBreak(state, LINE_HEIGHT + 10); 
+        
+        // Combine material name and description for the first column
+        let materialContent = item.material_name;
+        
+        // Add supplier code and description if available
+        if (item.supplier_code || item.description) {
+            materialContent += `\n(Cód. Prov: ${item.supplier_code || 'N/A'})`;
+            if (item.description) {
+                materialContent += ` ${item.description}`;
+            }
+        }
+        
+        // Wrap the combined content for the first column (30% width, approx 35 chars per line)
+        const materialLines = wrapText(materialContent, 35); 
+        const requiredHeight = materialLines.length * (FONT_SIZE - 1) * 1.2 + 5; // Calculate height based on smaller font size
+        const lineSpacing = (FONT_SIZE - 1) * 1.2;
 
+        state = checkPageBreak(state, requiredHeight + 10); 
+
+        // Draw thin gray line above the row content (to separate rows)
         state.page.drawLine({
           start: { x: MARGIN, y: state.y },
           end: { x: MARGIN + tableWidth, y: state.y },
@@ -442,36 +461,46 @@ serve(async (req) => {
         const totalItem = subtotal + itemIva;
 
         let currentX = MARGIN;
+        let currentY = state.y - 5; // Start drawing slightly below the top line
+
+        // 1. Material/Description (Multi-line)
+        for (const line of materialLines) {
+          drawText(state, line, currentX + 5, currentY, { size: FONT_SIZE - 1 }); // Slightly smaller font for wrapped text
+          currentY -= lineSpacing;
+        }
+        currentX += originalColWidths[0];
+
+        // Calculate the final Y position for the row based on the wrapped text height
+        const finalY = state.y - requiredHeight;
         
-        // 1. Descripción (Material name)
-        drawText(state, item.material_name, currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
-        currentX += colWidths[0];
+        // Helper to draw data centered vertically in the remaining columns
+        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true) => {
+            const cellWidth = originalColWidths[colIndex];
+            const textWidth = font.widthOfTextAtSize(text, FONT_SIZE);
+            const xPos = isRightAligned 
+                ? currentX + cellWidth - 5 - textWidth 
+                : currentX + 5;
+            
+            drawText(state, text, xPos, finalY + requiredHeight / 2 - FONT_SIZE / 2);
+            currentX += cellWidth;
+        };
 
         // 2. Cantidad
-        const quantityText = item.quantity.toString();
-        drawText(state, quantityText, currentX + colWidths[1] - 5 - font.widthOfTextAtSize(quantityText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
-        currentX += colWidths[1];
+        drawCellData(item.quantity.toString(), 1);
 
         // 3. Unidad
-        const unitText = item.unit || 'UND';
-        drawText(state, unitText, currentX + colWidths[2] - 5 - font.widthOfTextAtSize(unitText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
-        currentX += colWidths[2];
+        drawCellData(item.unit || 'UND', 2);
 
         // 4. P. Unitario
-        const unitPriceText = `${order.currency} ${item.unit_price.toFixed(2)}`;
-        drawText(state, unitPriceText, currentX + colWidths[3] - 5 - font.widthOfTextAtSize(unitPriceText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
-        currentX += colWidths[3];
+        drawCellData(`${order.currency} ${item.unit_price.toFixed(2)}`, 3);
 
         // 5. IVA
-        const ivaText = item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`;
-        drawText(state, ivaText, currentX + colWidths[4] - 5 - font.widthOfTextAtSize(ivaText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
-        currentX += colWidths[4];
+        drawCellData(item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`, 4);
 
         // 6. Total
-        const totalItemText = `${order.currency} ${totalItem.toFixed(2)}`;
-        drawText(state, totalItemText, currentX + colWidths[5] - 5 - font.widthOfTextAtSize(totalItemText, FONT_SIZE), state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2);
+        drawCellData(`${order.currency} ${totalItem.toFixed(2)}`, 5);
 
-        state.y -= LINE_HEIGHT;
+        state.y = finalY; // Update Y position for the next row
       }
       
       state.page.drawLine({

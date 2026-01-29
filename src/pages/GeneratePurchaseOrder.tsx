@@ -124,6 +124,7 @@ const GeneratePurchaseOrder = () => {
             tax_rate: 0.16,
             is_exempt: isExempt,
             unit: item.unit || MATERIAL_UNITS[0],
+            description: item.description || '', // ADDED description from QR item
           });
         }
       }
@@ -153,6 +154,7 @@ const GeneratePurchaseOrder = () => {
         tax_rate: 0.16,
         is_exempt: materialData.is_exempt || false,
         unit: materialData.unit || MATERIAL_UNITS[0],
+        description: materialData.specification || '', // ADDED description from material specification
       });
     }
   }, [materialData]);
@@ -188,15 +190,12 @@ const GeneratePurchaseOrder = () => {
       is_exempt: material.is_exempt || false,
       supplier_code: material.code || '', // Use material code as supplier code if available
       // tax_rate remains 0.16 by default, calculation handles is_exempt
+      description: material.specification || '', // Update description with specification
     });
-    // Import specification into description if available
-    if (material.specification) {
-      updateItem(index, { description: material.specification });
-    }
   };
 
   const handleAddItem = () => {
-    addItem({ material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0] });
+    addItem({ material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: MATERIAL_UNITS[0], description: '' });
   };
 
   const handleItemChange = (index: number, field: keyof typeof items[0], value: any) => {

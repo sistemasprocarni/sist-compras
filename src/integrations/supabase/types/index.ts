@@ -99,6 +99,7 @@ export interface PurchaseOrderItem {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string; // Added unit field
+  description?: string; // ADDED
 }
 
 export interface FichaTecnica {
