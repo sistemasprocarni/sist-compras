@@ -21,6 +21,35 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
+interface MaterialAssociation {
+  id: string; // ID of supplier_materials entry
+  material_id: string;
+  specification?: string;
+  materials: {
+    id: string;
+    name: string;
+    category?: string;
+  };
+}
+
+interface SupplierDetailsData {
+  id: string;
+  code?: string;
+  rif: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  phone_2?: string;
+  instagram?: string;
+  address?: string;
+  payment_terms: string;
+  custom_payment_terms?: string | null;
+  credit_days: number;
+  status: string;
+  user_id: string;
+  materials?: MaterialAssociation[];
+}
+
 const SupplierDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -29,13 +58,13 @@ const SupplierDetails = () => {
   const [currentFichaUrl, setCurrentFichaUrl] = useState('');
   const [currentFichaTitle, setCurrentFichaTitle] = useState('');
 
-  const { data: supplier, isLoading, error } = useQuery({
+  const { data: supplier, isLoading, error } = useQuery<SupplierDetailsData | null>({
     queryKey: ['supplierDetails', id],
     queryFn: async () => {
       if (!id) throw new Error('Supplier ID is missing.');
       const details = await getSupplierDetails(id);
       if (!details) throw new Error('Supplier not found.');
-      return details;
+      return details as SupplierDetailsData;
     },
     enabled: !!id,
   });
@@ -211,8 +240,8 @@ const SupplierDetails = () => {
           {supplier.materials && supplier.materials.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
-                {supplier.materials.map((sm) => (
-                  <Card key={sm.id} className="p-3">
+                {supplier.materials.map((sm, index) => (
+                  <Card key={sm.id || index} className="p-3">
                     <p className="font-semibold text-procarni-primary">{sm.materials.name}</p>
                     <div className="text-sm mt-1 space-y-0.5">
                       <p><strong>Código:</strong> {sm.materials.code || 'N/A'}</p>
@@ -240,8 +269,8 @@ const SupplierDetails = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {supplier.materials.map((sm) => (
-                      <TableRow key={sm.id}>
+                    {supplier.materials.map((sm, index) => (
+                      <TableRow key={sm.id || index}>
                         <TableCell>{sm.materials.code || 'N/A'}</TableCell>
                         <TableCell>{sm.materials.name}</TableCell>
                         <TableCell>{sm.materials.category || 'N/A'}</TableCell>
