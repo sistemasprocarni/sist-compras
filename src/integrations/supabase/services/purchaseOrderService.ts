@@ -6,15 +6,18 @@ import { PurchaseOrder, PurchaseOrderItem } from '../types';
 import { logAudit } from './auditLogService';
 
 const PurchaseOrderService = {
-  getAll: async (statusFilter: 'Active' | 'Archived' = 'Active'): Promise<PurchaseOrder[]> => {
+  getAll: async (statusFilter: 'Active' | 'Archived' | 'Approved' = 'Active'): Promise<PurchaseOrder[]> => {
     let query = supabase
       .from('purchase_orders')
       .select('*, suppliers(name), companies(name)')
       .order('created_at', { ascending: false });
 
     if (statusFilter === 'Active') {
-      // Excluir 'Archived'
-      query = query.neq('status', 'Archived');
+      // Incluir 'Draft', 'Sent', 'Rejected'
+      query = query.in('status', ['Draft', 'Sent', 'Rejected']);
+    } else if (statusFilter === 'Approved') {
+      // Solo incluir 'Approved'
+      query = query.eq('status', 'Approved');
     } else if (statusFilter === 'Archived') {
       // Solo incluir 'Archived'
       query = query.eq('status', 'Archived');

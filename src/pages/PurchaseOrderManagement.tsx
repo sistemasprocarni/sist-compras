@@ -47,7 +47,7 @@ const PurchaseOrderManagement = () => {
   const isMobile = useIsMobile();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'archived' | 'approved'>('active');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [orderToModify, setOrderToModify] = useState<{ id: string; action: 'archive' | 'unarchive' } | null>(null);
 
@@ -58,6 +58,13 @@ const PurchaseOrderManagement = () => {
     enabled: !!session && activeTab === 'active',
   });
 
+  // Fetch approved orders
+  const { data: approvedPurchaseOrders, isLoading: isLoadingApproved, error: approvedError } = useQuery<PurchaseOrder[]>({
+    queryKey: ['purchaseOrders', 'Approved'],
+    queryFn: () => getAllPurchaseOrders('Approved'),
+    enabled: !!session && activeTab === 'approved',
+  });
+
   // Fetch archived orders
   const { data: archivedPurchaseOrders, isLoading: isLoadingArchived, error: archivedError } = useQuery<PurchaseOrder[]>({
     queryKey: ['purchaseOrders', 'Archived'],
@@ -65,9 +72,9 @@ const PurchaseOrderManagement = () => {
     enabled: !!session && activeTab === 'archived',
   });
 
-  const currentOrders = activeTab === 'active' ? activePurchaseOrders : archivedPurchaseOrders;
-  const isLoading = activeTab === 'active' ? isLoadingActive : isLoadingArchived;
-  const error = activeTab === 'active' ? activeError : archivedError;
+  const currentOrders = activeTab === 'active' ? activePurchaseOrders : (activeTab === 'approved' ? approvedPurchaseOrders : archivedPurchaseOrders);
+  const isLoading = activeTab === 'active' ? isLoadingActive : (activeTab === 'approved' ? isLoadingApproved : isLoadingArchived);
+  const error = activeTab === 'active' ? activeError : (activeTab === 'approved' ? approvedError : archivedError);
 
   const filteredPurchaseOrders = useMemo(() => {
     if (!currentOrders) return [];
@@ -86,6 +93,7 @@ const PurchaseOrderManagement = () => {
     mutationFn: archivePurchaseOrder,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Approved'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Archived'] });
       showSuccess('Orden de compra archivada exitosamente.');
       setIsConfirmDialogOpen(false);
@@ -102,6 +110,7 @@ const PurchaseOrderManagement = () => {
     mutationFn: unarchivePurchaseOrder,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Approved'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Archived'] });
       showSuccess('Orden de compra desarchivada exitosamente.');
       setIsConfirmDialogOpen(false);
@@ -166,9 +175,10 @@ const PurchaseOrderManagement = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archived')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archived' | 'approved')} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="active">Activas</TabsTrigger>
+              <TabsTrigger value="approved">Aprobadas</TabsTrigger>
               <TabsTrigger value="archived">Archivadas</TabsTrigger>
             </TabsList>
 
@@ -256,6 +266,88 @@ const PurchaseOrderManagement = () => {
               ) : (
                 <div className="text-center text-muted-foreground p-8">
                   No hay órdenes de compra activas o no se encontraron resultados para tu búsqueda.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="approved" className="mt-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar en aprobadas..."
+                  className="w-full appearance-none bg-background pl-8 shadow-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {isLoading ? (
+                <div className="text-center text-muted-foreground p-8">Cargando órdenes aprobadas...</div>
+              ) : filteredPurchaseOrders.length > 0 ? (
+                isMobile ? (
+                  <div className="grid gap-4">
+                    {filteredPurchaseOrders.map((order) => (
+                      <Card key={order.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500">
+                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
+                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Empresa:</strong> {order.companies.name}</p>
+                          <p><strong>Moneda:</strong> {order.currency}</p>
+                          <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
+                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>N° Orden</TableHead>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Fecha Creación</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPurchaseOrders.map((order) => (
+                          <TableRow key={order.id} className="bg-green-50/50 dark:bg-green-900/20">
+                            <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
+                            <TableCell>{order.suppliers.name}</TableCell>
+                            <TableCell>{order.companies.name}</TableCell>
+                            <TableCell>{order.currency}</TableCell>
+                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+                                <Archive className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No hay órdenes de compra aprobadas o no se encontraron resultados para tu búsqueda.
                 </div>
               )}
             </TabsContent>

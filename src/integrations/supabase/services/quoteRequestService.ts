@@ -6,15 +6,18 @@ import { QuoteRequest, QuoteRequestItem } from '../types';
 import { logAudit } from './auditLogService';
 
 const QuoteRequestService = {
-  getAll: async (statusFilter: 'Active' | 'Archived' = 'Active'): Promise<QuoteRequest[]> => {
+  getAll: async (statusFilter: 'Active' | 'Archived' | 'Approved' = 'Active'): Promise<QuoteRequest[]> => {
     let query = supabase
       .from('quote_requests')
       .select('*, suppliers(name), companies(name)')
       .order('created_at', { ascending: false });
 
     if (statusFilter === 'Active') {
-      // Excluir 'Archived'
-      query = query.neq('status', 'Archived');
+      // Incluir 'Draft' y 'Sent'
+      query = query.in('status', ['Draft', 'Sent']);
+    } else if (statusFilter === 'Approved') {
+      // Solo incluir 'Approved'
+      query = query.eq('status', 'Approved');
     } else if (statusFilter === 'Archived') {
       // Solo incluir 'Archived'
       query = query.eq('status', 'Archived');

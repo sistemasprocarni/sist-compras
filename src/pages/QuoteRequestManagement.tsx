@@ -36,7 +36,7 @@ const QuoteRequestManagement = () => {
   const isMobile = useIsMobile();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'archived' | 'approved'>('active');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // Nuevo estado para eliminación permanente
   const [requestToModify, setRequestToModify] = useState<{ id: string; action: 'archive' | 'unarchive' | 'delete' } | null>(null);
@@ -48,6 +48,13 @@ const QuoteRequestManagement = () => {
     enabled: !!session && activeTab === 'active',
   });
 
+  // Fetch approved requests
+  const { data: approvedQuoteRequests, isLoading: isLoadingApproved, error: approvedError } = useQuery<QuoteRequest[]>({
+    queryKey: ['quoteRequests', 'Approved'],
+    queryFn: () => getAllQuoteRequests('Approved'),
+    enabled: !!session && activeTab === 'approved',
+  });
+
   // Fetch archived requests
   const { data: archivedQuoteRequests, isLoading: isLoadingArchived, error: archivedError } = useQuery<QuoteRequest[]>({
     queryKey: ['quoteRequests', 'Archived'],
@@ -55,9 +62,9 @@ const QuoteRequestManagement = () => {
     enabled: !!session && activeTab === 'archived',
   });
 
-  const currentRequests = activeTab === 'active' ? activeQuoteRequests : archivedQuoteRequests;
-  const isLoading = activeTab === 'active' ? isLoadingActive : isLoadingArchived;
-  const error = activeTab === 'active' ? activeError : archivedError;
+  const currentRequests = activeTab === 'active' ? activeQuoteRequests : (activeTab === 'approved' ? approvedQuoteRequests : archivedQuoteRequests);
+  const isLoading = activeTab === 'active' ? isLoadingActive : (activeTab === 'approved' ? isLoadingApproved : isLoadingArchived);
+  const error = activeTab === 'active' ? activeError : (activeTab === 'approved' ? approvedError : archivedError);
 
   const filteredQuoteRequests = useMemo(() => {
     if (!currentRequests) return [];
@@ -75,6 +82,7 @@ const QuoteRequestManagement = () => {
     mutationFn: archiveQuoteRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Approved'] });
       queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Archived'] });
       showSuccess('Solicitud archivada exitosamente.');
       setIsConfirmDialogOpen(false);
@@ -91,6 +99,7 @@ const QuoteRequestManagement = () => {
     mutationFn: unarchiveQuoteRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Approved'] });
       queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Archived'] });
       showSuccess('Solicitud desarchivada exitosamente.');
       setIsConfirmDialogOpen(false);
@@ -177,9 +186,10 @@ const QuoteRequestManagement = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archived')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archived' | 'approved')} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="active">Activas</TabsTrigger>
+              <TabsTrigger value="approved">Aprobadas</TabsTrigger>
               <TabsTrigger value="archived">Archivadas</TabsTrigger>
             </TabsList>
             
@@ -264,6 +274,85 @@ const QuoteRequestManagement = () => {
               ) : (
                 <div className="text-center text-muted-foreground p-8">
                   No hay solicitudes de cotización activas o no se encontraron resultados para tu búsqueda.
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="approved" className="mt-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar en aprobadas..."
+                  className="w-full appearance-none bg-background pl-8 shadow-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              {isLoading ? (
+                <div className="text-center text-muted-foreground p-8">Cargando solicitudes aprobadas...</div>
+              ) : filteredQuoteRequests.length > 0 ? (
+                isMobile ? (
+                  <div className="grid gap-4">
+                    {filteredQuoteRequests.map((request) => (
+                      <Card key={request.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500">
+                        <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
+                        <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Moneda:</strong> {request.currency}</p>
+                          {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
+                          <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Proveedor</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead>Moneda</TableHead>
+                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Fecha Creación</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredQuoteRequests.map((request) => (
+                          <TableRow key={request.id} className="bg-green-50/50 dark:bg-green-900/20">
+                            <TableCell>{request.suppliers.name}</TableCell>
+                            <TableCell>{request.companies.name}</TableCell>
+                            <TableCell>{request.currency}</TableCell>
+                            <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
+                                <Archive className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  No hay solicitudes de cotización aprobadas o no se encontraron resultados para tu búsqueda.
                 </div>
               )}
             </TabsContent>
