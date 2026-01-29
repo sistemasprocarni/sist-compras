@@ -49,7 +49,9 @@ const QuoteRequestService = {
 
     // --- AUDIT LOG ---
     logAudit('CREATE_QUOTE_REQUEST', { 
-      request_id: newRequest.id, 
+      table: 'quote_requests',
+      record_id: newRequest.id, 
+      description: 'Creación de Solicitud de Cotización',
       supplier_id: newRequest.supplier_id, 
       company_id: newRequest.company_id,
       items_count: items.length
@@ -96,7 +98,9 @@ const QuoteRequestService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_QUOTE_REQUEST', { 
-      request_id: id, 
+      table: 'quote_requests',
+      record_id: id, 
+      description: 'Actualización de Solicitud de Cotización',
       updates: updates,
       items_count: items.length
     });
@@ -153,7 +157,9 @@ const QuoteRequestService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_QUOTE_REQUEST_STATUS', { 
-      request_id: id, 
+      table: 'quote_requests',
+      record_id: id, 
+      description: `Cambio de estado a ${newStatus}`,
       new_status: newStatus 
     });
     // -----------------
@@ -186,6 +192,8 @@ const QuoteRequestService = {
     // --- AUDIT LOG ---
     if (data.length > 0) {
       logAudit('BULK_ARCHIVE_QUOTE_REQUESTS', { 
+        table: 'quote_requests',
+        description: `Archivado masivo de ${data.length} SCs`,
         supplier_id: supplierId, 
         count: data.length 
       });
@@ -209,7 +217,11 @@ const QuoteRequestService = {
     }
 
     // --- AUDIT LOG ---
-    logAudit('DELETE_QUOTE_REQUEST', { request_id: id });
+    logAudit('DELETE_QUOTE_REQUEST', { 
+      table: 'quote_requests',
+      record_id: id,
+      description: 'Eliminación permanente de Solicitud de Cotización'
+    });
     // -----------------
     
     return true;

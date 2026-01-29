@@ -30,7 +30,8 @@ const AuditLog = () => {
     return logs.filter(log =>
       log.action.toLowerCase().includes(lowerCaseSearchTerm) ||
       (log.user_email && log.user_email.toLowerCase().includes(lowerCaseSearchTerm)) ||
-      (log.details && JSON.stringify(log.details).toLowerCase().includes(lowerCaseSearchTerm))
+      (log.table && log.table.toLowerCase().includes(lowerCaseSearchTerm)) ||
+      (log.description && log.description.toLowerCase().includes(lowerCaseSearchTerm))
     );
   }, [logs, searchTerm]);
 
@@ -92,7 +93,7 @@ const AuditLog = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar por acción, email o detalles..."
+              placeholder="Buscar por acción, email, tabla o descripción..."
               className="w-full appearance-none bg-background pl-8 shadow-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -108,10 +109,15 @@ const AuditLog = () => {
                     <div className="text-sm space-y-1">
                       <p className="flex items-center"><User className="mr-1 h-3 w-3" /> Usuario: {log.user_email || 'N/A'}</p>
                       <p className="flex items-center"><Clock className="mr-1 h-3 w-3" /> Fecha: {formatTimestamp(log.timestamp)}</p>
-                      <div className="mt-2">
-                        <p className="font-semibold">Detalles:</p>
-                        {renderLogDetails(log.details)}
-                      </div>
+                      <p><strong>Tabla:</strong> {log.table || 'N/A'}</p>
+                      <p><strong>ID Registro:</strong> {log.record_id ? log.record_id.substring(0, 8) : 'N/A'}</p>
+                      <p><strong>Descripción:</strong> {log.description || 'N/A'}</p>
+                      {log.raw_details && Object.keys(log.raw_details).length > 3 && (
+                        <div className="mt-2">
+                          <p className="font-semibold">Detalles Adicionales:</p>
+                          {renderLogDetails(log.raw_details)}
+                        </div>
+                      )}
                     </div>
                   </Card>
                 ))}
@@ -121,10 +127,12 @@ const AuditLog = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">Fecha</TableHead>
-                      <TableHead className="w-[200px]">Usuario</TableHead>
-                      <TableHead className="w-[200px]">Acción</TableHead>
-                      <TableHead>Detalles</TableHead>
+                      <TableHead className="w-[150px]">Fecha</TableHead>
+                      <TableHead className="w-[150px]">Usuario</TableHead>
+                      <TableHead className="w-[150px]">Acción</TableHead>
+                      <TableHead className="w-[100px]">Tabla</TableHead>
+                      <TableHead className="w-[100px]">ID Registro</TableHead>
+                      <TableHead>Descripción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -133,7 +141,9 @@ const AuditLog = () => {
                         <TableCell className="text-xs">{formatTimestamp(log.timestamp)}</TableCell>
                         <TableCell className="text-sm">{log.user_email || 'N/A'}</TableCell>
                         <TableCell className="font-medium">{log.action}</TableCell>
-                        <TableCell>{renderLogDetails(log.details)}</TableCell>
+                        <TableCell>{log.table || 'N/A'}</TableCell>
+                        <TableCell>{log.record_id ? log.record_id.substring(0, 8) : 'N/A'}</TableCell>
+                        <TableCell>{log.description || renderLogDetails(log.raw_details)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

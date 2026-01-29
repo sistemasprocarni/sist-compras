@@ -45,7 +45,9 @@ const SupplierService = {
 
     // --- AUDIT LOG ---
     logAudit('CREATE_SUPPLIER', { 
-      supplier_id: newSupplier.id, 
+      table: 'suppliers',
+      record_id: newSupplier.id, 
+      description: `Creación de proveedor ${newSupplier.name} (${newSupplier.code})`,
       name: newSupplier.name, 
       rif: newSupplier.rif,
       materials_count: materials.length
@@ -102,6 +104,23 @@ const SupplierService = {
       const archivedQRs = await bulkArchiveQuoteRequestsBySupplier(id);
       const archivedPOs = await bulkArchivePurchaseOrdersBySupplier(id);
       
+      if (archivedQRs > 0) {
+        logAudit('BULK_ARCHIVE_QUOTE_REQUESTS', { 
+          table: 'quote_requests',
+          description: `Archivado masivo de ${archivedQRs} SCs por inactividad de proveedor`,
+          supplier_id: id, 
+          count: archivedQRs 
+        });
+      }
+      if (archivedPOs > 0) {
+        logAudit('BULK_ARCHIVE_PURCHASE_ORDERS', { 
+          table: 'purchase_orders',
+          description: `Archivado masivo de ${archivedPOs} OCs por inactividad de proveedor`,
+          supplier_id: id, 
+          count: archivedPOs 
+        });
+      }
+      
       if (archivedQRs > 0 || archivedPOs > 0) {
         console.log(`[SupplierService.update] Archived ${archivedQRs} QRs and ${archivedPOs} POs for inactive supplier ${id}.`);
         showError(`Advertencia: Se archivaron ${archivedQRs} Solicitudes de Cotización y ${archivedPOs} Órdenes de Compra activas para este proveedor.`);
@@ -111,7 +130,9 @@ const SupplierService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_SUPPLIER', { 
-      supplier_id: id, 
+      table: 'suppliers',
+      record_id: id, 
+      description: 'Actualización de proveedor',
       updates: updates,
       materials_count: materials.length
     });
@@ -198,7 +219,11 @@ const SupplierService = {
     }
 
     // --- AUDIT LOG ---
-    logAudit('DELETE_SUPPLIER', { supplier_id: id });
+    logAudit('DELETE_SUPPLIER', { 
+      table: 'suppliers',
+      record_id: id,
+      description: 'Eliminación de proveedor'
+    });
     // -----------------
     
     return true;

@@ -40,7 +40,9 @@ const MaterialService = {
 
     // --- AUDIT LOG ---
     logAudit('CREATE_MATERIAL', { 
-      material_id: newMaterial.id, 
+      table: 'materials',
+      record_id: newMaterial.id, 
+      description: `Creación de material ${newMaterial.name} (${newMaterial.code})`,
       name: newMaterial.name, 
       code: newMaterial.code 
     });
@@ -70,7 +72,9 @@ const MaterialService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_MATERIAL', { 
-      material_id: id, 
+      table: 'materials',
+      record_id: id, 
+      description: 'Actualización de material',
       updates: updates 
     });
     // -----------------
@@ -91,7 +95,11 @@ const MaterialService = {
     }
 
     // --- AUDIT LOG ---
-    logAudit('DELETE_MATERIAL', { material_id: id });
+    logAudit('DELETE_MATERIAL', { 
+      table: 'materials',
+      record_id: id,
+      description: 'Eliminación de material'
+    });
     // -----------------
     
     return true;

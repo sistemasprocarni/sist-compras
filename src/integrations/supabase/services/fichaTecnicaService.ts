@@ -40,7 +40,9 @@ const FichaTecnicaService = {
       
       // --- AUDIT LOG ---
       logAudit('UPLOAD_FICHA_TECNICA', { 
-        ficha_id: newFicha.id, 
+        table: 'fichas_tecnicas',
+        record_id: newFicha.id, 
+        description: `Subida de ficha técnica para ${newFicha.nombre_producto}`,
         nombre_producto: newFicha.nombre_producto, 
         proveedor_id: newFicha.proveedor_id,
         file_name: payload.fileName
@@ -110,7 +112,9 @@ const FichaTecnicaService = {
       
       // --- AUDIT LOG ---
       logAudit('DELETE_FICHA_TECNICA', { 
-        ficha_id: fichaId, 
+        table: 'fichas_tecnicas',
+        record_id: fichaId, 
+        description: 'Eliminación de ficha técnica',
         storage_url: storageUrl 
       });
       // -----------------

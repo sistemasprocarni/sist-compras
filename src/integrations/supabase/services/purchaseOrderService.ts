@@ -48,7 +48,9 @@ const PurchaseOrderService = {
 
     // --- AUDIT LOG ---
     logAudit('CREATE_PURCHASE_ORDER', { 
-      order_id: newOrder.id, 
+      table: 'purchase_orders',
+      record_id: newOrder.id, 
+      description: `Creación de Orden de Compra #${newOrder.sequence_number}`,
       sequence_number: newOrder.sequence_number,
       supplier_id: newOrder.supplier_id, 
       company_id: newOrder.company_id,
@@ -124,7 +126,9 @@ const PurchaseOrderService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_PURCHASE_ORDER', { 
-      order_id: id, 
+      table: 'purchase_orders',
+      record_id: id, 
+      description: 'Actualización de Orden de Compra',
       sequence_number: updatedOrder.sequence_number,
       updates: updates,
       items_count: items.length
@@ -209,7 +213,9 @@ const PurchaseOrderService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_PURCHASE_ORDER_STATUS', { 
-      order_id: id, 
+      table: 'purchase_orders',
+      record_id: id, 
+      description: `Cambio de estado a ${newStatus}`,
       new_status: newStatus 
     });
     // -----------------
@@ -242,6 +248,8 @@ const PurchaseOrderService = {
     // --- AUDIT LOG ---
     if (data.length > 0) {
       logAudit('BULK_ARCHIVE_PURCHASE_ORDERS', { 
+        table: 'purchase_orders',
+        description: `Archivado masivo de ${data.length} OCs`,
         supplier_id: supplierId, 
         count: data.length 
       });
@@ -264,7 +272,11 @@ const PurchaseOrderService = {
     }
 
     // --- AUDIT LOG ---
-    logAudit('DELETE_PURCHASE_ORDER', { order_id: id });
+    logAudit('DELETE_PURCHASE_ORDER', { 
+      table: 'purchase_orders',
+      record_id: id,
+      description: 'Eliminación permanente de Orden de Compra'
+    });
     // -----------------
     
     return true;

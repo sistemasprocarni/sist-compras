@@ -35,7 +35,9 @@ const CompanyService = {
 
     // --- AUDIT LOG ---
     logAudit('CREATE_COMPANY', { 
-      company_id: newCompany.id, 
+      table: 'companies',
+      record_id: newCompany.id, 
+      description: `Creación de empresa ${newCompany.name}`,
       name: newCompany.name, 
       rif: newCompany.rif 
     });
@@ -60,7 +62,9 @@ const CompanyService = {
 
     // --- AUDIT LOG ---
     logAudit('UPDATE_COMPANY', { 
-      company_id: id, 
+      table: 'companies',
+      record_id: id, 
+      description: 'Actualización de empresa',
       updates: updates 
     });
     // -----------------
@@ -81,7 +85,11 @@ const CompanyService = {
     }
 
     // --- AUDIT LOG ---
-    logAudit('DELETE_COMPANY', { company_id: id });
+    logAudit('DELETE_COMPANY', { 
+      table: 'companies',
+      record_id: id,
+      description: 'Eliminación de empresa'
+    });
     // -----------------
     
     return true;
