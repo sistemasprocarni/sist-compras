@@ -1,35 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, RefObject } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ScrollToTopButton: React.FC = () => {
+interface ScrollToTopButtonProps {
+  scrollContainerRef: RefObject<HTMLElement>;
+}
+
+const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ scrollContainerRef }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   // Función para manejar el desplazamiento
   const toggleVisibility = () => {
-    // Usamos document.documentElement.scrollTop para compatibilidad
-    if (document.documentElement.scrollTop > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
+    const container = scrollContainerRef.current;
+    if (container) {
+      // Usamos scrollTop del contenedor
+      if (container.scrollTop > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
     }
   };
 
   // Función para volver al inicio
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    }
   };
 
   useEffect(() => {
-    window.addEventListener('scroll', toggleVisibility);
-    return () => {
-      window.removeEventListener('scroll', toggleVisibility);
-    };
-  }, []);
+    const container = scrollContainerRef.current;
+    if (container) {
+      // Escuchar el evento de desplazamiento en el contenedor específico
+      container.addEventListener('scroll', toggleVisibility);
+      // Ejecutar una vez al montar para el estado inicial
+      toggleVisibility();
+      
+      return () => {
+        container.removeEventListener('scroll', toggleVisibility);
+      };
+    }
+  }, [scrollContainerRef]);
 
   return (
     <div className={cn(

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
 import { Search } from 'lucide-react';
@@ -9,10 +9,11 @@ import { MadeWithDyad } from './made-with-dyad';
 import { useIsMobile } from '@/hooks/use-mobile';
 import UserDropdown from './UserDropdown';
 import SidebarNav from './SidebarNav';
-import ScrollToTopButton from './ScrollToTopButton'; // NEW IMPORT
+import ScrollToTopButton from './ScrollToTopButton';
 
 const Layout = () => {
   const isMobile = useIsMobile();
+  const mainContentRef = useRef<HTMLElement>(null); // Ref para el contenido principal
 
   const SidebarHeader = () => (
     <div className="flex flex-col items-center justify-center py-4 border-b border-gray-200 bg-background dark:bg-gray-900">
@@ -69,10 +70,10 @@ const Layout = () => {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <MobileHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
+        <main ref={mainContentRef} className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
           <Outlet />
         </main>
-        <ScrollToTopButton /> {/* NEW: Add button for mobile */}
+        <ScrollToTopButton scrollContainerRef={mainContentRef} /> {/* Pasar ref */}
       </div>
     );
   }
@@ -94,12 +95,12 @@ const Layout = () => {
               <h1 className="text-lg font-semibold text-procarni-primary"></h1>
             </div>
           </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto h-full">
+          <main ref={mainContentRef} className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto h-full">
             <Outlet />
           </main>
         </div>
       </ResizablePanel>
-      <ScrollToTopButton /> {/* NEW: Add button for desktop */}
+      <ScrollToTopButton scrollContainerRef={mainContentRef} /> {/* Pasar ref */}
     </ResizablePanelGroup>
   );
 };
