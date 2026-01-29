@@ -86,51 +86,42 @@ const FichaTecnicaService = {
   },
 
   delete: async (fichaId: string, storageUrl: string): Promise<boolean> => {
-    // 1. Extract file path from storage URL
-    // Example URL: https://[project_id].supabase.co/storage/v1/object/public/fichas/user_id/timestamp_filename.pdf
-    const pathSegments = storageUrl.split('/');
-    const bucketIndex = pathSegments.indexOf('fichas');
-    
-    if (bucketIndex === -1 || bucketIndex + 1 >= pathSegments.length) {
-      console.error('[FichaTecnicaService.delete] Invalid storage URL format:', storageUrl);
-      showError('Error: URL de almacenamiento inválida.');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      showError('Sesión no activa. Por favor, inicia sesión.');
       return false;
     }
-    
-    // Path is everything after 'fichas/'
-    const filePath = pathSegments.slice(bucketIndex + 1).join('/');
-    
-    // 2. Delete file from Storage
-    const { error: storageError } = await supabase.storage
-      .from('fichas')
-      .remove([filePath]);
 
-    if (storageError) {
-      console.error('[FichaTecnicaService.delete] Storage Delete Error:', storageError);
-      showError('Error al eliminar el archivo del almacenamiento.');
-      // We continue to delete the DB entry even if storage fails, to clean up metadata
+    try {
+      // Llama a la Edge Function para manejar la eliminación del archivo y el registro DB
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/delete-ficha-tecnica`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fichaId, storageUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error desconocido al eliminar la ficha técnica.');
+      }
+      
+      // --- AUDIT LOG ---
+      logAudit('DELETE_FICHA_TECNICA', { 
+        ficha_id: fichaId, 
+        storage_url: storageUrl 
+      });
+      // -----------------
+
+      return true;
+
+    } catch (error: any) {
+      console.error('[FichaTecnicaService.delete] Error:', error);
+      // Re-throw the error so useMutation catches it
+      throw new Error(error.message || 'Error al eliminar la ficha técnica.');
     }
-
-    // 3. Delete metadata from DB
-    const { error: dbError } = await supabase
-      .from('fichas_tecnicas')
-      .delete()
-      .eq('id', fichaId);
-
-    if (dbError) {
-      console.error('[FichaTecnicaService.delete] DB Delete Error:', dbError);
-      // Throwing an error ensures the useMutation onError handler is triggered.
-      throw new Error(`Error al eliminar el registro de la base de datos: ${dbError.message}`);
-    }
-
-    // --- AUDIT LOG ---
-    logAudit('DELETE_FICHA_TECNICA', { 
-      ficha_id: fichaId, 
-      storage_path: filePath 
-    });
-    // -----------------
-
-    return true;
   },
 };
 
