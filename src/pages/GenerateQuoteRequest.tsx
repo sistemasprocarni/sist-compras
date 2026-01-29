@@ -13,7 +13,7 @@ import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchC
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AddMaterialToSupplierDialogForQuote from '@/components/AddMaterialToSupplierDialogForQuote';
+import MaterialCreationDialog from '@/components/MaterialCreationDialog'; // Updated import
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface Company {
@@ -121,9 +121,16 @@ const GenerateQuoteRequest = () => {
     setCompanyName(company.name);
   };
 
-  const handleMaterialAdded = (material: { id: string; name: string; unit?: string }) => {
-    // Optionally, you could automatically select the newly added material
-    // For now, we'll just close the dialog and let the user select it from the search
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
+    // Since the material is created and associated immediately in the dialog, 
+    // we just need to ensure the user can select it now.
+    // Optionally, we can pre-select it in the last added item.
+    
+    // Find the last item that has no material_name yet (or is the default empty item)
+    const lastIndex = items.length - 1;
+    if (lastIndex >= 0 && !items[lastIndex].material_name) {
+      handleMaterialSelect(lastIndex, material as MaterialSearchResult);
+    }
   };
 
   const handleSubmit = async () => {
@@ -369,10 +376,10 @@ const GenerateQuoteRequest = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
-      <AddMaterialToSupplierDialogForQuote
+      <MaterialCreationDialog
         isOpen={isAddMaterialDialogOpen}
         onClose={() => setIsAddMaterialDialogOpen(false)}
-        onMaterialAdded={handleMaterialAdded}
+        onMaterialCreated={handleMaterialAdded}
         supplierId={supplierId}
         supplierName={supplierName}
       />

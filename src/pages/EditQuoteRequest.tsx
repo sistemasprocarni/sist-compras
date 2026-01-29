@@ -16,7 +16,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
-import AddMaterialToSupplierDialogForQuote from '@/components/AddMaterialToSupplierDialogForQuote';
+import MaterialCreationDialog from '@/components/MaterialCreationDialog'; // Updated import
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface Company {
@@ -161,9 +161,10 @@ const EditQuoteRequest = () => {
     setCompanyName(company.name);
   };
 
-  const handleMaterialAdded = (material: { id: string; name: string; unit?: string }) => {
-    // Optionally, you could automatically select the newly added material
-    // For now, we'll just close the dialog and let the user select it from the search
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
+    // Since the material is created and associated immediately in the dialog, 
+    // we just need to ensure the user can select it now.
+    // The user will select it via SmartSearch.
   };
 
   const handleSubmit = async () => {
@@ -342,6 +343,7 @@ const EditQuoteRequest = () => {
             <QuoteRequestPreviewModal
               requestId={id!}
               onClose={() => setIsModalOpen(false)}
+              fileName={generateFileName()}
             />
           </DialogContent>
         </Dialog>
@@ -419,10 +421,10 @@ const EditQuoteRequest = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
-      <AddMaterialToSupplierDialogForQuote
+      <MaterialCreationDialog
         isOpen={isAddMaterialDialogOpen}
         onClose={() => setIsAddMaterialDialogOpen(false)}
-        onMaterialAdded={handleMaterialAdded}
+        onMaterialCreated={handleMaterialAdded}
         supplierId={supplierId}
         supplierName={supplierName}
       />

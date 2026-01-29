@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { PlusCircle, Trash2, CheckCircle } from 'lucide-react'; // Import CheckCircle
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterialsBySupplier } from '@/integrations/supabase/data';
-import AddMaterialToSupplierDialog from '@/components/AddMaterialToSupplierDialog';
+import MaterialCreationDialog from '@/components/MaterialCreationDialog';
 import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
 
 interface PurchaseOrderItemForm {
@@ -64,8 +64,10 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
     return searchMaterialsBySupplier(supplierId, query);
   };
 
-  const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean }) => {
-    // Logic to handle material addition (e.g., invalidate queries or prompt user to select)
+  // Updated signature to match MaterialCreationDialog callback
+  const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
+    // Since the material is created and associated immediately in the dialog (because supplierId is present), 
+    // we rely on the user searching/selecting it via SmartSearch.
   };
 
   const renderItemRow = (item: PurchaseOrderItemForm, index: number) => {
@@ -280,10 +282,10 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
         </Button>
       </div>
-      <AddMaterialToSupplierDialog
+      <MaterialCreationDialog
         isOpen={isAddMaterialDialogOpen}
         onClose={() => setIsAddMaterialDialogOpen(false)}
-        onMaterialAdded={handleMaterialAdded}
+        onMaterialCreated={handleMaterialAdded}
         supplierId={supplierId}
         supplierName={supplierName}
       />

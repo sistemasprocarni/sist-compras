@@ -10,11 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DialogFooter } from '@/components/ui/dialog';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Loader2, Plus, X, PlusCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getAllMaterials } from '@/integrations/supabase/data';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { validateRif } from '@/utils/validators'; // Importar el validador de RIF
+import MaterialCreationDialog from '@/components/MaterialCreationDialog'; // NEW IMPORT
 
 // Esquema de validación - reestructurado para evitar problemas con ctx.parent
 const supplierFormSchema = z.object({
@@ -78,8 +79,9 @@ interface SupplierFormProps {
 
 const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: SupplierFormProps) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMaterialCreationDialogOpen, setIsMaterialCreationDialogOpen] = useState(false); // NEW STATE
 
-  const { data: allMaterials, isLoading: isLoadingMaterials } = useQuery({
+  const { data: allMaterials, isLoading: isLoadingMaterials, refetch: refetchMaterials } = useQuery({
     queryKey: ['materials'],
     queryFn: getAllMaterials,
   });
@@ -104,6 +106,8 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
 
   const currentMaterialsInForm = form.watch('materials');
   const currentPaymentTerms = form.watch('payment_terms');
+  
+  const currentSupplierId = initialData?.id;
 
   useEffect(() => {
     if (initialData) {
@@ -156,11 +160,34 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
     const newMaterialEntry = {
       material_id: material.id,
       material_name: material.name,
-      material_category: material.category,
+      material_category: material.category || '',
       specification: '',
     };
 
     form.setValue('materials', [...materialsArray, newMaterialEntry], { shouldDirty: true });
+  };
+  
+  const handleMaterialCreatedFromDialog = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
+    // 1. Add the newly created/associated material to the form state
+    const materialsArray = form.getValues('materials') || [];
+    
+    // Check if it was already added (shouldn't happen if logic is correct, but safety check)
+    if (materialsArray.some(m => m.material_id === material.id)) {
+      showError('El material ya estaba en la lista.');
+      return;
+    }
+
+    const newMaterialEntry = {
+      material_id: material.id,
+      material_name: material.name,
+      material_category: '', // We don't have category here, rely on refetch if needed later
+      specification: material.specification || '',
+    };
+
+    form.setValue('materials', [...materialsArray, newMaterialEntry], { shouldDirty: true });
+    
+    // 2. Since a new material might have been created, invalidate the general materials query
+    refetchMaterials();
   };
 
   const handleRemoveMaterial = (materialId: string) => {
@@ -249,7 +276,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="Email del proveedor" {...field} />
+                  <Input placeholder="Email del proveedor" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -275,7 +302,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
               <FormItem>
                 <FormLabel>Teléfono 2</FormLabel>
                 <FormControl>
-                  <Input placeholder="Teléfono secundario" {...field} />
+                  <Input placeholder="Teléfono secundario" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -288,7 +315,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
               <FormItem>
                 <FormLabel>Instagram</FormLabel>
                 <FormControl>
-                  <Input placeholder="@usuario" {...field} />
+                  <Input placeholder="@usuario" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -301,7 +328,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
               <FormItem>
                 <FormLabel>Dirección</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Dirección del proveedor" {...field} />
+                  <Textarea placeholder="Dirección del proveedor" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -387,11 +414,21 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
           />
         {/* Sección de materiales asociados */}
         <div className="mt-6 p-4 border rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Materiales Asociados</h3>
+          <h3 className="text-lg font-semibold mb-4 flex justify-between items-center">
+            Materiales Asociados
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsMaterialCreationDialogOpen(true)} // NEW BUTTON
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Crear Material
+            </Button>
+          </h3>
 
           <div className="mb-4">
             <Input
-              placeholder="Buscar materiales..."
+              placeholder="Buscar materiales existentes para asociar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="mb-2"
@@ -484,6 +521,15 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
           </Button>
         </DialogFooter>
       </form>
+      
+      {/* NEW DIALOG */}
+      <MaterialCreationDialog
+        isOpen={isMaterialCreationDialogOpen}
+        onClose={() => setIsMaterialCreationDialogOpen(false)}
+        onMaterialCreated={handleMaterialCreatedFromDialog}
+        supplierId={currentSupplierId} // Pass ID if editing, undefined if creating
+        supplierName={initialData?.name}
+      />
     </Form>
   );
 };

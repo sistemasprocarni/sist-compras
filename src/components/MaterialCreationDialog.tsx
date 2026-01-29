@@ -4,17 +4,20 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { showError, showSuccess } from '@/utils/toast';
 import { createMaterial, createSupplierMaterialRelation, searchMaterials } from '@/integrations/supabase/data';
 import { useSession } from '@/components/SessionContextProvider';
-import { Material } from '@/integrations/supabase/types'; // Import Material type
+import { Material } from '@/integrations/supabase/types';
 
-interface AddMaterialToSupplierDialogForQuoteProps {
+interface MaterialCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onMaterialAdded: (material: { id: string; name: string; unit?: string }) => void;
-  supplierId: string;
-  supplierName: string;
+  // onMaterialCreated returns the created material object plus the specification entered in the dialog
+  onMaterialCreated: (material: Material & { specification?: string }) => void;
+  // supplierId is now optional. If provided, association happens immediately.
+  supplierId?: string; 
+  supplierName?: string; // Optional if supplierId is not provided
 }
 
 const MATERIAL_CATEGORIES = [
@@ -29,10 +32,10 @@ const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
 
-const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogForQuoteProps> = ({
+const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
   isOpen,
   onClose,
-  onMaterialAdded,
+  onMaterialCreated,
   supplierId,
   supplierName,
 }) => {
@@ -42,6 +45,7 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
   const [materialName, setMaterialName] = useState('');
   const [category, setCategory] = useState(MATERIAL_CATEGORIES[0]);
   const [unit, setUnit] = useState(MATERIAL_UNITS[0]);
+  const [isExempt, setIsExempt] = useState(false);
   const [specification, setSpecification] = useState('');
   const [existingMaterial, setExistingMaterial] = useState<Material | null>(null);
 
@@ -49,6 +53,7 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
     setMaterialName('');
     setCategory(MATERIAL_CATEGORIES[0]);
     setUnit(MATERIAL_UNITS[0]);
+    setIsExempt(false);
     setSpecification('');
     setExistingMaterial(null);
   };
@@ -83,14 +88,14 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
         if (exactMatch) {
           // Found existing material, use it
           materialToAssociate = exactMatch;
-          showSuccess(`Material existente "${materialToAssociate.name}" encontrado. Asociando...`);
+          showSuccess(`Material existente "${materialToAssociate.name}" encontrado.`);
         } else {
           // 2. Create the new material
           const newMaterial = await createMaterial({
             name: trimmedMaterialName,
             category,
             unit,
-            is_exempt: false, // Default for quote requests
+            is_exempt: isExempt,
             user_id: session.user.id,
           });
 
@@ -98,35 +103,40 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
             throw new Error('No se pudo crear el material.');
           }
           materialToAssociate = newMaterial;
-          showSuccess('Material creado exitosamente. Asociando...');
+          showSuccess('Material creado exitosamente.');
         }
       }
 
-      // 3. Associate the material with the supplier
-      const relationCreated = await createSupplierMaterialRelation({
-        supplier_id: supplierId,
-        material_id: materialToAssociate.id,
-        specification: specification.trim() || undefined,
-        user_id: session.user.id,
-      });
+      // 3. Associate the material with the supplier IF supplierId is provided
+      if (supplierId && materialToAssociate) {
+        const relationCreated = await createSupplierMaterialRelation({
+          supplier_id: supplierId,
+          material_id: materialToAssociate.id,
+          specification: specification.trim() || undefined,
+          user_id: session.user.id,
+        });
 
-      if (!relationCreated) {
-        throw new Error('No se pudo asociar el material con el proveedor (posiblemente ya existe la relación).');
+        if (!relationCreated) {
+          showError('Advertencia: La relación con el proveedor ya existía o falló la asociación.');
+        } else {
+          showSuccess(`Material "${materialToAssociate.name}" asociado con el proveedor exitosamente.`);
+        }
+      } else if (!supplierId && materialToAssociate) {
+        showSuccess(`Material "${materialToAssociate.name}" creado. Añádelo al proveedor manualmente.`);
       }
-
-      showSuccess(`Material "${materialToAssociate.name}" asociado con el proveedor exitosamente.`);
       
-      // Call the callback with the new material data
-      onMaterialAdded({
-        id: materialToAssociate.id,
-        name: materialToAssociate.name,
-        unit: materialToAssociate.unit,
-      });
+      // 4. Call the callback with the material data and specification
+      if (materialToAssociate) {
+        onMaterialCreated({
+          ...materialToAssociate,
+          specification: specification.trim(),
+        });
+      }
 
       handleClose();
 
     } catch (error: any) {
-      console.error('[AddMaterialToSupplierDialogForQuote] Error:', error);
+      console.error('[MaterialCreationDialog] Error:', error);
       showError(error.message || 'Error al crear/asociar el material.');
     } finally {
       setIsSubmitting(false);
@@ -146,13 +156,17 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
     }
   };
 
+  const dialogDescription = supplierId 
+    ? `Crea un nuevo material o asocia uno existente a ${supplierName ? <strong>{supplierName}</strong> : 'este proveedor'}.`
+    : 'Crea un nuevo material. Si estás creando un nuevo proveedor, este material se asociará al guardar el formulario.';
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Añadir Nuevo Material</DialogTitle>
           <DialogDescription>
-            Crea un nuevo material o asocia uno existente a <strong>{supplierName}</strong>.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
         
@@ -168,41 +182,57 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
             />
             {existingMaterial && (
               <p className="text-sm text-blue-600">
-                Material existente encontrado: <strong>{existingMaterial.name}</strong>. Se asociará este material con la nueva especificación.
+                Material existente encontrado: <strong>{existingMaterial.name}</strong>. Se usará este material.
               </p>
             )}
           </div>
 
           {!existingMaterial && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="category">Categoría</Label>
-                <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Selecciona categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MATERIAL_CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Categoría</Label>
+                  <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Selecciona categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MATERIAL_CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="unit">Unidad</Label>
+                  <Select value={unit} onValueChange={setUnit} disabled={isSubmitting}>
+                    <SelectTrigger id="unit">
+                      <SelectValue placeholder="Selecciona unidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MATERIAL_UNITS.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="unit">Unidad</Label>
-                <Select value={unit} onValueChange={setUnit} disabled={isSubmitting}>
-                  <SelectTrigger id="unit">
-                    <SelectValue placeholder="Selecciona unidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MATERIAL_UNITS.map(u => (
-                      <SelectItem key={u} value={u}>{u}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label>Exento de IVA</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Marcar si este material no debe incluir IVA.
+                  </p>
+                </div>
+                <Switch
+                  checked={isExempt}
+                  onCheckedChange={setIsExempt}
+                  disabled={isSubmitting}
+                />
               </div>
-            </div>
+            </>
           )}
 
           <div className="grid gap-2">
@@ -221,8 +251,8 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button onClick={handleAddMaterial} disabled={isSubmitting} className="bg-procarni-secondary hover:bg-green-700">
-            {isSubmitting ? 'Guardando...' : (existingMaterial ? 'Asociar Material Existente' : 'Crear y Asociar')}
+          <Button onClick={handleAddMaterial} disabled={isSubmitting || !materialName.trim()}>
+            {isSubmitting ? 'Guardando...' : (existingMaterial ? 'Asociar Material' : 'Crear y Asociar')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -230,4 +260,4 @@ const AddMaterialToSupplierDialogForQuote: React.FC<AddMaterialToSupplierDialogF
   );
 };
 
-export default AddMaterialToSupplierDialogForQuote;
+export default MaterialCreationDialog;
