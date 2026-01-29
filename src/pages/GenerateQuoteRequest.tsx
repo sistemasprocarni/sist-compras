@@ -88,10 +88,10 @@ const GenerateQuoteRequest = () => {
   }, [materialData]);
 
   // New wrapper function for material search, filtered by selected supplier
-  const searchSupplierMaterials = async (query: string) => {
+  const searchSupplierMaterials = React.useCallback(async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
-  };
+  }, [supplierId]);
 
   const handleAddItem = () => {
     setItems((prevItems) => [...prevItems, { material_name: '', quantity: 0, description: '', unit: MATERIAL_UNITS[0] }]);
@@ -124,13 +124,7 @@ const GenerateQuoteRequest = () => {
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
     // Since the material is created and associated immediately in the dialog, 
     // we just need to ensure the user can select it now.
-    // Optionally, we can pre-select it in the last added item.
-    
-    // Find the last item that has no material_name yet (or is the default empty item)
-    const lastIndex = items.length - 1;
-    if (lastIndex >= 0 && !items[lastIndex].material_name) {
-      handleMaterialSelect(lastIndex, material as MaterialSearchResult);
-    }
+    // The user will select it via SmartSearch.
   };
 
   const handleSubmit = async () => {

@@ -97,10 +97,10 @@ const EditQuoteRequest = () => {
   }, [initialRequest]);
 
   // New wrapper function for material search, filtered by selected supplier
-  const searchSupplierMaterials = async (query: string) => {
+  const searchSupplierMaterials = React.useCallback(async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
-  };
+  }, [supplierId]);
 
   if (isLoadingRequest || isLoadingSession) {
     return (
@@ -206,6 +206,13 @@ const EditQuoteRequest = () => {
       navigate(`/quote-requests/${id}`); // Go back to details page
     }
     setIsSubmitting(false);
+  };
+
+  const generateFileName = () => {
+    if (!initialRequest) return '';
+    const supplierName = initialRequest.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
+    const date = new Date(initialRequest.created_at).toLocaleDateString('es-VE').replace(/\//g, '-');
+    return `SC_${initialRequest.id.substring(0, 8)}_${supplierName}_${date}.pdf`;
   };
 
   const renderItemFields = (item: QuoteRequestItemForm, index: number) => {

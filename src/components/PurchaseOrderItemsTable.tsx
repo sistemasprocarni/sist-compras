@@ -59,10 +59,11 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const searchSupplierMaterials = async (query: string) => {
+  // Memoize the search function so it only changes when supplierId changes
+  const searchSupplierMaterials = React.useCallback(async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
-  };
+  }, [supplierId]);
 
   // Updated signature to match MaterialCreationDialog callback
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
