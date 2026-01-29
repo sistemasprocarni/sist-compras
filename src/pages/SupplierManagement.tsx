@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram, Filter } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -14,6 +14,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 
 interface MaterialAssociation {
   id?: string;
@@ -75,9 +76,10 @@ const SupplierManagement = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'Inactive'>('Active'); // NEW STATE for status filter
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDeleteId, setSupplierToDeleteId] = useState<string | null>(null);
-  const [isLoadingEditData, setIsLoadingEditData] = useState(false); // New loading state for edit
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false);
 
   const { data: suppliers, isLoading, error } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
@@ -87,15 +89,25 @@ const SupplierManagement = () => {
 
   const filteredSuppliers = useMemo(() => {
     if (!suppliers) return [];
-    if (!searchTerm) return suppliers;
+    let currentSuppliers = suppliers;
 
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    return suppliers.filter(supplier =>
-      supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      supplier.rif.toLowerCase().includes(lowerCaseSearchTerm) ||
-      (supplier.email && supplier.email.toLowerCase().includes(lowerCaseSearchTerm))
-    );
-  }, [suppliers, searchTerm]);
+    // 1. Filter by Status
+    if (selectedStatus !== 'All') {
+      currentSuppliers = currentSuppliers.filter(supplier => supplier.status === selectedStatus);
+    }
+
+    // 2. Filter by Search Term
+    if (searchTerm) {
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      currentSuppliers = currentSuppliers.filter(supplier =>
+        supplier.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+        supplier.rif.toLowerCase().includes(lowerCaseSearchTerm) ||
+        (supplier.email && supplier.email.toLowerCase().includes(lowerCaseSearchTerm))
+      );
+    }
+
+    return currentSuppliers;
+  }, [suppliers, searchTerm, selectedStatus]);
 
   const createMutation = useMutation({
     mutationFn: ({ supplierData, materials }: { supplierData: Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'materials'>; materials: Array<{ material_id: string; specification?: string }> }) =>
@@ -252,15 +264,30 @@ const SupplierManagement = () => {
           </Dialog>
         </CardHeader>
         <CardContent>
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar proveedor por RIF, nombre o email..."
-              className="w-full appearance-none bg-background pl-8 shadow-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar proveedor por RIF, nombre o email..."
+                className="w-full appearance-none bg-background pl-8 shadow-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="relative md:w-1/3">
+              <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as 'All' | 'Active' | 'Inactive')}>
+                <SelectTrigger className="w-full pl-8">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">Todos los Estados</SelectItem>
+                  <SelectItem value="Active">Activo</SelectItem>
+                  <SelectItem value="Inactive">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isMobile ? (
