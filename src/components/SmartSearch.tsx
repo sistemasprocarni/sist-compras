@@ -58,7 +58,9 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
     // Only fetch if not disabled and query is present (or if we want default suggestions)
     if (!disabled) {
       debounceTimeoutRef.current = setTimeout(() => {
-        debouncedFetch(query);
+        // Si la consulta está vacía, cargamos todos los resultados (para el scroll)
+        const fetchQuery = query.trim() === '' ? '' : query;
+        debouncedFetch(fetchQuery);
       }, 300) as unknown as number;
     } else {
       setResults([]);
@@ -99,7 +101,7 @@ const SmartSearch: React.FC<SmartSearchProps> = ({ placeholder, onSelect, fetchF
             value={query}
             onValueChange={setQuery}
           />
-          <CommandList>
+          <CommandList className="max-h-60 overflow-y-auto"> {/* Added max-h-60 and overflow-y-auto */}
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup>
               {results.map((item) => (
