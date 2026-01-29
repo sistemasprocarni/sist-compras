@@ -61,8 +61,7 @@ const EditQuoteRequest = () => {
   const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
-  const [currency, setCurrency] = useState<'USD' | 'VES'>('USD');
-  const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
+  // Moneda y Tasa de Cambio eliminados del estado
   const [items, setItems] = useState<QuoteRequestItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -83,8 +82,7 @@ const EditQuoteRequest = () => {
       setCompanyName(initialRequest.companies?.name || '');
       setSupplierId(initialRequest.supplier_id);
       setSupplierName(initialRequest.suppliers?.name || '');
-      setCurrency(initialRequest.currency as 'USD' | 'VES');
-      setExchangeRate(initialRequest.exchange_rate || undefined);
+      // Moneda y Tasa de Cambio ignorados
       setItems(initialRequest.quote_request_items.map(item => ({
         id: item.id,
         material_name: item.material_name,
@@ -180,10 +178,7 @@ const EditQuoteRequest = () => {
       showError('Por favor, selecciona un proveedor.');
       return;
     }
-    if (currency === 'VES' && (!exchangeRate || exchangeRate <= 0)) {
-      showError('La tasa de cambio es requerida y debe ser mayor que cero para solicitudes en Bolívares.');
-      return;
-    }
+    // Validación de ítems
     if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || !item.unit)) {
       showError('Por favor, añade al menos un ítem válido con nombre, cantidad mayor a cero y unidad.');
       return;
@@ -193,8 +188,8 @@ const EditQuoteRequest = () => {
     const requestData = {
       supplier_id: supplierId,
       company_id: companyId, // Use the selected company ID
-      currency,
-      exchange_rate: currency === 'VES' ? exchangeRate : null,
+      currency: 'USD' as const, // Default to USD
+      exchange_rate: null, // Set to null
       created_by: userEmail || 'unknown',
       user_id: userId,
     };
@@ -386,28 +381,7 @@ const EditQuoteRequest = () => {
               />
               {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
             </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="currency">Moneda (USD/VES)</Label>
-              <Switch
-                id="currency"
-                checked={currency === 'VES'}
-                onCheckedChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
-              />
-              <span>{currency}</span>
-            </div>
-            {currency === 'VES' && (
-              <div>
-                <Label htmlFor="exchangeRate">Tasa de Cambio (USD a VES)</Label>
-                <Input
-                  id="exchangeRate"
-                  type="number"
-                  step="0.01"
-                  value={exchangeRate || ''}
-                  onChange={(e) => setExchangeRate(parseFloat(e.target.value))}
-                  placeholder="Ej: 36.50"
-                />
-              </div>
-            )}
+            {/* Moneda y Tasa de Cambio eliminados */}
           </div>
 
           <h3 className="text-lg font-semibold mb-4">Ítems de la Solicitud</h3>
