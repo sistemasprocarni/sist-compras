@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { createMaterial, createSupplierMaterialRelation, searchMaterials } from '@/integrations/supabase/data';
 import { useSession } from '@/components/SessionContextProvider';
 import { Material } from '@/integrations/supabase/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 
 interface MaterialCreationDialogProps {
   isOpen: boolean;
@@ -49,8 +49,9 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
   const [isExempt, setIsExempt] = useState(false);
   const [specification, setSpecification] = useState('');
   
-  const [existingMaterial, setExistingMaterial] = useState<Material | null>(null);
+  const [suggestedMaterial, setSuggestedMaterial] = useState<Material | null>(null); // Best match suggestion
   const [isCheckingExistence, setIsCheckingExistence] = useState(false);
+  const debounceTimeoutRef = useRef<number | null>(null);
 
   const resetForm = () => {
     setMaterialName('');
@@ -58,7 +59,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     setUnit(MATERIAL_UNITS[0]);
     setIsExempt(false);
     setSpecification('');
-    setExistingMaterial(null);
+    setSuggestedMaterial(null);
     setIsCheckingExistence(false);
   };
 
@@ -71,23 +72,34 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const delayDebounceFn = setTimeout(async () => {
-      const trimmedName = materialName.trim();
-      if (trimmedName.length > 2) {
-        setIsCheckingExistence(true);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    const trimmedName = materialName.trim();
+    
+    if (trimmedName.length > 2) {
+      setIsCheckingExistence(true);
+      debounceTimeoutRef.current = setTimeout(async () => {
         try {
-          // Search for materials, then check for exact match (case insensitive)
           const existingMaterials = await searchMaterials(trimmedName);
-          const exactMatch = existingMaterials.find(m => m.name.toUpperCase() === trimmedName.toUpperCase());
           
-          if (exactMatch) {
-            setExistingMaterial(exactMatch);
-            // Pre-fill fields from existing material
-            setCategory(exactMatch.category || MATERIAL_CATEGORIES[0]);
-            setUnit(exactMatch.unit || MATERIAL_UNITS[0]);
-            setIsExempt(exactMatch.is_exempt || false);
+          if (existingMaterials.length > 0) {
+            // Use the first result as the best suggestion
+            const bestMatch = existingMaterials[0];
+            setSuggestedMaterial(bestMatch);
+            
+            // If the match is exact, pre-fill fields immediately
+            if (bestMatch.name.toUpperCase() === trimmedName.toUpperCase()) {
+              setCategory(bestMatch.category || MATERIAL_CATEGORIES[0]);
+              setUnit(bestMatch.unit || MATERIAL_UNITS[0]);
+              setIsExempt(bestMatch.is_exempt || false);
+            } else {
+              // If it's just a suggestion, keep current form values but show suggestion
+              // We only reset fields if the user accepts the suggestion
+            }
           } else {
-            setExistingMaterial(null);
+            setSuggestedMaterial(null);
             // Reset fields to default if no match found
             setCategory(MATERIAL_CATEGORIES[0]);
             setUnit(MATERIAL_UNITS[0]);
@@ -95,19 +107,32 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
           }
         } catch (e) {
           console.error("Error checking material existence:", e);
-          setExistingMaterial(null);
+          setSuggestedMaterial(null);
         } finally {
           setIsCheckingExistence(false);
         }
-      } else {
-        setExistingMaterial(null);
-        setIsCheckingExistence(false);
-      }
-    }, 500); // Debounce time
+      }, 500) as unknown as number;
+    } else {
+      setSuggestedMaterial(null);
+      setIsCheckingExistence(false);
+    }
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
   }, [materialName, isOpen]);
 
+  const handleAcceptSuggestion = () => {
+    if (suggestedMaterial) {
+      setMaterialName(suggestedMaterial.name);
+      setCategory(suggestedMaterial.category || MATERIAL_CATEGORIES[0]);
+      setUnit(suggestedMaterial.unit || MATERIAL_UNITS[0]);
+      setIsExempt(suggestedMaterial.is_exempt || false);
+      setSuggestedMaterial(null); // Clear suggestion after acceptance
+    }
+  };
 
   const handleAddMaterial = async () => {
     if (!session?.user?.id) {
@@ -124,10 +149,17 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      let materialToAssociate: Material | null = existingMaterial;
+      let materialToAssociate: Material | null = null;
 
-      if (!materialToAssociate) {
-        // If no existing material was detected, create the new material
+      // 1. Check if the final name matches an existing material (case insensitive)
+      const existingMaterials = await searchMaterials(trimmedMaterialName);
+      const exactMatch = existingMaterials.find(m => m.name.toUpperCase() === trimmedMaterialName);
+
+      if (exactMatch) {
+        materialToAssociate = exactMatch;
+        showSuccess(`Material existente "${materialToAssociate.name}" encontrado.`);
+      } else {
+        // 2. Create the new material
         const newMaterial = await createMaterial({
           name: trimmedMaterialName,
           category,
@@ -141,8 +173,6 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
         }
         materialToAssociate = newMaterial;
         showSuccess('Material creado exitosamente.');
-      } else {
-        showSuccess(`Material existente "${materialToAssociate.name}" asociado.`);
       }
 
       // 3. Associate the material with the supplier IF supplierId is provided
@@ -186,8 +216,8 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     : 'Crea un nuevo material. Si estás creando un nuevo proveedor, este material se asociará al guardar el formulario.';
 
   const isMaterialNameValid = materialName.trim().length > 0;
-  const isExistingMaterial = !!existingMaterial;
-  const submitButtonText = isExistingMaterial ? 'Asociar Material' : 'Crear y Asociar';
+  const isExactMatch = suggestedMaterial && suggestedMaterial.name.toUpperCase() === materialName.trim().toUpperCase();
+  const submitButtonText = isExactMatch ? 'Asociar Material' : 'Crear y Asociar';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -209,17 +239,33 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
               onChange={(e) => setMaterialName(e.target.value)}
               disabled={isSubmitting}
             />
+            
             {isCheckingExistence && (
               <p className="text-sm text-muted-foreground flex items-center">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Validando existencia...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Buscando sugerencias...
               </p>
             )}
-            {isExistingMaterial && !isCheckingExistence && (
-              <p className="text-sm text-blue-600">
-                Material existente detectado: <strong>{existingMaterial.name}</strong>. Se usará este material.
-              </p>
+
+            {suggestedMaterial && !isCheckingExistence && (
+              <div className="flex items-center justify-between p-2 border rounded-md bg-blue-50 dark:bg-blue-900/20">
+                <p className="text-sm text-blue-600 dark:text-blue-300">
+                  {isExactMatch ? 'Material existente:' : 'Material sugerido:'} <strong>{suggestedMaterial.name}</strong>
+                </p>
+                {!isExactMatch && (
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={handleAcceptSuggestion}
+                    className="h-8"
+                  >
+                    <Check className="mr-1 h-4 w-4" /> Usar
+                  </Button>
+                )}
+              </div>
             )}
-            {!isExistingMaterial && isMaterialNameValid && !isCheckingExistence && (
+
+            {!isExactMatch && isMaterialNameValid && !isCheckingExistence && !suggestedMaterial && (
               <p className="text-sm text-yellow-600">
                 Material nuevo: <strong>{materialName.toUpperCase()}</strong>. Se creará al guardar.
               </p>
@@ -230,7 +276,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="category">Categoría</Label>
-              <Select value={category} onValueChange={setCategory} disabled={isSubmitting || isExistingMaterial}>
+              <Select value={category} onValueChange={setCategory} disabled={isSubmitting || isExactMatch}>
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Selecciona categoría" />
                 </SelectTrigger>
@@ -244,7 +290,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
 
             <div className="grid gap-2">
               <Label htmlFor="unit">Unidad</Label>
-              <Select value={unit} onValueChange={setUnit} disabled={isSubmitting || isExistingMaterial}>
+              <Select value={unit} onValueChange={setUnit} disabled={isSubmitting || isExactMatch}>
                 <SelectTrigger id="unit">
                   <SelectValue placeholder="Selecciona unidad" />
                 </SelectTrigger>
@@ -267,7 +313,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
             <Switch
               checked={isExempt}
               onCheckedChange={setIsExempt}
-              disabled={isSubmitting || isExistingMaterial}
+              disabled={isSubmitting || isExactMatch}
             />
           </div>
 
