@@ -21,9 +21,14 @@ const MaterialService = {
   },
 
   create: async (materialData: Omit<Material, 'id' | 'created_at' | 'updated_at'>): Promise<Material | null> => {
+    const payload = {
+      ...materialData,
+      name: materialData.name.toUpperCase(), // Convert name to uppercase
+    };
+
     const { data: newMaterial, error } = await supabase
       .from('materials')
-      .insert(materialData)
+      .insert(payload)
       .select()
       .single();
 
@@ -45,9 +50,14 @@ const MaterialService = {
   },
 
   update: async (id: string, updates: Partial<Omit<Material, 'id' | 'created_at' | 'updated_at'>>): Promise<Material | null> => {
+    const payload = { ...updates };
+    if (payload.name) {
+      payload.name = payload.name.toUpperCase(); // Convert name to uppercase
+    }
+
     const { data: updatedMaterial, error } = await supabase
       .from('materials')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();

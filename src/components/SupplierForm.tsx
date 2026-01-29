@@ -233,6 +233,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
     const finalData = {
       ...data,
       rif: normalizedRif,
+      name: data.name.toUpperCase(), // Ensure name is uppercase before submission
       credit_days: data.payment_terms === 'Crédito' ? data.credit_days : 0,
       custom_payment_terms: data.payment_terms === 'Otro' ? data.custom_payment_terms : null,
     };

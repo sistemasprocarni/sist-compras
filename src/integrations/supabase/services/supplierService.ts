@@ -24,9 +24,14 @@ const SupplierService = {
     supplierData: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>,
     materials: SupplierMaterialPayload[],
   ): Promise<Supplier | null> => {
+    const payload = {
+      ...supplierData,
+      name: supplierData.name.toUpperCase(), // Convert name to uppercase
+    };
+
     const { data: newSupplier, error: supplierError } = await supabase
       .from('suppliers')
-      .insert(supplierData)
+      .insert(payload)
       .select()
       .single();
 
@@ -72,9 +77,14 @@ const SupplierService = {
     updates: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at' | 'materials'>>,
     materials: SupplierMaterialPayload[],
   ): Promise<Supplier | null> => {
+    const payload = { ...updates };
+    if (payload.name) {
+      payload.name = payload.name.toUpperCase(); // Convert name to uppercase
+    }
+
     const { data: updatedSupplier, error: supplierError } = await supabase
       .from('suppliers')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();

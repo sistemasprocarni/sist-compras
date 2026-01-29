@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { createMaterial, createSupplierMaterialRelation, searchMaterials } from '@/integrations/supabase/data';
 import { useSession } from '@/components/SessionContextProvider';
 import { Material } from '@/integrations/supabase/types';
+import SmartSearch from './SmartSearch'; // Import SmartSearch
 
 interface MaterialCreationDialogProps {
   isOpen: boolean;
@@ -32,6 +33,12 @@ const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
 
+// Define el tipo de resultado de búsqueda para SmartSearch
+interface MaterialSearchResult extends Material {
+  id: string;
+  name: string;
+}
+
 const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
   isOpen,
   onClose,
@@ -47,7 +54,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
   const [unit, setUnit] = useState(MATERIAL_UNITS[0]);
   const [isExempt, setIsExempt] = useState(false);
   const [specification, setSpecification] = useState('');
-  const [existingMaterial, setExistingMaterial] = useState<Material | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<MaterialSearchResult | null>(null); // Selected existing material
 
   const resetForm = () => {
     setMaterialName('');
@@ -55,12 +62,37 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     setUnit(MATERIAL_UNITS[0]);
     setIsExempt(false);
     setSpecification('');
-    setExistingMaterial(null);
+    setSelectedMaterial(null);
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  // Effect to update form fields if an existing material is selected
+  useEffect(() => {
+    if (selectedMaterial) {
+      setMaterialName(selectedMaterial.name);
+      setCategory(selectedMaterial.category || MATERIAL_CATEGORIES[0]);
+      setUnit(selectedMaterial.unit || MATERIAL_UNITS[0]);
+      setIsExempt(selectedMaterial.is_exempt || false);
+      // Note: Specification is specific to the supplier relation, so it remains independent.
+    } else if (isOpen) {
+      // If the dialog is open and selection is cleared, reset fields but keep manual input
+      setCategory(MATERIAL_CATEGORIES[0]);
+      setUnit(MATERIAL_UNITS[0]);
+      setIsExempt(false);
+    }
+  }, [selectedMaterial, isOpen]);
+
+  const handleMaterialSelect = (material: MaterialSearchResult) => {
+    setSelectedMaterial(material);
+  };
+
+  const handleMaterialSearch = async (query: string): Promise<MaterialSearchResult[]> => {
+    const results = await searchMaterials(query);
+    return results as MaterialSearchResult[];
   };
 
   const handleAddMaterial = async () => {
@@ -69,7 +101,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
       return;
     }
 
-    const trimmedMaterialName = materialName.trim();
+    const trimmedMaterialName = materialName.trim().toUpperCase(); // Ensure uppercase for saving
     if (!trimmedMaterialName) {
       showError('El nombre del material es requerido.');
       return;
@@ -78,19 +110,18 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      let materialToAssociate: Material | null = existingMaterial;
+      let materialToAssociate: Material | null = selectedMaterial;
 
       if (!materialToAssociate) {
-        // 1. Check if material already exists by exact name
+        // If no material was selected via SmartSearch, check if the typed name exists
         const existingMaterials = await searchMaterials(trimmedMaterialName);
-        const exactMatch = existingMaterials.find(m => m.name.toLowerCase() === trimmedMaterialName.toLowerCase());
+        const exactMatch = existingMaterials.find(m => m.name.toUpperCase() === trimmedMaterialName);
 
         if (exactMatch) {
-          // Found existing material, use it
           materialToAssociate = exactMatch;
           showSuccess(`Material existente "${materialToAssociate.name}" encontrado.`);
         } else {
-          // 2. Create the new material
+          // Create the new material
           const newMaterial = await createMaterial({
             name: trimmedMaterialName,
             category,
@@ -122,7 +153,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
           showSuccess(`Material "${materialToAssociate.name}" asociado con el proveedor exitosamente.`);
         }
       } else if (!supplierId && materialToAssociate) {
-        showSuccess(`Material "${materialToAssociate.name}" creado. Añádelo al proveedor manualmente.`);
+        showSuccess(`Material "${materialToAssociate.name}" creado.`);
       }
       
       // 4. Call the callback with the material data and specification
@@ -143,22 +174,12 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     }
   };
 
-  // Logic to check for existing material as the user types
-  const handleMaterialNameChange = async (name: string) => {
-    setMaterialName(name);
-    const trimmedName = name.trim();
-    if (trimmedName.length > 2) {
-      const existingMaterials = await searchMaterials(trimmedName);
-      const exactMatch = existingMaterials.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
-      setExistingMaterial(exactMatch || null);
-    } else {
-      setExistingMaterial(null);
-    }
-  };
-
   const dialogDescription = supplierId 
     ? `Crea un nuevo material o asocia uno existente a ${supplierName ? <strong>{supplierName}</strong> : 'este proveedor'}.`
-    : 'Crea un nuevo material. Si estás creando un nuevo proveedor, este material se asociará al guardar el formulario.';
+    : 'Crea un nuevo material.';
+
+  const isExistingMaterialSelected = !!selectedMaterial;
+  const submitButtonText = isExistingMaterialSelected ? 'Asociar Material' : 'Crear y Asociar';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -173,67 +194,86 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="materialName">Nombre del Material *</Label>
-            <Input
-              id="materialName"
-              placeholder="Ej: Pollo entero, Carne molida..."
-              value={materialName}
-              onChange={(e) => handleMaterialNameChange(e.target.value)}
-              disabled={isSubmitting}
+            <SmartSearch
+              placeholder="Buscar o escribir nombre del material..."
+              onSelect={handleMaterialSelect}
+              fetchFunction={handleMaterialSearch}
+              displayValue={materialName}
+              selectedId={selectedMaterial?.id}
+              // Custom input handling for manual entry
+              customInput={(props) => (
+                <Input
+                  {...props}
+                  id="materialName"
+                  placeholder="Buscar o escribir nombre del material..."
+                  value={materialName}
+                  onChange={(e) => {
+                    setMaterialName(e.target.value);
+                    setSelectedMaterial(null); // Clear selection on manual change
+                  }}
+                  onBlur={() => {
+                    // When blurring, if text matches a selected item, keep it selected
+                    if (selectedMaterial && selectedMaterial.name.toUpperCase() === materialName.toUpperCase()) {
+                      setMaterialName(selectedMaterial.name);
+                    } else {
+                      setSelectedMaterial(null);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                />
+              )}
             />
-            {existingMaterial && (
+            {isExistingMaterialSelected && (
               <p className="text-sm text-blue-600">
-                Material existente encontrado: <strong>{existingMaterial.name}</strong>. Se usará este material.
+                Material existente seleccionado: <strong>{selectedMaterial.name}</strong>.
               </p>
             )}
           </div>
 
-          {!existingMaterial && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Categoría</Label>
-                  <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Selecciona categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MATERIAL_CATEGORIES.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Fields for new material creation or viewing existing material details */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Select value={category} onValueChange={setCategory} disabled={isSubmitting || isExistingMaterialSelected}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Selecciona categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="unit">Unidad</Label>
-                  <Select value={unit} onValueChange={setUnit} disabled={isSubmitting}>
-                    <SelectTrigger id="unit">
-                      <SelectValue placeholder="Selecciona unidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MATERIAL_UNITS.map(u => (
-                        <SelectItem key={u} value={u}>{u}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="unit">Unidad</Label>
+              <Select value={unit} onValueChange={setUnit} disabled={isSubmitting || isExistingMaterialSelected}>
+                <SelectTrigger id="unit">
+                  <SelectValue placeholder="Selecciona unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_UNITS.map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <Label>Exento de IVA</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Marcar si este material no debe incluir IVA.
-                  </p>
-                </div>
-                <Switch
-                  checked={isExempt}
-                  onCheckedChange={setIsExempt}
-                  disabled={isSubmitting}
-                />
-              </div>
-            </>
-          )}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label>Exento de IVA</Label>
+              <p className="text-sm text-muted-foreground">
+                Marcar si este material no debe incluir IVA.
+              </p>
+            </div>
+            <Switch
+              checked={isExempt}
+              onCheckedChange={setIsExempt}
+              disabled={isSubmitting || isExistingMaterialSelected}
+            />
+          </div>
 
           <div className="grid gap-2">
             <Label htmlFor="specification">Especificación (Opcional)</Label>
@@ -252,7 +292,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
             Cancelar
           </Button>
           <Button onClick={handleAddMaterial} disabled={isSubmitting || !materialName.trim()}>
-            {isSubmitting ? 'Guardando...' : (existingMaterial ? 'Asociar Material' : 'Crear y Asociar')}
+            {isSubmitting ? 'Guardando...' : submitButtonText}
           </Button>
         </DialogFooter>
       </DialogContent>
