@@ -94,8 +94,8 @@ const PurchaseOrderDetails = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false); // Nuevo estado para confirmación de aprobación
-  const [isApproving, setIsApproving] = useState(false); // Estado de carga para aprobación
+  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
@@ -162,7 +162,7 @@ const PurchaseOrderDetails = () => {
   const handleApproveOrder = async () => {
     if (!order || order.status === 'Approved') return;
 
-    setIsApproveConfirmOpen(false); // Close dialog immediately
+    setIsApproveConfirmOpen(false);
     setIsApproving(true);
     const toastId = showLoading('Aprobando orden...');
     
@@ -299,11 +299,12 @@ const PurchaseOrderDetails = () => {
 
   const ActionButtons = () => (
     <>
+      {/* 1. Previsualizar PDF */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogTrigger asChild>
-          <Button variant="secondary" className={isMobile ? 'w-full justify-start' : ''}>
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
-          </Button>
+          </DropdownMenuItem>
         </DialogTrigger>
         <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
           <DialogHeader>
@@ -316,54 +317,57 @@ const PurchaseOrderDetails = () => {
           />
         </DialogContent>
       </Dialog>
-      <PDFDownloadButton
-        orderId={order.id}
-        fileNameGenerator={generateFileName}
-        endpoint="generate-po-pdf"
-        label="Descargar PDF"
-        variant={isMobile ? 'secondary' : 'outline'}
-        className={isMobile ? 'w-full justify-start' : ''}
-      />
-      <WhatsAppSenderButton
-        recipientPhone={order.suppliers?.phone}
-        documentType="Orden de Compra"
-        documentId={order.id}
-        documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
-        companyName={order.companies?.name || ''}
-      />
-      <Button
-        onClick={() => setIsEmailModalOpen(true)}
-        disabled={!order.suppliers?.email}
-        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
-      >
+      
+      {/* 2. Descargar PDF */}
+      <DropdownMenuItem asChild>
+        <PDFDownloadButton
+          orderId={order.id}
+          fileNameGenerator={generateFileName}
+          endpoint="generate-po-pdf"
+          label="Descargar PDF"
+          variant="ghost"
+          asChild
+        />
+      </DropdownMenuItem>
+
+      <DropdownMenuSeparator />
+
+      {/* 3. Enviar por Correo */}
+      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsEmailModalOpen(true); }} disabled={!order.suppliers?.email} className="cursor-pointer">
         <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
-      </Button>
+      </DropdownMenuItem>
+      
+      {/* 4. Enviar por WhatsApp */}
+      <DropdownMenuItem asChild>
+        <WhatsAppSenderButton
+          recipientPhone={order.suppliers?.phone}
+          documentType="Orden de Compra"
+          documentId={order.id}
+          documentNumber={formatSequenceNumber(order.sequence_number, order.created_at)}
+          companyName={order.companies?.name || ''}
+          variant="ghost"
+          asChild
+        />
+      </DropdownMenuItem>
+
+      <DropdownMenuSeparator />
+
+      {/* 5. Aprobar Orden */}
       {isEditable && (
-        <Button 
-          onClick={() => setIsApproveConfirmOpen(true)} // Abrir diálogo de confirmación
-          disabled={isApproving}
-          className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
-        >
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsApproveConfirmOpen(true); }} disabled={isApproving} className="cursor-pointer text-green-600 focus:text-green-700">
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
-        </Button>
+        </DropdownMenuItem>
       )}
-      {/* Render Link only if editable, otherwise render disabled Button */}
+
+      {/* 6. Editar Orden */}
       {isEditable ? (
-        <Button 
-          asChild 
-          className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}
-        >
-          <Link to={`/purchase-orders/edit/${order.id}`}>
-            <Edit className="mr-2 h-4 w-4" /> Editar Orden
-          </Link>
-        </Button>
-      ) : (
-        <Button 
-          disabled={true}
-          className={cn("bg-procarni-primary/50 cursor-not-allowed", isMobile ? 'w-full justify-start' : '')}
-        >
+        <DropdownMenuItem onSelect={() => navigate(`/purchase-orders/edit/${order.id}`)} className="cursor-pointer">
           <Edit className="mr-2 h-4 w-4" /> Editar Orden
-        </Button>
+        </DropdownMenuItem>
+      ) : (
+        <DropdownMenuItem disabled>
+          <Edit className="mr-2 h-4 w-4" /> Editar Orden (Aprobada)
+        </DropdownMenuItem>
       )}
     </>
   );
@@ -375,26 +379,20 @@ const PurchaseOrderDetails = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         
-        {isMobile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Acciones de Orden</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="flex flex-col gap-1 p-1">
-                <ActionButtons />
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex gap-2 flex-wrap justify-end">
+        {/* Always use DropdownMenu for actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary">
+              <MoreVertical className="h-4 w-4" />
+              <span className="ml-2">Acciones</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Opciones de Orden</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <ActionButtons />
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="mb-6">
@@ -430,61 +428,61 @@ const PurchaseOrderDetails = () => {
                   const subtotal = item.quantity * item.unit_price;
                   const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
                   return (
-                    <Card key={item.id} className="p-3">
-                      <p className="font-semibold text-procarni-primary">{item.material_name}</p>
-                      <div className="text-sm mt-1 grid grid-cols-2 gap-2">
-                        <p><strong>Cód. Prov:</strong> {item.supplier_code || 'N/A'}</p>
-                        <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>
-                        <p><strong>P. Unitario:</strong> {order.currency} {item.unit_price.toFixed(2)}</p>
-                        <p><strong>Subtotal:</strong> {order.currency} {subtotal.toFixed(2)}</p>
-                        <p><strong>IVA:</strong> {order.currency} {itemIva.toFixed(2)}</p>
-                        <p><strong>Exento:</strong> {item.is_exempt ? 'Sí' : 'No'}</p>
-                      </div>
-                      <div className="mt-2 pt-2 border-t flex justify-between font-bold text-sm">
-                        <span>Total Ítem:</span>
-                        <span>{order.currency} {(subtotal + itemIva).toFixed(2)}</span>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Cód. Prov.</TableHead>
-                      <TableHead>Cantidad</TableHead>
-                      <TableHead>P. Unitario ({order.currency})</TableHead>
-                      <TableHead>Subtotal ({order.currency})</TableHead>
-                      <TableHead>IVA ({order.currency})</TableHead>
-                      <TableHead>Exento</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.purchase_order_items.map((item) => {
-                      const subtotal = item.quantity * item.unit_price;
-                      const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.material_name}</TableCell>
-                          <TableCell>{item.supplier_code || 'N/A'}</TableCell>
-                          <TableCell>{item.quantity} {item.unit || 'N/A'}</TableCell>
-                          <TableCell>{item.unit_price.toFixed(2)}</TableCell>
-                          <TableCell>{subtotal.toFixed(2)}</TableCell>
-                          <TableCell>{itemIva.toFixed(2)}</TableCell>
-                          <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell>
-                        </TableRow>
+                        <Card key={item.id} className="p-3">
+                          <p className="font-semibold text-procarni-primary">{item.material_name}</p>
+                          <div className="text-sm mt-1 grid grid-cols-2 gap-2">
+                            <p><strong>Cód. Prov:</strong> {item.supplier_code || 'N/A'}</p>
+                            <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>
+                            <p><strong>P. Unitario:</strong> {order.currency} {item.unit_price.toFixed(2)}</p>
+                            <p><strong>Subtotal:</strong> {order.currency} {subtotal.toFixed(2)}</p>
+                            <p><strong>IVA:</strong> {order.currency} {itemIva.toFixed(2)}</p>
+                            <p><strong>Exento:</strong> {item.is_exempt ? 'Sí' : 'No'}</p>
+                          </div>
+                          <div className="mt-2 pt-2 border-t flex justify-between font-bold text-sm">
+                            <span>Total Ítem:</span>
+                            <span>{order.currency} {(subtotal + itemIva).toFixed(2)}</span>
+                          </div>
+                        </Card>
                       );
                     })}
-                  </TableBody>
-                </Table>
-              </div>
-            )
-          ) : (
-            <p className="text-muted-foreground">Esta orden no tiene ítems registrados.</p>
-          )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Cód. Prov.</TableHead>
+                          <TableHead>Cantidad</TableHead>
+                          <TableHead>P. Unitario ({order.currency})</TableHead>
+                          <TableHead>Subtotal ({order.currency})</TableHead>
+                          <TableHead>IVA ({order.currency})</TableHead>
+                          <TableHead>Exento</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {order.purchase_order_items.map((item) => {
+                          const subtotal = item.quantity * item.unit_price;
+                          const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.material_name}</TableCell>
+                              <TableCell>{item.supplier_code || 'N/A'}</TableCell>
+                              <TableCell>{item.quantity} {item.unit || 'N/A'}</TableCell>
+                              <TableCell>{item.unit_price.toFixed(2)}</TableCell>
+                              <TableCell>{subtotal.toFixed(2)}</TableCell>
+                              <TableCell>{itemIva.toFixed(2)}</TableCell>
+                              <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <p className="text-muted-foreground">Esta orden no tiene ítems registrados.</p>
+              )}
 
           <div className="mt-8 border-t pt-4">
             <div className="flex justify-end items-center mb-2">

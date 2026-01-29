@@ -77,8 +77,8 @@ const QuoteRequestDetails = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false); // Nuevo estado para confirmación de aprobación
-  const [isApproving, setIsApproving] = useState(false); // Estado de carga para aprobación
+  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -103,7 +103,7 @@ const QuoteRequestDetails = () => {
   const handleApproveRequest = async () => {
     if (!request || request.status === 'Approved') return;
 
-    setIsApproveConfirmOpen(false); // Close dialog immediately
+    setIsApproveConfirmOpen(false);
     setIsApproving(true);
     const toastId = showLoading('Aprobando solicitud...');
     
@@ -259,13 +259,16 @@ const QuoteRequestDetails = () => {
     );
   }
 
+  const isEditable = request.status !== 'Approved' && request.status !== 'Archived';
+
   const ActionButtons = () => (
     <>
+      {/* 1. Previsualizar PDF */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogTrigger asChild>
-          <Button variant="secondary" className={isMobile ? 'w-full justify-start' : ''}>
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
-          </Button>
+          </DropdownMenuItem>
         </DialogTrigger>
         <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
           <DialogHeader>
@@ -278,45 +281,61 @@ const QuoteRequestDetails = () => {
           />
         </DialogContent>
       </Dialog>
-      <PDFDownloadButton
-        requestId={request.id}
-        fileNameGenerator={generateFileName}
-        endpoint="generate-qr-pdf"
-        label="Descargar PDF"
-        variant={isMobile ? 'secondary' : 'outline'}
-        className={isMobile ? 'w-full justify-start' : ''}
-      />
-      <WhatsAppSenderButton
-        recipientPhone={request.suppliers?.phone}
-        documentType="Solicitud de Cotización"
-        documentId={request.id}
-        documentNumber={request.id.substring(0, 8)}
-        companyName={request.companies?.name || ''}
-      />
-      <Button
-        onClick={() => setIsEmailModalOpen(true)}
-        disabled={!request.suppliers?.email}
-        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
-      >
+      
+      {/* 2. Descargar PDF */}
+      <DropdownMenuItem asChild>
+        <PDFDownloadButton
+          requestId={request.id}
+          fileNameGenerator={generateFileName}
+          endpoint="generate-qr-pdf"
+          label="Descargar PDF"
+          variant="ghost"
+          asChild
+        />
+      </DropdownMenuItem>
+
+      <DropdownMenuSeparator />
+
+      {/* 3. Enviar por Correo */}
+      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsEmailModalOpen(true); }} disabled={!request.suppliers?.email} className="cursor-pointer">
         <Mail className="mr-2 h-4 w-4" /> Enviar por Correo
-      </Button>
+      </DropdownMenuItem>
+      
+      {/* 4. Enviar por WhatsApp */}
+      <DropdownMenuItem asChild>
+        <WhatsAppSenderButton
+          recipientPhone={request.suppliers?.phone}
+          documentType="Solicitud de Cotización"
+          documentId={request.id}
+          documentNumber={request.id.substring(0, 8)}
+          companyName={request.companies?.name || ''}
+          variant="ghost"
+          asChild
+        />
+      </DropdownMenuItem>
+
+      <DropdownMenuSeparator />
+
+      {/* 5. Aprobar Solicitud */}
       {request.status !== 'Approved' && request.status !== 'Archived' && (
-        <Button 
-          onClick={() => setIsApproveConfirmOpen(true)} // Abrir diálogo de confirmación
-          disabled={isApproving}
-          className={cn("bg-green-600 hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
-        >
+        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsApproveConfirmOpen(true); }} disabled={isApproving} className="cursor-pointer text-green-600 focus:text-green-700">
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Solicitud
-        </Button>
+        </DropdownMenuItem>
       )}
-      <Button asChild className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}>
-        <Link to={`/quote-requests/edit/${request.id}`}>
+
+      {/* 6. Editar Solicitud */}
+      {isEditable && (
+        <DropdownMenuItem onSelect={() => navigate(`/quote-requests/edit/${request.id}`)} className="cursor-pointer">
           <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
-        </Link>
-      </Button>
-      <Button onClick={handleConvertToPurchaseOrder} className={cn("bg-procarni-secondary hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}>
+        </DropdownMenuItem>
+      )}
+
+      <DropdownMenuSeparator />
+
+      {/* 7. Convertir a OC */}
+      <DropdownMenuItem onSelect={handleConvertToPurchaseOrder} className="cursor-pointer text-procarni-secondary focus:text-green-700">
         <ShoppingCart className="mr-2 h-4 w-4" /> Convertir a OC
-      </Button>
+      </DropdownMenuItem>
     </>
   );
 
@@ -327,26 +346,20 @@ const QuoteRequestDetails = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         
-        {isMobile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="flex flex-col gap-1 p-1">
-                <ActionButtons />
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex gap-2 flex-wrap justify-end">
+        {/* Always use DropdownMenu for actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary">
+              <MoreVertical className="h-4 w-4" />
+              <span className="ml-2">Acciones</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Opciones de Solicitud</DropdownMenuLabel>
+            <DropdownMenuSeparator />
             <ActionButtons />
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="mb-6">

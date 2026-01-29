@@ -9,6 +9,8 @@ interface WhatsAppSenderButtonProps {
   documentId: string;
   documentNumber: string;
   companyName: string;
+  asChild?: boolean; // NEW: Added asChild prop
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined; // NEW: Added variant prop
 }
 
 const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
@@ -17,6 +19,8 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
   documentId,
   documentNumber,
   companyName,
+  asChild = false,
+  variant = 'default',
 }) => {
   const handleSendWhatsApp = () => {
     if (!recipientPhone) {
@@ -38,7 +42,9 @@ const WhatsAppSenderButton: React.FC<WhatsAppSenderButtonProps> = ({
     <Button
       onClick={handleSendWhatsApp}
       disabled={!recipientPhone}
-      className="bg-green-600 hover:bg-green-700"
+      variant={variant}
+      asChild={asChild}
+      className={!asChild ? "bg-green-600 hover:bg-green-700" : ""} // Apply custom color only if not rendering as child (i.e., not inside dropdown)
     >
       <MessageSquare className="mr-2 h-4 w-4" /> Enviar por WhatsApp
     </Button>

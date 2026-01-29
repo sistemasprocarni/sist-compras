@@ -13,6 +13,7 @@ interface PDFDownloadButtonProps {
   label?: string;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | null | undefined;
   disabled?: boolean; // Added disabled prop
+  asChild?: boolean; // NEW: Added asChild prop
 }
 
 const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
@@ -24,6 +25,7 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
   label = 'Descargar PDF',
   variant = 'outline',
   disabled = false,
+  asChild = false, // Default to false
 }) => {
   const { session } = useSession();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -95,9 +97,20 @@ const PDFDownloadButton: React.FC<PDFDownloadButtonProps> = ({
       disabled={isDownloading || disabled}
       variant={variant}
       className="flex items-center gap-2"
+      asChild={asChild} // Pass asChild down to Button
     >
-      <Download className="h-4 w-4" />
-      {isDownloading ? 'Descargando...' : label}
+      {/* If asChild is true, the children (Download icon and label) will be rendered inside the DropdownMenuItem */}
+      {asChild ? (
+        <>
+          <Download className="h-4 w-4" />
+          {isDownloading ? 'Descargando...' : label}
+        </>
+      ) : (
+        <>
+          <Download className="h-4 w-4" />
+          {isDownloading ? 'Descargando...' : label}
+        </>
+      )}
     </Button>
   );
 };
