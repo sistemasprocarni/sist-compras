@@ -347,15 +347,24 @@ const PurchaseOrderDetails = () => {
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
         </Button>
       )}
-      <Button 
-        asChild 
-        disabled={!isEditable}
-        className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}
-      >
-        <Link to={`/purchase-orders/edit/${order.id}`}>
+      {/* Render Link only if editable, otherwise render disabled Button */}
+      {isEditable ? (
+        <Button 
+          asChild 
+          className={cn("bg-procarni-primary hover:bg-procarni-primary/90", isMobile ? 'w-full justify-start' : '')}
+        >
+          <Link to={`/purchase-orders/edit/${order.id}`}>
+            <Edit className="mr-2 h-4 w-4" /> Editar Orden
+          </Link>
+        </Button>
+      ) : (
+        <Button 
+          disabled={true}
+          className={cn("bg-procarni-primary/50 cursor-not-allowed", isMobile ? 'w-full justify-start' : '')}
+        >
           <Edit className="mr-2 h-4 w-4" /> Editar Orden
-        </Link>
-      </Button>
+        </Button>
+      )}
     </>
   );
 
