@@ -218,6 +218,13 @@ const GeneratePurchaseOrder = () => {
 
   const totals = calculateTotals(items);
 
+  const totalInUSD = React.useMemo(() => {
+    if (currency === 'VES' && exchangeRate && exchangeRate > 0) {
+      return (totals.total / exchangeRate).toFixed(2);
+    }
+    return null;
+  }, [currency, exchangeRate, totals.total]);
+
   const handleSubmit = async () => {
     if (!userId) {
       showError('Usuario no autenticado.');
@@ -394,6 +401,12 @@ const GeneratePurchaseOrder = () => {
               <span className="mr-2">TOTAL:</span>
               <span>{currency} {totals.total.toFixed(2)}</span>
             </div>
+            {totalInUSD && currency === 'VES' && (
+              <div className="flex justify-end items-center text-lg font-bold text-blue-600 mt-1">
+                <span className="mr-2">TOTAL (USD):</span>
+                <span>USD {totalInUSD}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 mt-6">

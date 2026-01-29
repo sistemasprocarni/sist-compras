@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import PDFDownloadButton from './PDFDownloadButton'; // Importar el botón de descarga
+import { calculateTotals } from '@/utils/calculations'; // Import calculateTotals
 
 interface PurchaseOrderHeader {
   supplier_id: string;
@@ -227,9 +228,23 @@ const PurchaseOrderDraftPreview: React.FC<PurchaseOrderDraftPreviewProps> = ({ o
     };
   }, [orderData.supplier_id, orderData.company_id, orderData.currency, orderData.exchange_rate, orderData.delivery_date, orderData.payment_terms, orderData.custom_payment_terms, orderData.credit_days, orderData.observations, itemsData.length]); // Re-run if core data changes
 
+  const totals = calculateTotals(itemsData);
+  const totalInUSD = orderData.currency === 'VES' && orderData.exchange_rate && orderData.exchange_rate > 0
+    ? (totals.total / orderData.exchange_rate).toFixed(2)
+    : null;
+
   return (
     <div className="flex flex-col h-full">
-      {/* Moved buttons to the top for better visibility */}
+      {/* Totals Display */}
+      <div className="flex justify-end items-center mb-4 gap-4 text-sm">
+        <div className="flex flex-col items-end">
+          <span className="font-semibold">Total: {orderData.currency} {totals.total.toFixed(2)}</span>
+          {totalInUSD && (
+            <span className="font-bold text-blue-600">USD {totalInUSD}</span>
+          )}
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 mb-4">
         {/* Usar PDFDownloadButton para la descarga consistente */}
         <PDFDownloadButton

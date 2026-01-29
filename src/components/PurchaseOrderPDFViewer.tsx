@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import PDFDownloadButton from './PDFDownloadButton'; // Importar el botón de descarga
+import { getPurchaseOrderDetails } from '@/integrations/supabase/data'; // Importar servicio para obtener detalles
+import { calculateTotals } from '@/utils/calculations'; // Import calculateTotals
 
 interface PurchaseOrderPDFViewerProps {
   orderId: string;
@@ -16,6 +18,16 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [successToastId, setSuccessToastId] = useState<string | null>(null);
+  const [orderData, setOrderData] = useState<any>(null); // State to hold order details for totals
+
+  const fetchOrderDetails = async () => {
+    try {
+      const details = await getPurchaseOrderDetails(orderId);
+      setOrderData(details);
+    } catch (e) {
+      console.error("Error fetching order details for viewer:", e);
+    }
+  };
 
   const generatePdf = async () => {
     if (!session) {
@@ -88,6 +100,7 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
   };
 
   useEffect(() => {
+    fetchOrderDetails();
     generatePdf();
     return () => {
       if (pdfUrl) {
@@ -102,8 +115,32 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
     };
   }, [orderId]);
 
+  const itemsForCalculation = orderData?.purchase_order_items.map((item: any) => ({
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    tax_rate: item.tax_rate,
+    is_exempt: item.is_exempt,
+  })) || [];
+
+  const totals = calculateTotals(itemsForCalculation);
+  const totalInUSD = orderData?.currency === 'VES' && orderData.exchange_rate && orderData.exchange_rate > 0
+    ? (totals.total / orderData.exchange_rate).toFixed(2)
+    : null;
+
   return (
     <div className="flex flex-col h-full">
+      {/* Totals Display */}
+      <div className="flex justify-end items-center mb-4 gap-4 text-sm">
+        {orderData && (
+          <div className="flex flex-col items-end">
+            <span className="font-semibold">Total: {orderData.currency} {totals.total.toFixed(2)}</span>
+            {totalInUSD && (
+              <span className="font-bold text-blue-600">USD {totalInUSD}</span>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="flex justify-end gap-2 mb-4">
         {/* Usar PDFDownloadButton para la descarga consistente */}
         <PDFDownloadButton
