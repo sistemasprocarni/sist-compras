@@ -10,16 +10,22 @@ interface ScrollToTopButtonProps {
 const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ scrollContainerRef }) => {
   const [isVisible, setIsVisible] = useState(false);
 
+  // Función para obtener la posición de desplazamiento actual
+  const getScrollPosition = (container: HTMLElement | null): number => {
+    if (container) {
+      return container.scrollTop;
+    }
+    // Fallback para desplazamiento de ventana (común en móvil)
+    return window.scrollY || document.documentElement.scrollTop;
+  };
+
   // Función para manejar el desplazamiento
   const toggleVisibility = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      // Usamos scrollTop del contenedor
-      if (container.scrollTop > 300) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
+    const scrollPosition = getScrollPosition(scrollContainerRef.current);
+    if (scrollPosition > 300) {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
     }
   };
 
@@ -31,21 +37,35 @@ const ScrollToTopButton: React.FC<ScrollToTopButtonProps> = ({ scrollContainerRe
         top: 0,
         behavior: 'smooth',
       });
+    } else {
+      // Fallback para desplazamiento de ventana
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
     }
   };
 
   useEffect(() => {
     const container = scrollContainerRef.current;
+    
+    // 1. Intentar escuchar el contenedor interno
     if (container) {
-      // Escuchar el evento de desplazamiento en el contenedor específico
       container.addEventListener('scroll', toggleVisibility);
-      // Ejecutar una vez al montar para el estado inicial
       toggleVisibility();
       
       return () => {
         container.removeEventListener('scroll', toggleVisibility);
       };
-    }
+    } 
+    
+    // 2. Si no hay contenedor (o si el desplazamiento es a nivel de ventana), usar window
+    window.addEventListener('scroll', toggleVisibility);
+    toggleVisibility();
+    
+    return () => {
+      window.removeEventListener('scroll', toggleVisibility);
+    };
   }, [scrollContainerRef]);
 
   return (
