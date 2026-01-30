@@ -171,7 +171,7 @@ serve(async (req) => {
       .from('purchase_orders')
       .select(`
         *,
-        suppliers (name, rif, email, phone, payment_terms, address),
+        suppliers (name, rif, email, phone, payment_terms),
         companies (name, logo_url, fiscal_data, rif, address, phone, email)
       `)
       .eq('id', orderId)
@@ -369,40 +369,10 @@ serve(async (req) => {
       
       state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
       
-      // Max width for supplier details (approx 60 characters per line)
-      const maxChars = 60; 
-      
-      // 1. Supplier Name (Bold)
-      const namePrefix = 'Nombre: ';
-      const nameLines = wrapText(order.suppliers?.name || 'N/A', maxChars - namePrefix.length);
-      
-      drawText(state, namePrefix, MARGIN, state.y, { font: boldFont });
-      let currentX = MARGIN + font.widthOfTextAtSize(namePrefix, FONT_SIZE);
-      
-      for (const line of nameLines) {
-        drawText(state, line, currentX, state.y);
-        state.y -= LINE_HEIGHT;
-        currentX = MARGIN + font.widthOfTextAtSize(namePrefix, FONT_SIZE); // Subsequent lines start indented
-      }
-      
-      // 2. RIF
-      drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
+      drawText(state, `Nombre: ${order.suppliers?.name || 'N/A'}`, MARGIN, state.y);
       state.y -= LINE_HEIGHT;
-      
-      // 3. Address
-      const addressPrefix = 'Dirección: ';
-      const addressLines = wrapText(order.suppliers?.address || 'N/A', maxChars - addressPrefix.length);
-      
-      drawText(state, addressPrefix, MARGIN, state.y, { font: boldFont });
-      currentX = MARGIN + font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
-      
-      for (const line of addressLines) {
-        drawText(state, line, currentX, state.y);
-        state.y -= LINE_HEIGHT;
-        currentX = MARGIN + font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
-      }
-      
-      state.y -= LINE_HEIGHT; // Extra space after details
+      drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
+      state.y -= LINE_HEIGHT * 2;
       return state;
     };
 
@@ -600,7 +570,8 @@ serve(async (req) => {
       const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
         const fontToUse = isBold ? boldFont : font;
         
-        // Calculate vertical center position: currentY (top of the row) - half the row height + half the font size
+        // Calculate vertical center position within the totalRowHeight
+        // We use currentY (top of the row) and subtract half the row height, then add half the font size for baseline alignment
         const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
         
         // Draw label (left aligned)
