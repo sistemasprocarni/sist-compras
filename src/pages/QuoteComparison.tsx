@@ -1,21 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, PlusCircle, Edit, Trash2, Scale, DollarSign, Clock, Truck } from 'lucide-react';
+import { ArrowLeft, Search, PlusCircle, Trash2, Scale, DollarSign, X } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
-import { searchMaterials, getQuotesByMaterial, deleteQuote } from '@/integrations/supabase/data';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { searchMaterials, searchMaterialsBySupplier, getSuppliersByMaterial } from '@/integrations/supabase/data';
+import { useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, isPast } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { SupplierQuote } from '@/integrations/supabase/types';
-import QuoteFormDialog from '@/components/QuoteFormDialog';
-import { showError, showSuccess } from '@/utils/toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
 interface MaterialSearchResult {
@@ -26,133 +23,186 @@ interface MaterialSearchResult {
   unit?: string;
 }
 
-interface SupplierQuoteExtended extends SupplierQuote {
-    supplier_name?: string;
-    suppliers: {
-        id: string;
-        name: string;
-        code?: string;
-        rif: string;
-        phone?: string;
-        email?: string;
-    }
+interface SupplierResult {
+  id: string;
+  name: string;
+  rif: string;
+  code?: string;
+}
+
+interface QuoteEntry {
+  supplierId: string;
+  supplierName: string;
+  unitPrice: number;
+  currency: 'USD' | 'VES';
+  exchangeRate?: number;
+}
+
+interface MaterialComparison {
+  material: MaterialSearchResult;
+  quotes: QuoteEntry[];
 }
 
 const QuoteComparison = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const queryClient = useQueryClient();
   
-  const [selectedMaterial, setSelectedMaterial] = useState<MaterialSearchResult | null>(null);
+  const [materialsToCompare, setMaterialsToCompare] = useState<MaterialComparison[]>([]);
   const [baseCurrency, setBaseCurrency] = useState<'USD' | 'VES'>('USD');
+  const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingQuote, setEditingQuote] = useState<SupplierQuoteExtended | undefined>(undefined);
-  
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [quoteToDeleteId, setQuoteToDeleteId] = useState<string | null>(null);
+  // State for adding a new material via SmartSearch
+  const [newMaterialQuery, setNewMaterialQuery] = useState('');
+  const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<MaterialSearchResult | null>(null);
 
-  const { data: quotes, isLoading, error, refetch } = useQuery<SupplierQuoteExtended[]>({
-    queryKey: ['supplierQuotes', selectedMaterial?.id],
-    queryFn: () => getQuotesByMaterial(selectedMaterial!.id),
-    enabled: !!selectedMaterial?.id,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteQuote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supplierQuotes', selectedMaterial?.id] });
-      showSuccess('Cotización eliminada exitosamente.');
-      setIsDeleteDialogOpen(false);
-      setQuoteToDeleteId(null);
+  // Fetch all suppliers associated with the currently selected material for adding quotes
+  const { data: availableSuppliers, isLoading: isLoadingSuppliers } = useQuery<SupplierResult[]>({
+    queryKey: ['suppliersByMaterial', selectedMaterialToAdd?.id],
+    queryFn: async () => {
+        if (!selectedMaterialToAdd?.id) return [];
+        const results = await getSuppliersByMaterial(selectedMaterialToAdd.id);
+        // Map results to the simpler SupplierResult interface
+        return results.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            rif: s.rif,
+            code: s.code,
+        }));
     },
-    onError: (err) => {
-      showError(`Error al eliminar cotización: ${err.message}`);
-      setIsDeleteDialogOpen(false);
-      setQuoteToDeleteId(null);
-    },
+    enabled: !!selectedMaterialToAdd?.id,
   });
 
   const handleMaterialSelect = (material: MaterialSearchResult) => {
-    setSelectedMaterial(material);
+    setSelectedMaterialToAdd(material);
+    setNewMaterialQuery(material.name);
   };
 
-  const handleAddQuote = () => {
-    if (!selectedMaterial) {
-        showError('Por favor, selecciona un material primero.');
-        return;
+  const handleAddMaterial = () => {
+    if (!selectedMaterialToAdd) {
+      showError('Por favor, selecciona un material para añadir.');
+      return;
     }
-    setEditingQuote(undefined);
-    setIsFormOpen(true);
-  };
-
-  const handleEditQuote = (quote: SupplierQuoteExtended) => {
-    // Add supplier name to the object for the form dialog display
-    setEditingQuote({ ...quote, supplier_name: quote.suppliers.name });
-    setIsFormOpen(true);
-  };
-
-  const confirmDeleteQuote = (id: string) => {
-    setQuoteToDeleteId(id);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const executeDeleteQuote = async () => {
-    if (quoteToDeleteId) {
-      await deleteMutation.mutateAsync(quoteToDeleteId);
-    }
-  };
-
-  // Helper function to convert price to the base currency
-  const convertPriceToBase = (quote: SupplierQuoteExtended, base: 'USD' | 'VES'): number | null => {
-    const price = quote.unit_price;
-    const currency = quote.currency;
-    const rate = quote.exchange_rate;
-
-    if (currency === base) {
-      return price;
+    if (materialsToCompare.some(m => m.material.id === selectedMaterialToAdd.id)) {
+      showError('Este material ya está en la lista de comparación.');
+      return;
     }
 
-    if (base === 'USD' && currency === 'VES') {
-      if (rate && rate > 0) {
-        return price / rate;
+    setMaterialsToCompare(prev => [
+      ...prev,
+      { material: selectedMaterialToAdd, quotes: [] }
+    ]);
+    setSelectedMaterialToAdd(null);
+    setNewMaterialQuery('');
+  };
+
+  const handleRemoveMaterial = (materialId: string) => {
+    setMaterialsToCompare(prev => prev.filter(m => m.material.id !== materialId));
+  };
+
+  const handleAddQuoteEntry = (materialId: string) => {
+    setMaterialsToCompare(prev => prev.map(m => {
+      if (m.material.id === materialId) {
+        return {
+          ...m,
+          quotes: [...m.quotes, { 
+            supplierId: '', 
+            supplierName: '', 
+            unitPrice: 0, 
+            currency: 'USD', 
+            exchangeRate: undefined 
+          }]
+        };
       }
-      return null; // Cannot convert VES to USD without a rate
-    }
-
-    if (base === 'VES' && currency === 'USD') {
-      if (rate && rate > 0) {
-        return price * rate;
-      }
-      return null; // Cannot convert USD to VES without a rate
-    }
-
-    return null;
+      return m;
+    }));
   };
 
-  const comparisonData = useMemo(() => {
-    if (!quotes || quotes.length === 0) return [];
+  const handleRemoveQuoteEntry = (materialId: string, quoteIndex: number) => {
+    setMaterialsToCompare(prev => prev.map(m => {
+      if (m.material.id === materialId) {
+        return {
+          ...m,
+          quotes: m.quotes.filter((_, i) => i !== quoteIndex)
+        };
+      }
+      return m;
+    }));
+  };
 
-    return quotes.map(quote => {
-      const convertedPrice = convertPriceToBase(quote, baseCurrency);
-      const isValid = !quote.valid_until || !isPast(new Date(quote.valid_until));
+  const handleQuoteChange = (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any) => {
+    setMaterialsToCompare(prev => prev.map(m => {
+      if (m.material.id === materialId) {
+        const updatedQuotes = m.quotes.map((q, i) => {
+          if (i === quoteIndex) {
+            const newQuote = { ...q, [field]: value };
+            
+            // Handle supplier name update when ID changes
+            if (field === 'supplierId') {
+                const supplier = availableSuppliers?.find(s => s.id === value);
+                newQuote.supplierName = supplier?.name || '';
+            }
+            
+            // Handle currency change logic
+            if (field === 'currency' && value === 'USD') {
+                newQuote.exchangeRate = undefined;
+            }
+            
+            return newQuote;
+          }
+          return q;
+        });
+        return { ...m, quotes: updatedQuotes };
+      }
+      return m;
+    }));
+  };
+
+  // --- Core Comparison Logic ---
+  const comparisonResults = useMemo(() => {
+    return materialsToCompare.map(materialComp => {
+      const results = materialComp.quotes.map(quote => {
+        // 1. Validate required fields
+        if (!quote.supplierId || quote.unitPrice <= 0 || (quote.currency === 'VES' && (!quote.exchangeRate || quote.exchangeRate <= 0))) {
+            return { ...quote, convertedPrice: null, isValid: false, error: 'Datos incompletos o inválidos.' };
+        }
+
+        // 2. Convert price to base currency
+        let convertedPrice: number | null = quote.unitPrice;
+        const rate = quote.exchangeRate || exchangeRate; // Use quote rate first, then global rate
+
+        if (quote.currency === baseCurrency) {
+            // No conversion needed
+        } else if (baseCurrency === 'USD' && quote.currency === 'VES') {
+            if (rate && rate > 0) {
+                convertedPrice = quote.unitPrice / rate;
+            } else {
+                return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
+            }
+        } else if (baseCurrency === 'VES' && quote.currency === 'USD') {
+            if (rate && rate > 0) {
+                convertedPrice = quote.unitPrice * rate;
+            } else {
+                return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para USD a VES.' };
+            }
+        }
+        
+        return { ...quote, convertedPrice: convertedPrice, isValid: true, error: null };
+      });
+
+      // Find the best price among valid quotes
+      const validResults = results.filter(r => r.isValid && r.convertedPrice !== null);
+      const bestPrice = validResults.length > 0 
+        ? Math.min(...validResults.map(r => r.convertedPrice!)) 
+        : null;
 
       return {
-        ...quote,
-        convertedPrice: convertedPrice,
-        isValid: isValid,
-        baseCurrency: baseCurrency,
+        material: materialComp.material,
+        results: results,
+        bestPrice: bestPrice,
       };
-    }).sort((a, b) => {
-        // Sort by price, prioritizing valid quotes
-        if (a.isValid && !b.isValid) return -1;
-        if (!a.isValid && b.isValid) return 1;
-        
-        const priceA = a.convertedPrice ?? Infinity;
-        const priceB = b.convertedPrice ?? Infinity;
-        return priceA - priceB;
     });
-  }, [quotes, baseCurrency]);
+  }, [materialsToCompare, baseCurrency, exchangeRate]);
+  // -----------------------------
 
   const formatPrice = (price: number | null, currency: string) => {
     if (price === null || isNaN(price)) return 'N/A';
@@ -160,109 +210,139 @@ const QuoteComparison = () => {
   };
 
   const renderComparisonTable = () => {
-    if (isLoading) {
-      return <div className="text-center text-muted-foreground p-8">Cargando cotizaciones...</div>;
-    }
-
-    if (!selectedMaterial) {
-      return <div className="text-center text-muted-foreground p-8">Selecciona un material para ver y comparar cotizaciones.</div>;
-    }
-
-    if (comparisonData.length === 0) {
-      return <div className="text-center text-muted-foreground p-8">No se encontraron cotizaciones para este material.</div>;
-    }
-
-    if (isMobile) {
-      return (
-        <div className="grid gap-4">
-          {comparisonData.map((data, index) => (
-            <Card key={data.id} className={cn("p-4", !data.isValid && "bg-red-50/50 dark:bg-red-900/20 border-l-4 border-red-500")}>
-              <CardTitle className="text-lg mb-2 flex justify-between items-center">
-                {data.suppliers.name}
-                {index === 0 && data.isValid && <Scale className="h-5 w-5 text-procarni-secondary" />}
-              </CardTitle>
-              <CardDescription className="mb-2">Cód: {data.suppliers.code || 'N/A'} | RIF: {data.suppliers.rif}</CardDescription>
-              <div className="text-sm space-y-1">
-                <p className="font-bold text-lg">
-                    <DollarSign className="inline h-4 w-4 mr-1" /> Precio: {formatPrice(data.convertedPrice, data.baseCurrency)}
-                </p>
-                <p>
-                    <Clock className="inline h-4 w-4 mr-1 text-muted-foreground" /> Válido hasta: {data.valid_until ? format(new Date(data.valid_until), 'dd/MM/yyyy') : 'Indefinido'}
-                    {!data.isValid && <span className="ml-2 text-red-600 font-semibold">(Vencida)</span>}
-                </p>
-                <p>
-                    <Truck className="inline h-4 w-4 mr-1 text-muted-foreground" /> Entrega: {data.delivery_days !== null ? `${data.delivery_days} días` : 'N/A'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                    Precio Original: {data.currency} {data.unit_price.toFixed(2)}
-                    {data.exchange_rate && ` (Tasa: ${data.exchange_rate.toFixed(2)})`}
-                </p>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="ghost" size="icon" onClick={() => handleEditQuote(data)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => confirmDeleteQuote(data.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      );
+    if (materialsToCompare.length === 0) {
+      return <div className="text-center text-muted-foreground p-8">Añade materiales para empezar la comparación.</div>;
     }
 
     return (
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Proveedor</TableHead>
-              <TableHead>RIF</TableHead>
-              <TableHead className="text-right">Precio ({baseCurrency})</TableHead>
-              <TableHead>Moneda Original</TableHead>
-              <TableHead>Tasa</TableHead>
-              <TableHead>Válido Hasta</TableHead>
-              <TableHead>Entrega (Días)</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {comparisonData.map((data, index) => (
-              <TableRow 
-                key={data.id} 
-                className={cn(
-                    index === 0 && data.isValid && "bg-green-50/50 dark:bg-green-900/20 border-l-4 border-procarni-secondary",
-                    !data.isValid && "bg-red-50/50 dark:bg-red-900/20 text-muted-foreground"
-                )}
-              >
-                <TableCell className="font-medium flex items-center">
-                    {data.suppliers.name}
-                    {index === 0 && data.isValid && <Scale className="ml-2 h-4 w-4 text-procarni-secondary" />}
-                </TableCell>
-                <TableCell>{data.suppliers.rif}</TableCell>
-                <TableCell className={cn("text-right font-bold", index === 0 && data.isValid && "text-procarni-secondary")}>
-                    {formatPrice(data.convertedPrice, data.baseCurrency)}
-                </TableCell>
-                <TableCell>{data.currency} {data.unit_price.toFixed(2)}</TableCell>
-                <TableCell>{data.exchange_rate ? data.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                <TableCell>
-                    {data.valid_until ? format(new Date(data.valid_until), 'dd/MM/yyyy') : 'Indefinido'}
-                    {!data.isValid && <span className="ml-2 text-red-600 font-semibold">(Vencida)</span>}
-                </TableCell>
-                <TableCell>{data.delivery_days !== null ? data.delivery_days : 'N/A'}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEditQuote(data)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => confirmDeleteQuote(data.id)}>
+      <div className="space-y-8">
+        {comparisonResults.map(materialComp => (
+          <Card key={materialComp.material.id} className="p-4">
+            <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between border-b">
+                <CardTitle className="text-lg text-procarni-primary flex items-center">
+                    <Scale className="mr-2 h-5 w-5" />
+                    {materialComp.material.name} ({materialComp.material.code})
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => handleRemoveMaterial(materialComp.material.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </Button>
+            </CardHeader>
+            <CardContent className="p-0 pt-4">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[25%]">Proveedor</TableHead>
+                                <TableHead className="w-[15%]">Precio Original</TableHead>
+                                <TableHead className="w-[15%]">Moneda</TableHead>
+                                <TableHead className="w-[15%]">Tasa (si VES)</TableHead>
+                                <TableHead className="w-[20%] text-right font-bold">Precio Comparado ({baseCurrency})</TableHead>
+                                <TableHead className="w-[10%] text-right">Acción</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {materialComp.results.map((quote, index) => {
+                                const isBestPrice = quote.isValid && quote.convertedPrice === materialComp.bestPrice;
+                                
+                                // Find the full supplier details for the dropdown options
+                                const currentMaterialSuppliers = availableSuppliers; 
+
+                                return (
+                                    <TableRow 
+                                        key={index} 
+                                        className={cn(
+                                            isBestPrice && "bg-green-50/50 dark:bg-green-900/20 border-l-4 border-procarni-secondary",
+                                            !quote.isValid && "bg-red-50/50 dark:bg-red-900/20 text-muted-foreground"
+                                        )}
+                                    >
+                                        <TableCell>
+                                            <Select 
+                                                value={quote.supplierId} 
+                                                onValueChange={(value) => handleQuoteChange(materialComp.material.id, index, 'supplierId', value)}
+                                                disabled={isLoadingSuppliers}
+                                            >
+                                                <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Selecciona proveedor" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {isLoadingSuppliers ? (
+                                                        <SelectItem value="" disabled>Cargando proveedores...</SelectItem>
+                                                    ) : currentMaterialSuppliers && currentMaterialSuppliers.length > 0 ? (
+                                                        currentMaterialSuppliers.map(supplier => (
+                                                            <SelectItem key={supplier.id} value={supplier.id}>
+                                                                {supplier.name} ({supplier.code || supplier.rif})
+                                                            </SelectItem>
+                                                        ))
+                                                    ) : (
+                                                        <SelectItem value="" disabled>No hay proveedores asociados</SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={quote.unitPrice || ''}
+                                                onChange={(e) => handleQuoteChange(materialComp.material.id, index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                className="h-9"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select 
+                                                value={quote.currency} 
+                                                onValueChange={(value) => handleQuoteChange(materialComp.material.id, index, 'currency', value as 'USD' | 'VES')}
+                                            >
+                                                <SelectTrigger className="h-9">
+                                                    <SelectValue placeholder="Moneda" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="USD">USD</SelectItem>
+                                                    <SelectItem value="VES">VES</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            {quote.currency === 'VES' && (
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={quote.exchangeRate || exchangeRate || ''}
+                                                    onChange={(e) => handleQuoteChange(materialComp.material.id, index, 'exchangeRate', parseFloat(e.target.value) || undefined)}
+                                                    placeholder={exchangeRate ? `Global: ${exchangeRate}` : 'Tasa'}
+                                                    className="h-9"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell className={cn("text-right font-bold", isBestPrice && "text-procarni-secondary")}>
+                                            {formatPrice(quote.convertedPrice, baseCurrency)}
+                                            {!quote.isValid && quote.error && (
+                                                <p className="text-xs text-red-600 mt-1">{quote.error}</p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveQuoteEntry(materialComp.material.id, index)}>
+                                                <X className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+                <div className="mt-4 flex justify-end">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleAddQuoteEntry(materialComp.material.id)}
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" /> Añadir Cotización
+                    </Button>
+                </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   };
@@ -276,27 +356,38 @@ const QuoteComparison = () => {
       </div>
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary">Comparación de Cotizaciones</CardTitle>
+          <CardTitle className="text-procarni-primary">Comparación Inmediata de Cotizaciones</CardTitle>
           <CardDescription>
-            Ingresa y compara las cotizaciones actuales recibidas de diferentes proveedores para un material específico.
+            Compara precios de diferentes proveedores para múltiples materiales en tiempo real.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg bg-muted/20">
             <div className="md:col-span-2">
-              <Label htmlFor="material-search">Material *</Label>
+              <Label htmlFor="material-search">Añadir Material a Comparar</Label>
               <SmartSearch
                 placeholder="Buscar material por nombre o código"
                 onSelect={handleMaterialSelect}
                 fetchFunction={searchMaterials}
-                displayValue={selectedMaterial?.name || ''}
+                displayValue={newMaterialQuery}
+                selectedId={selectedMaterialToAdd?.id}
               />
-              {selectedMaterial && (
+              {selectedMaterialToAdd && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Material seleccionado: <span className="font-semibold">{selectedMaterial.name} ({selectedMaterial.code})</span>
+                  Material listo para añadir: <span className="font-semibold">{selectedMaterialToAdd.name} ({selectedMaterialToAdd.code})</span>
                 </p>
               )}
             </div>
+            <Button 
+                onClick={handleAddMaterial} 
+                disabled={!selectedMaterialToAdd}
+                className="bg-procarni-secondary hover:bg-green-700 h-10"
+            >
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Material
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg">
             <div>
               <Label htmlFor="base-currency">Moneda Base de Comparación</Label>
               <Select value={baseCurrency} onValueChange={(value) => setBaseCurrency(value as 'USD' | 'VES')}>
@@ -309,54 +400,29 @@ const QuoteComparison = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          <div className="flex justify-end mb-4">
-            <Button 
-                onClick={handleAddQuote} 
-                disabled={!selectedMaterial}
-                className="bg-procarni-secondary hover:bg-green-700"
-            >
-                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Cotización
-            </Button>
+            <div>
+              <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD a VES)</Label>
+              <Input
+                id="exchange-rate"
+                type="number"
+                step="0.01"
+                placeholder="Opcional: Tasa global"
+                value={exchangeRate || ''}
+                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || undefined)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Se usa si la cotización en VES no especifica su propia tasa.</p>
+            </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-4">Cotizaciones Actuales</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <Scale className="mr-2 h-5 w-5 text-procarni-primary" />
+            Resultados de la Comparación
+          </h3>
           {renderComparisonTable()}
           
         </CardContent>
       </Card>
       <MadeWithDyad />
-
-      <QuoteFormDialog
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        materialId={selectedMaterial?.id || ''}
-        materialName={selectedMaterial?.name || ''}
-        initialData={editingQuote}
-        onSaveSuccess={() => {
-            showSuccess('Cotización guardada exitosamente.');
-            queryClient.invalidateQueries({ queryKey: ['supplierQuotes', selectedMaterial?.id] });
-        }}
-      />
-
-      {/* AlertDialog for delete confirmation */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará permanentemente esta cotización.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={executeDeleteQuote} disabled={deleteMutation.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
