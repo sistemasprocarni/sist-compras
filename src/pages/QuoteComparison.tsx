@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle, Scale } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Scale, Download, X } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { showError } from '@/utils/toast';
-import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow'; // NEW IMPORT
+import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow';
+import QuoteComparisonPDFButton from '@/components/QuoteComparisonPDFButton'; // NEW IMPORT
 
 interface MaterialSearchResult {
   id: string;
@@ -19,6 +20,13 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
+}
+
+interface SupplierResult {
+  id: string;
+  name: string;
+  rif: string;
+  code?: string;
 }
 
 interface QuoteEntry {
@@ -44,8 +52,6 @@ const QuoteComparison = () => {
   // State for adding a new material via SmartSearch
   const [newMaterialQuery, setNewMaterialQuery] = useState('');
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<MaterialSearchResult | null>(null);
-
-  // NOTE: Removed the useQuery for availableSuppliers here, it's now inside MaterialQuoteComparisonRow
 
   const handleMaterialSelect = (material: MaterialSearchResult) => {
     setSelectedMaterialToAdd(material);
@@ -110,13 +116,6 @@ const QuoteComparison = () => {
         const updatedQuotes = m.quotes.map((q, i) => {
           if (i === quoteIndex) {
             const newQuote = { ...q, [field]: value };
-            
-            // Handle supplier name update when ID changes (This logic is now less critical here 
-            // but kept for consistency if needed elsewhere)
-            if (field === 'supplierId') {
-                // We no longer have availableSuppliers here, rely on the row component to handle display
-                // For internal state, we just store the ID.
-            }
             
             // Handle currency change logic
             if (field === 'currency' && value === 'USD') {
@@ -188,16 +187,28 @@ const QuoteComparison = () => {
     return (
       <div className="space-y-8">
         {comparisonResults.map(materialComp => (
-          <MaterialQuoteComparisonRow
-            key={materialComp.material.id}
-            comparisonData={materialComp}
-            baseCurrency={baseCurrency}
-            globalExchangeRate={exchangeRate}
-            onAddQuoteEntry={handleAddQuoteEntry}
-            onRemoveQuoteEntry={handleRemoveQuoteEntry}
-            onQuoteChange={handleQuoteChange}
-            onRemoveMaterial={handleRemoveMaterial}
-          />
+          <div key={materialComp.material.id}>
+            <MaterialQuoteComparisonRow
+              comparisonData={materialComp}
+              baseCurrency={baseCurrency}
+              globalExchangeRate={exchangeRate}
+              onAddQuoteEntry={handleAddQuoteEntry}
+              onRemoveQuoteEntry={handleRemoveQuoteEntry}
+              onQuoteChange={handleQuoteChange}
+              onRemoveMaterial={handleRemoveMaterial}
+            />
+            {/* Individual PDF Download Button */}
+            <div className="flex justify-end mt-2">
+                <QuoteComparisonPDFButton
+                    comparisonResults={[materialComp]} // Pass only the current material
+                    baseCurrency={baseCurrency}
+                    globalExchangeRate={exchangeRate}
+                    label={`Descargar PDF de ${materialComp.material.code}`}
+                    variant="outline"
+                    isSingleMaterial={true}
+                />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -267,6 +278,15 @@ const QuoteComparison = () => {
                 onChange={(e) => setExchangeRate(parseFloat(e.target.value) || undefined)}
               />
               <p className="text-xs text-muted-foreground mt-1">Se usa si la cotización en VES no especifica su propia tasa.</p>
+            </div>
+            <div className="flex justify-end items-end">
+                <QuoteComparisonPDFButton
+                    comparisonResults={comparisonResults}
+                    baseCurrency={baseCurrency}
+                    globalExchangeRate={exchangeRate}
+                    label="Descargar Reporte General"
+                    variant="default"
+                />
             </div>
           </div>
 
