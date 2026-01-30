@@ -482,12 +482,15 @@ serve(async (req) => {
         const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true) => {
             const cellWidth = originalColWidths[colIndex];
             const textWidth = font.widthOfTextAtSize(text, FONT_SIZE);
+            
+            // Calculate vertical center position: finalY (bottom of cell) + requiredHeight/2 (center) - FONT_SIZE/2 (baseline adjustment)
+            const verticalCenterY = finalY + requiredHeight / 2 - FONT_SIZE / 2;
+
             const xPos = isRightAligned 
                 ? currentX + cellWidth - 5 - textWidth 
                 : currentX + 5;
             
-            // Center vertically within the required height
-            drawText(state, text, xPos, finalY + requiredHeight / 2 - FONT_SIZE / 2);
+            drawText(state, text, xPos, verticalCenterY);
             currentX += cellWidth;
         };
 
