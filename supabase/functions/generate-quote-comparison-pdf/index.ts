@@ -146,14 +146,18 @@ serve(async (req) => {
 
         // Draw Table Header
         let currentX = MARGIN;
+        const headerY = state.y;
+        
+        // Draw thin gray line below header row
         state.page.drawLine({
-            start: { x: MARGIN, y: state.y - LINE_HEIGHT },
-            end: { x: MARGIN + tableWidth, y: state.y - LINE_HEIGHT },
+            start: { x: MARGIN, y: headerY - LINE_HEIGHT },
+            end: { x: MARGIN + tableWidth, y: headerY - LINE_HEIGHT },
             thickness: 1,
             color: LIGHT_GRAY,
         });
+        
         for (let i = 0; i < colHeaders.length; i++) {
-            drawText(state, colHeaders[i], currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
+            drawText(state, colHeaders[i], currentX + 5, headerY - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
                 font: boldFont, 
                 size: 10,
                 color: PROC_RED
@@ -165,7 +169,10 @@ serve(async (req) => {
         // Draw Table Rows
         for (const quote of results) {
             const isBestPrice = quote.isValid && quote.convertedPrice === bestPrice;
-            const rowHeight = LINE_HEIGHT * 1.5; // Ensure enough space
+            
+            // Calculate row height based on content (Proveedor name might wrap, but usually not in this context)
+            // We use a fixed height slightly larger than LINE_HEIGHT for padding
+            const rowHeight = LINE_HEIGHT * 1.5; 
             state = checkPageBreak(pdfDoc, state, rowHeight);
 
             // Draw row background/border if it's the best price
@@ -180,7 +187,16 @@ serve(async (req) => {
                 });
             }
 
+            // Draw separator line above row content
+            state.page.drawLine({
+                start: { x: MARGIN, y: state.y },
+                end: { x: MARGIN + tableWidth, y: state.y },
+                thickness: 0.5,
+                color: LIGHT_GRAY,
+            });
+
             currentX = MARGIN;
+            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) + FONT_SIZE/2 (baseline adjustment)
             const verticalCenterY = state.y - rowHeight / 2 + FONT_SIZE / 2;
 
             // 1. Proveedor
@@ -190,44 +206,51 @@ serve(async (req) => {
             });
             currentX += colWidths[0];
 
+            // Helper to draw data centered vertically and right-aligned
+            const drawCellData = (text: string, colIndex: number, isBold: boolean = false) => {
+                const cellWidth = colWidths[colIndex];
+                const fontToUse = isBold ? state.boldFont : state.font;
+                const textWidth = fontToUse.widthOfTextAtSize(text, FONT_SIZE);
+                
+                const xPos = currentX + cellWidth - 5 - textWidth;
+                
+                drawText(state, text, xPos, verticalCenterY, { font: fontToUse });
+                currentX += cellWidth;
+            };
+
             // 2. Precio Original
-            const priceOriginalText = `${quote.currency} ${quote.unitPrice.toFixed(2)}`;
-            let textWidth = state.font.widthOfTextAtSize(priceOriginalText, FONT_SIZE);
-            drawText(state, priceOriginalText, currentX + colWidths[1] - 5 - textWidth, verticalCenterY);
-            currentX += colWidths[1];
+            drawCellData(`${quote.currency} ${quote.unitPrice.toFixed(2)}`, 1);
 
             // 3. Moneda
-            drawText(state, quote.currency, currentX + 5, verticalCenterY);
-            currentX += colWidths[2];
+            currentX += colWidths[2]; // Skip drawing, already in original price
 
             // 4. Tasa
-            const rateText = quote.exchangeRate ? quote.exchangeRate.toFixed(4) : 'N/A';
-            textWidth = state.font.widthOfTextAtSize(rateText, FONT_SIZE);
-            drawText(state, rateText, currentX + colWidths[3] - 5 - textWidth, verticalCenterY);
-            currentX += colWidths[3];
+            drawCellData(quote.exchangeRate ? quote.exchangeRate.toFixed(4) : 'N/A', 3);
 
             // 5. Precio Comparado
             const priceComparedText = quote.isValid 
                 ? `${baseCurrency} ${quote.convertedPrice.toFixed(2)}`
                 : `INVÁLIDO (${quote.error})`;
             
-            textWidth = state.boldFont.widthOfTextAtSize(priceComparedText, FONT_SIZE);
+            const color = isBestPrice ? PROC_RED : (quote.isValid ? rgb(0, 0, 0) : DARK_GRAY);
+            
+            const textWidth = state.boldFont.widthOfTextAtSize(priceComparedText, FONT_SIZE);
             drawText(state, priceComparedText, currentX + colWidths[4] - 5 - textWidth, verticalCenterY, { 
                 font: boldFont, 
-                color: isBestPrice ? PROC_RED : (quote.isValid ? rgb(0, 0, 0) : DARK_GRAY)
+                color: color
             });
             currentX += colWidths[4];
 
             state.y -= rowHeight;
-            
-            // Draw separator line below row
-            state.page.drawLine({
-                start: { x: MARGIN, y: state.y },
-                end: { x: MARGIN + tableWidth, y: state.y },
-                thickness: 0.5,
-                color: LIGHT_GRAY,
-            });
         }
+        
+        // Draw final bottom border for the table
+        state.page.drawLine({
+            start: { x: MARGIN, y: state.y },
+            end: { x: MARGIN + tableWidth, y: state.y },
+            thickness: 1,
+            color: LIGHT_GRAY,
+        });
         
         state.y -= LINE_HEIGHT;
         return state;
