@@ -141,36 +141,43 @@ const QuoteComparison = () => {
   };
 
   // --- Core Comparison Logic (Memoized) ---
-  const comparisonResults = useMemo(() => {
-    // La moneda base de comparación SIEMPRE es USD
-    const comparisonBaseCurrency = 'USD'; 
+  const comparisonBaseCurrency = 'USD'; 
 
+  const comparisonResults = useMemo(() => {
     return materialsToCompare.map(materialComp => {
       const results = materialComp.quotes.map(quote => {
+        
+        // Determine the rate to use: quote-specific rate, or global rate
+        const rateToUse = quote.exchangeRate || exchangeRate; // exchangeRate is the global state variable
+
         // 1. Validate required fields
-        if (!quote.supplierId || quote.unitPrice <= 0 || (quote.currency === 'VES' && (!quote.exchangeRate || quote.exchangeRate <= 0))) {
+        if (!quote.supplierId || quote.unitPrice <= 0) {
             return { ...quote, convertedPrice: null, isValid: false, error: 'Datos incompletos o inválidos.' };
+        }
+        
+        // 1b. Validate rate if currency is VES
+        if (quote.currency === 'VES' && (!rateToUse || rateToUse <= 0)) {
+            return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
         }
 
         // 2. Convert price to comparisonBaseCurrency (USD)
         let convertedPrice: number | null = quote.unitPrice;
-        const rate = quote.exchangeRate || exchangeRate; // Use quote rate first, then global rate
-
+        
         if (quote.currency === comparisonBaseCurrency) {
             // No conversion needed (USD -> USD)
         } else if (quote.currency === 'VES' && comparisonBaseCurrency === 'USD') {
-            if (rate && rate > 0) {
-                convertedPrice = quote.unitPrice / rate;
+            if (rateToUse && rateToUse > 0) {
+                convertedPrice = quote.unitPrice / rateToUse;
             } else {
+                // Should be caught by 1b, but kept for safety
                 return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
             }
-        } else if (quote.currency === 'USD' && comparisonBaseCurrency === 'VES') {
-            // Este caso no debería ocurrir si la moneda base es siempre USD, pero lo mantenemos por si acaso.
-            if (rate && rate > 0) {
-                convertedPrice = quote.unitPrice * rate;
-            } else {
-                return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para USD a VES.' };
-            }
+        } 
+        // Note: The USD -> VES conversion case is irrelevant since comparisonBaseCurrency is fixed to USD.
+        
+        // Ensure conversion result is a number
+        if (convertedPrice === null || isNaN(convertedPrice)) {
+             return { ...quote, convertedPrice: null, isValid: false, error: 'Error de cálculo.' };
         }
         
         return { ...quote, convertedPrice: convertedPrice, isValid: true, error: null };
@@ -202,7 +209,7 @@ const QuoteComparison = () => {
           <div key={materialComp.material.id}>
             <MaterialQuoteComparisonRow
               comparisonData={materialComp}
-              baseCurrency={'USD'} // Siempre USD para la comparación
+              baseCurrency={comparisonBaseCurrency} // Siempre USD para la comparación
               globalExchangeRate={exchangeRate}
               onAddQuoteEntry={handleAddQuoteEntry}
               onRemoveQuoteEntry={handleRemoveQuoteEntry}
@@ -213,7 +220,7 @@ const QuoteComparison = () => {
             <div className="flex justify-end mt-2">
                 <QuoteComparisonPDFButton
                     comparisonResults={[materialComp]} // Pass only the current material
-                    baseCurrency={'USD'} // Siempre USD para el PDF
+                    baseCurrency={comparisonBaseCurrency} // Siempre USD para el PDF
                     globalExchangeRate={exchangeRate}
                     label={`Descargar PDF de ${materialComp.material.code}`}
                     variant="outline"
@@ -295,7 +302,7 @@ const QuoteComparison = () => {
             <div className="flex justify-end items-end">
                 <QuoteComparisonPDFButton
                     comparisonResults={comparisonResults}
-                    baseCurrency={'USD'} // Siempre USD para el PDF
+                    baseCurrency={comparisonBaseCurrency}
                     globalExchangeRate={exchangeRate}
                     label="Descargar Reporte General"
                     variant="default"
