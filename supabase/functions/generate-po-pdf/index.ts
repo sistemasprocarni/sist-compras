@@ -356,14 +356,19 @@ serve(async (req) => {
     };
 
     const drawSupplierDetails = (state: PDFState, order: any): PDFState => {
+      // Draw title
       drawText(state, 'DATOS DEL PROVEEDOR:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      
+      // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
-        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-      state.y -= LINE_HEIGHT;
+      
+      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
+      
       drawText(state, `Nombre: ${order.suppliers?.name || 'N/A'}`, MARGIN, state.y);
       state.y -= LINE_HEIGHT;
       drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
@@ -374,14 +379,18 @@ serve(async (req) => {
     const drawOrderDetails = (state: PDFState, order: any): PDFState => {
       const paymentTerms = formatPaymentTerms(order);
 
+      // Draw title
       drawText(state, 'DETALLES DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      
+      // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
-        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-      state.y -= LINE_HEIGHT;
+      
+      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
       
       drawText(state, `Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, MARGIN, state.y);
       state.y -= LINE_HEIGHT;
@@ -393,14 +402,18 @@ serve(async (req) => {
     const drawObservations = (state: PDFState, order: any): PDFState => {
       if (!order.observations) return state;
 
+      // Draw title
       drawText(state, 'OBSERVACIONES:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      
+      // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
-        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-      state.y -= LINE_HEIGHT;
+      
+      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
       
       const observationsText = order.observations;
       const maxCharsPerLine = 100; 
@@ -416,14 +429,18 @@ serve(async (req) => {
     };
 
     const drawItemsTable = (state: PDFState, items: any[]): PDFState => {
+      // Draw title
       drawText(state, 'ÍTEMS DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
+      
+      // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - LINE_HEIGHT + 2 },
-        end: { x: width - MARGIN, y: state.y - LINE_HEIGHT + 2 },
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
-      state.y -= LINE_HEIGHT;
+      
+      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
       
       state = drawTableHeader(state);
 
@@ -554,6 +571,7 @@ serve(async (req) => {
         const fontToUse = isBold ? boldFont : font;
         
         // Calculate vertical center position within the totalRowHeight
+        // We use currentY (top of the row) and subtract half the row height, then add half the font size for baseline alignment
         const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
         
         // Draw label (left aligned)
@@ -567,10 +585,11 @@ serve(async (req) => {
       };
 
       const drawInternalSeparator = () => {
-        // Draw separator line slightly above the next row's starting Y position
+        // Draw separator line at the bottom of the row that was just drawn (currentY + totalRowHeight)
+        // We draw it slightly above the next row's starting Y position (which is currentY after the drawTotalRow call)
         state.page.drawLine({
-          start: { x: totalSectionX, y: currentY + totalRowHeight + 5 }, // Draw line 5 points above the next row start
-          end: { x: totalSectionX + totalSectionWidth, y: currentY + totalRowHeight + 5 },
+          start: { x: totalSectionX, y: currentY + totalRowHeight },
+          end: { x: totalSectionX + totalSectionWidth, y: currentY + totalRowHeight },
           thickness: 0.5,
           color: LIGHT_GRAY,
         });
@@ -583,12 +602,12 @@ serve(async (req) => {
       drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
       drawInternalSeparator();
 
-      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), FONT_SIZE);
+      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); // Make TOTAL bigger and red
       
       if (hasUsdTotal) {
         drawInternalSeparator(); // Separator before USD total
         const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
-        drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), FONT_SIZE);
+        drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, DARK_GRAY, FONT_SIZE);
       }
 
       // Update state.y to be below the total box
