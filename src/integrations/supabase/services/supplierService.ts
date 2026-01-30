@@ -230,13 +230,12 @@ const SupplierService = {
   },
 
   search: async (query: string): Promise<Supplier[]> => {
-    // Si la consulta está vacía, devuelve los primeros 10 proveedores como sugerencias
+    // Si la consulta está vacía, devuelve todos los proveedores como sugerencias
     if (!query.trim()) {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
-        .order('name', { ascending: true })
-        .limit(10); // Limita a 10 sugerencias
+        .order('name', { ascending: true }); // Removed limit(10)
 
       if (error) {
         console.error('[SupplierService.search] Error fetching default suppliers:', error);

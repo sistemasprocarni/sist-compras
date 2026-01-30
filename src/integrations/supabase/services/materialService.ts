@@ -106,13 +106,12 @@ const MaterialService = {
   },
 
   search: async (query: string): Promise<Material[]> => {
-    // Si la consulta está vacía, devuelve los primeros 10 materiales como sugerencias
+    // Si la consulta está vacía, devuelve todos los materiales como sugerencias
     if (!query.trim()) {
       const { data, error } = await supabase
         .from('materials')
         .select('*')
-        .order('name', { ascending: true })
-        .limit(10); // Limita a 10 sugerencias
+        .order('name', { ascending: true }); // Removed limit(10)
 
       if (error) {
         console.error('[MaterialService.search] Error fetching default materials:', error);

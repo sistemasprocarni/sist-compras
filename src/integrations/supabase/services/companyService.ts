@@ -96,13 +96,12 @@ const CompanyService = {
   },
 
   search: async (query: string): Promise<Company[]> => {
-    // Si la consulta está vacía, devuelve las primeras 10 empresas como sugerencias
+    // Si la consulta está vacía, devuelve todas las empresas como sugerencias
     if (!query.trim()) {
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .order('name', { ascending: true })
-        .limit(10); // Limita a 10 sugerencias
+        .order('name', { ascending: true }); // Removed limit(10)
 
       if (error) {
         console.error('[CompanyService.search] Error fetching default companies:', error);
