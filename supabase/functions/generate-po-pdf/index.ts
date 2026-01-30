@@ -447,8 +447,8 @@ serve(async (req) => {
         
         // Wrap the combined content for the first column (30% width, approx 35 chars per line)
         const materialLines = wrapText(materialContent, 35); 
-        const requiredHeight = materialLines.length * (FONT_SIZE - 1) * 1.2 + 5; // Calculate height based on smaller font size
         const lineSpacing = (FONT_SIZE - 1) * 1.2;
+        const requiredHeight = materialLines.length * lineSpacing + 5; // Calculate height based on smaller font size + padding
 
         state = checkPageBreak(state, requiredHeight + 10); 
 
@@ -465,11 +465,12 @@ serve(async (req) => {
         const totalItem = subtotal + itemIva;
 
         let currentX = MARGIN;
-        let currentY = state.y - 5; // Start drawing slightly below the top line
+        // Adjusted currentY to start drawing 3 points below the top line (state.y)
+        let currentY = state.y - 3; 
 
         // 1. Material/Description (Multi-line)
         for (const line of materialLines) {
-          drawText(state, line, currentX + 5, currentY, { size: FONT_SIZE - 1 }); // Slightly smaller font for wrapped text
+          drawText(state, line, currentX + 5, currentY - (FONT_SIZE - 1), { size: FONT_SIZE - 1 }); // Draw text, adjusting for font size
           currentY -= lineSpacing;
         }
         currentX += originalColWidths[0];
@@ -485,6 +486,7 @@ serve(async (req) => {
                 ? currentX + cellWidth - 5 - textWidth 
                 : currentX + 5;
             
+            // Center vertically within the required height
             drawText(state, text, xPos, finalY + requiredHeight / 2 - FONT_SIZE / 2);
             currentX += cellWidth;
         };
