@@ -1,19 +1,17 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, PlusCircle, Trash2, Scale, DollarSign, X } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Scale } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
-import { searchMaterials, searchMaterialsBySupplier, getSuppliersByMaterial } from '@/integrations/supabase/data';
+import { searchMaterials } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { showError } from '@/utils/toast';
-import { cn } from '@/lib/utils';
+import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow'; // NEW IMPORT
 
 interface MaterialSearchResult {
   id: string;
@@ -21,13 +19,6 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
-}
-
-interface SupplierResult {
-  id: string;
-  name: string;
-  rif: string;
-  code?: string;
 }
 
 interface QuoteEntry {
@@ -45,7 +36,6 @@ interface MaterialComparison {
 
 const QuoteComparison = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   
   const [materialsToCompare, setMaterialsToCompare] = useState<MaterialComparison[]>([]);
   const [baseCurrency, setBaseCurrency] = useState<'USD' | 'VES'>('USD');
@@ -55,22 +45,7 @@ const QuoteComparison = () => {
   const [newMaterialQuery, setNewMaterialQuery] = useState('');
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<MaterialSearchResult | null>(null);
 
-  // Fetch all suppliers associated with the currently selected material for adding quotes
-  const { data: availableSuppliers, isLoading: isLoadingSuppliers } = useQuery<SupplierResult[]>({
-    queryKey: ['suppliersByMaterial', selectedMaterialToAdd?.id],
-    queryFn: async () => {
-        if (!selectedMaterialToAdd?.id) return [];
-        const results = await getSuppliersByMaterial(selectedMaterialToAdd.id);
-        // Map results to the simpler SupplierResult interface
-        return results.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            rif: s.rif,
-            code: s.code,
-        }));
-    },
-    enabled: !!selectedMaterialToAdd?.id,
-  });
+  // NOTE: Removed the useQuery for availableSuppliers here, it's now inside MaterialQuoteComparisonRow
 
   const handleMaterialSelect = (material: MaterialSearchResult) => {
     setSelectedMaterialToAdd(material);
@@ -136,10 +111,11 @@ const QuoteComparison = () => {
           if (i === quoteIndex) {
             const newQuote = { ...q, [field]: value };
             
-            // Handle supplier name update when ID changes
+            // Handle supplier name update when ID changes (This logic is now less critical here 
+            // but kept for consistency if needed elsewhere)
             if (field === 'supplierId') {
-                const supplier = availableSuppliers?.find(s => s.id === value);
-                newQuote.supplierName = supplier?.name || '';
+                // We no longer have availableSuppliers here, rely on the row component to handle display
+                // For internal state, we just store the ID.
             }
             
             // Handle currency change logic
@@ -157,7 +133,7 @@ const QuoteComparison = () => {
     }));
   };
 
-  // --- Core Comparison Logic ---
+  // --- Core Comparison Logic (Memoized) ---
   const comparisonResults = useMemo(() => {
     return materialsToCompare.map(materialComp => {
       const results = materialComp.quotes.map(quote => {
@@ -204,11 +180,6 @@ const QuoteComparison = () => {
   }, [materialsToCompare, baseCurrency, exchangeRate]);
   // -----------------------------
 
-  const formatPrice = (price: number | null, currency: string) => {
-    if (price === null || isNaN(price)) return 'N/A';
-    return `${currency} ${price.toFixed(2)}`;
-  };
-
   const renderComparisonTable = () => {
     if (materialsToCompare.length === 0) {
       return <div className="text-center text-muted-foreground p-8">Añade materiales para empezar la comparación.</div>;
@@ -217,134 +188,16 @@ const QuoteComparison = () => {
     return (
       <div className="space-y-8">
         {comparisonResults.map(materialComp => (
-          <Card key={materialComp.material.id} className="p-4">
-            <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between border-b">
-                <CardTitle className="text-lg text-procarni-primary flex items-center">
-                    <Scale className="mr-2 h-5 w-5" />
-                    {materialComp.material.name} ({materialComp.material.code})
-                </CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => handleRemoveMaterial(materialComp.material.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-            </CardHeader>
-            <CardContent className="p-0 pt-4">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[25%]">Proveedor</TableHead>
-                                <TableHead className="w-[15%]">Precio Original</TableHead>
-                                <TableHead className="w-[15%]">Moneda</TableHead>
-                                <TableHead className="w-[15%]">Tasa (si VES)</TableHead>
-                                <TableHead className="w-[20%] text-right font-bold">Precio Comparado ({baseCurrency})</TableHead>
-                                <TableHead className="w-[10%] text-right">Acción</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {materialComp.results.map((quote, index) => {
-                                const isBestPrice = quote.isValid && quote.convertedPrice === materialComp.bestPrice;
-                                
-                                // Find the full supplier details for the dropdown options
-                                const currentMaterialSuppliers = availableSuppliers; 
-
-                                return (
-                                    <TableRow 
-                                        key={index} 
-                                        className={cn(
-                                            isBestPrice && "bg-green-50/50 dark:bg-green-900/20 border-l-4 border-procarni-secondary",
-                                            !quote.isValid && "bg-red-50/50 dark:bg-red-900/20 text-muted-foreground"
-                                        )}
-                                    >
-                                        <TableCell>
-                                            <Select 
-                                                value={quote.supplierId} 
-                                                onValueChange={(value) => handleQuoteChange(materialComp.material.id, index, 'supplierId', value)}
-                                                disabled={isLoadingSuppliers}
-                                            >
-                                                <SelectTrigger className="h-9">
-                                                    <SelectValue placeholder="Selecciona proveedor" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {/* Placeholder item with a non-empty value */}
-                                                    <SelectItem value="__placeholder__" disabled>Selecciona proveedor</SelectItem>
-                                                    
-                                                    {isLoadingSuppliers ? (
-                                                        <SelectItem value="__loading__" disabled>Cargando proveedores...</SelectItem>
-                                                    ) : currentMaterialSuppliers && currentMaterialSuppliers.length > 0 ? (
-                                                        currentMaterialSuppliers.map(supplier => (
-                                                            <SelectItem key={supplier.id} value={supplier.id}>
-                                                                {supplier.name} ({supplier.code || supplier.rif})
-                                                            </SelectItem>
-                                                        ))
-                                                    ) : (
-                                                        <SelectItem value="__no_suppliers__" disabled>No hay proveedores asociados</SelectItem>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                value={quote.unitPrice || ''}
-                                                onChange={(e) => handleQuoteChange(materialComp.material.id, index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                                className="h-9"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select 
-                                                value={quote.currency} 
-                                                onValueChange={(value) => handleQuoteChange(materialComp.material.id, index, 'currency', value as 'USD' | 'VES')}
-                                            >
-                                                <SelectTrigger className="h-9">
-                                                    <SelectValue placeholder="Moneda" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="USD">USD</SelectItem>
-                                                    <SelectItem value="VES">VES</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            {quote.currency === 'VES' && (
-                                                <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={quote.exchangeRate || exchangeRate || ''}
-                                                    onChange={(e) => handleQuoteChange(materialComp.material.id, index, 'exchangeRate', parseFloat(e.target.value) || undefined)}
-                                                    placeholder={exchangeRate ? `Global: ${exchangeRate}` : 'Tasa'}
-                                                    className="h-9"
-                                                />
-                                            )}
-                                        </TableCell>
-                                        <TableCell className={cn("text-right font-bold", isBestPrice && "text-procarni-secondary")}>
-                                            {formatPrice(quote.convertedPrice, baseCurrency)}
-                                            {!quote.isValid && quote.error && (
-                                                <p className="text-xs text-red-600 mt-1">{quote.error}</p>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveQuoteEntry(materialComp.material.id, index)}>
-                                                <X className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-                <div className="mt-4 flex justify-end">
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleAddQuoteEntry(materialComp.material.id)}
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Añadir Cotización
-                    </Button>
-                </div>
-            </CardContent>
-          </Card>
+          <MaterialQuoteComparisonRow
+            key={materialComp.material.id}
+            comparisonData={materialComp}
+            baseCurrency={baseCurrency}
+            globalExchangeRate={exchangeRate}
+            onAddQuoteEntry={handleAddQuoteEntry}
+            onRemoveQuoteEntry={handleRemoveQuoteEntry}
+            onQuoteChange={handleQuoteChange}
+            onRemoveMaterial={handleRemoveMaterial}
+          />
         ))}
       </div>
     );
