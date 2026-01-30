@@ -118,9 +118,9 @@ const MaterialQuoteComparisonRow: React.FC<MaterialQuoteComparisonRowProps> = ({
               <TableRow>
                 <TableHead className="w-[25%]">Proveedor</TableHead>
                 <TableHead className="w-[15%]">Precio Original</TableHead>
-                <TableHead className="w-[10%]">Moneda</TableHead> {/* Moneda ahora es su propia columna */}
+                <TableHead className="w-[10%]">Moneda</TableHead>
                 <TableHead className="w-[15%]">Tasa (si VES)</TableHead>
-                <TableHead className="w-[20%] text-right font-bold">Precio Comparado (USD)</TableHead> {/* Siempre USD */}
+                <TableHead className="w-[20%] text-right font-bold">Precio Comparado (USD)</TableHead>
                 <TableHead className="w-[10%] text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
