@@ -535,8 +535,9 @@ serve(async (req) => {
         hasUsdTotal = true;
       }
       
-      // Calculate required height based on total rows + padding
-      const totalSectionHeight = LINE_HEIGHT * totalRows + 10;
+      // Use a fixed row height for the totals table for consistent spacing
+      const totalRowHeight = LINE_HEIGHT * 1.5; // Increased height for padding
+      const totalSectionHeight = totalRowHeight * totalRows + 5; // 5 points padding at top/bottom
 
       state = checkPageBreak(state, totalSectionHeight + LINE_HEIGHT * 3); 
 
@@ -552,26 +553,30 @@ serve(async (req) => {
       const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
         const fontToUse = isBold ? boldFont : font;
         
+        // Calculate vertical center position within the totalRowHeight
+        const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
+        
         // Draw label (left aligned)
-        drawText(state, label, totalSectionX + 5, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
+        drawText(state, label, totalSectionX + 5, verticalCenterY, { font: fontToUse, size, color });
         
         // Draw value (right aligned)
         const valueWidth = fontToUse.widthOfTextAtSize(value, size);
-        drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
+        drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, verticalCenterY, { font: fontToUse, size, color });
         
-        currentY -= LINE_HEIGHT;
+        currentY -= totalRowHeight; // Move Y down by the fixed row height
       };
 
       const drawInternalSeparator = () => {
         // Draw separator line slightly above the next row's starting Y position
         state.page.drawLine({
-          start: { x: totalSectionX, y: currentY + LINE_HEIGHT - 5 },
-          end: { x: totalSectionX + totalSectionWidth, y: currentY + LINE_HEIGHT - 5 },
+          start: { x: totalSectionX, y: currentY + totalRowHeight + 5 }, // Draw line 5 points above the next row start
+          end: { x: totalSectionX + totalSectionWidth, y: currentY + totalRowHeight + 5 },
           thickness: 0.5,
           color: LIGHT_GRAY,
         });
       };
 
+      // Draw rows
       drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
       drawInternalSeparator();
 
@@ -581,6 +586,7 @@ serve(async (req) => {
       drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, rgb(0, 0, 0), FONT_SIZE);
       
       if (hasUsdTotal) {
+        drawInternalSeparator(); // Separator before USD total
         const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
         drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), FONT_SIZE);
       }
