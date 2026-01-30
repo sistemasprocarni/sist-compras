@@ -27,7 +27,8 @@ import Settings from "./pages/Settings";
 import FichaTecnicaUpload from "./pages/FichaTecnicaUpload";
 import PriceHistory from "./pages/PriceHistory";
 import AuditLog from "./pages/AuditLog";
-import QuoteComparison from "./pages/QuoteComparison"; // NEW IMPORT
+import QuoteComparison from "./pages/QuoteComparison";
+import AdminRouteGuard from "./components/AdminRouteGuard"; // NEW IMPORT
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<Layout />}>
+                {/* Rutas de acceso general */}
                 <Route index element={<SearchManagement />} />
                 <Route path="/generate-quote" element={<GenerateQuoteRequest />} />
                 <Route path="/generate-po" element={<GeneratePurchaseOrder />} />
@@ -54,7 +56,6 @@ const App = () => (
                 <Route path="/suppliers/:id" element={<SupplierDetails />} />
                 <Route path="/supplier-management" element={<SupplierManagement />} />
                 <Route path="/material-management" element={<MaterialManagement />} />
-                <Route path="/bulk-upload" element={<BulkUpload />} />
                 <Route path="/quote-request-management" element={<QuoteRequestManagement />} />
                 <Route path="/quote-requests/:id" element={<QuoteRequestDetails />} />
                 <Route path="/quote-requests/edit/:id" element={<EditQuoteRequest />} />
@@ -62,11 +63,16 @@ const App = () => (
                 <Route path="/purchase-order-management" element={<PurchaseOrderManagement />} />
                 <Route path="/purchase-orders/:id" element={<PurchaseOrderDetails />} />
                 <Route path="/purchase-orders/edit/:id" element={<EditPurchaseOrder />} />
-                <Route path="/settings" element={<Settings />} />
                 <Route path="/ficha-tecnica-upload" element={<FichaTecnicaUpload />} />
                 <Route path="/price-history" element={<PriceHistory />} />
-                <Route path="/audit-log" element={<AuditLog />} />
-                <Route path="/quote-comparison" element={<QuoteComparison />} /> {/* NEW ROUTE */}
+                <Route path="/quote-comparison" element={<QuoteComparison />} />
+
+                {/* Rutas de acceso restringido a Admin */}
+                <Route element={<AdminRouteGuard />}>
+                  <Route path="/bulk-upload" element={<BulkUpload />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/audit-log" element={<AuditLog />} />
+                </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

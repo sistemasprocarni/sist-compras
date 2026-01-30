@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign, ScrollText, Scale } from 'lucide-react'; // Import Scale icon
+import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign, ScrollText, Scale } from 'lucide-react';
+import { useSession } from './SessionContextProvider'; // NEW IMPORT
 
 const navItems = [
   {
@@ -34,6 +35,7 @@ const navItems = [
   },
   {
     category: 'Administración',
+    adminOnly: true, // NEW FLAG
     items: [
       { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
       { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
@@ -44,11 +46,14 @@ const navItems = [
 ];
 
 const SidebarNav = () => {
+  const { isAdmin } = useSession();
   const [openItems, setOpenItems] = useState<string[]>(['Inicio y Búsqueda', 'Maestros de Datos', 'Órdenes y Cotizaciones', 'Administración']);
 
   const handleValueChange = (value: string[]) => {
     setOpenItems(value);
   };
+
+  const filteredNavItems = navItems.filter(category => !category.adminOnly || isAdmin);
 
   return (
     <Accordion
@@ -57,7 +62,7 @@ const SidebarNav = () => {
       onValueChange={handleValueChange}
       className="w-full"
     >
-      {navItems.map((category) => (
+      {filteredNavItems.map((category) => (
         <AccordionItem key={category.category} value={category.category} className="border-b border-sidebar-border">
           <AccordionTrigger className="px-4 py-2 text-sm font-semibold text-sidebar-foreground hover:bg-muted/50 rounded-md">
             {category.category}
@@ -65,6 +70,8 @@ const SidebarNav = () => {
           <AccordionContent className="pb-2">
             <nav className="grid items-start px-2 text-sm font-medium">
               {category.items.map((item) => (
+                // Check if the item itself is admin-only (only relevant if the category wasn't marked adminOnly)
+                // Since we filtered the categories, this check is mostly redundant but safe.
                 <NavLink
                   key={item.to}
                   to={item.to}
