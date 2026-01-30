@@ -294,10 +294,10 @@ const SupplierManagement = () => {
             <div className="grid gap-4">
               {filteredSuppliers.length > 0 ? (
                 filteredSuppliers.map((supplier) => (
-                  <Card key={supplier.id} className="p-4">
+                  <Card key={supplier.id} className="p-4 w-full">
                     <CardTitle className="text-lg mb-1">{supplier.name}</CardTitle>
                     <CardDescription className="mb-2">Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}</CardDescription>
-                    <div className="text-sm space-y-1 mt-2">
+                    <div className="text-sm space-y-1 mt-2 w-full">
                       {supplier.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></p>}
                       {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 1: {supplier.phone}</p>}
                       {supplier.phone_2 && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 2: {supplier.phone_2}</p>}
