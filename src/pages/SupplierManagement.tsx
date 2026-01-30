@@ -291,18 +291,17 @@ const SupplierManagement = () => {
           </div>
 
           {isMobile ? (
-            <div className="grid gap-4 w-full"> {/* Added w-full here */}
+            <div className="grid gap-4">
               {filteredSuppliers.length > 0 ? (
                 filteredSuppliers.map((supplier) => (
                   <Card key={supplier.id} className="p-4 w-full">
-                    <CardTitle className="text-lg mb-1 truncate">{supplier.name}</CardTitle>
+                    <CardTitle className="text-lg mb-1">{supplier.name}</CardTitle>
                     <CardDescription className="mb-2">Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}</CardDescription>
                     <div className="text-sm space-y-1 mt-2 w-full">
-                      {/* Ensure long text fields are handled */}
-                      {supplier.email && <p className="flex items-center truncate"><Mail className="mr-1 h-3 w-3 flex-shrink-0" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1 truncate">{supplier.email}</a></p>}
-                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3 flex-shrink-0" /> Teléfono 1: {supplier.phone}</p>}
-                      {supplier.phone_2 && <p className="flex items-center"><Phone className="mr-1 h-3 w-3 flex-shrink-0" /> Teléfono 2: {supplier.phone_2}</p>}
-                      {supplier.instagram && <p className="flex items-center truncate"><Instagram className="mr-1 h-3 w-3 flex-shrink-0" /> Instagram: {supplier.instagram}</p>}
+                      {supplier.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></p>}
+                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 1: {supplier.phone}</p>}
+                      {supplier.phone_2 && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 2: {supplier.phone_2}</p>}
+                      {supplier.instagram && <p className="flex items-center"><Instagram className="mr-1 h-3 w-3" /> Instagram: {supplier.instagram}</p>}
                       <p><strong>Términos de Pago:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
                       <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
                       <p><strong>Estado:</strong> {supplier.status}</p>
