@@ -6,7 +6,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
 import { searchMaterials, searchMaterialsBySupplier, getSuppliersByMaterial } from '@/integrations/supabase/data';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } => '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -265,8 +265,11 @@ const QuoteComparison = () => {
                                                     <SelectValue placeholder="Selecciona proveedor" />
                                                 </SelectTrigger>
                                                 <SelectContent>
+                                                    {/* Placeholder item with a non-empty value */}
+                                                    <SelectItem value="__placeholder__" disabled>Selecciona proveedor</SelectItem>
+                                                    
                                                     {isLoadingSuppliers ? (
-                                                        <SelectItem value="" disabled>Cargando proveedores...</SelectItem>
+                                                        <SelectItem value="__loading__" disabled>Cargando proveedores...</SelectItem>
                                                     ) : currentMaterialSuppliers && currentMaterialSuppliers.length > 0 ? (
                                                         currentMaterialSuppliers.map(supplier => (
                                                             <SelectItem key={supplier.id} value={supplier.id}>
@@ -274,7 +277,7 @@ const QuoteComparison = () => {
                                                             </SelectItem>
                                                         ))
                                                     ) : (
-                                                        <SelectItem value="" disabled>No hay proveedores asociados</SelectItem>
+                                                        <SelectItem value="__no_suppliers__" disabled>No hay proveedores asociados</SelectItem>
                                                     )}
                                                 </SelectContent>
                                             </Select>
