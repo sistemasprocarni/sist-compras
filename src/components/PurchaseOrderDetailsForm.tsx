@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import SmartSearch from '@/components/SmartSearch';
 import { searchCompanies, searchSuppliers, getSupplierDetails } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button'; // Importar Button
+import { Button } from '@/components/ui/button';
+import ExchangeRateInput from './ExchangeRateInput'; // NEW IMPORT
 
 interface Company {
   id: string;
@@ -145,17 +146,11 @@ const PurchaseOrderDetailsForm: React.FC<PurchaseOrderDetailsFormProps> = ({
           <span>{currency}</span>
         </div>
         {currency === 'VES' && (
-          <div>
-            <Label htmlFor="exchangeRate">Tasa de Cambio (USD a VES)</Label>
-            <Input
-              id="exchangeRate"
-              type="number"
-              step="0.01"
-              value={exchangeRate || ''}
-              onChange={(e) => onExchangeRateChange(parseFloat(e.target.value))}
-              placeholder="Ej: 36.50"
-            />
-          </div>
+          <ExchangeRateInput
+            currency={currency}
+            exchangeRate={exchangeRate}
+            onExchangeRateChange={onExchangeRateChange}
+          />
         )}
         <div>
           <Label htmlFor="paymentTerms">Condición de Pago</Label>
