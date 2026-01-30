@@ -110,7 +110,8 @@ const QuoteComparison = () => {
     }));
   };
 
-  const handleQuoteChange = (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any) => {
+  // Updated handler to accept supplierName when supplierId changes
+  const handleQuoteChange = (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any, supplierName?: string) => {
     setMaterialsToCompare(prev => prev.map(m => {
       if (m.material.id === materialId) {
         const updatedQuotes = m.quotes.map((q, i) => {
@@ -122,6 +123,11 @@ const QuoteComparison = () => {
                 newQuote.exchangeRate = undefined;
             }
             
+            // Handle supplier name update if supplierId changed
+            if (field === 'supplierId' && supplierName) {
+                newQuote.supplierName = supplierName;
+            }
+
             return newQuote;
           }
           return q;

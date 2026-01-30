@@ -42,7 +42,8 @@ interface MaterialQuoteComparisonRowProps {
   globalExchangeRate?: number;
   onAddQuoteEntry: (materialId: string) => void;
   onRemoveQuoteEntry: (materialId: string, quoteIndex: number) => void;
-  onQuoteChange: (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any) => void;
+  // Updated signature to include optional supplierName for supplierId changes
+  onQuoteChange: (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any, supplierName?: string) => void;
   onRemoveMaterial: (materialId: string) => void;
 }
 
@@ -91,6 +92,14 @@ const MaterialQuoteComparisonRow: React.FC<MaterialQuoteComparisonRowProps> = ({
     ));
   }, [associatedSuppliers, isLoadingSuppliers]);
 
+  const handleSupplierChange = (materialId: string, quoteIndex: number, supplierId: string) => {
+    const selectedSupplier = associatedSuppliers?.find(s => s.id === supplierId);
+    const supplierName = selectedSupplier?.name || '';
+    
+    // Pass both ID and Name back to the parent
+    onQuoteChange(materialId, quoteIndex, 'supplierId', supplierId, supplierName);
+  };
+
   return (
     <Card className="p-4">
       <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between border-b">
@@ -130,7 +139,7 @@ const MaterialQuoteComparisonRow: React.FC<MaterialQuoteComparisonRowProps> = ({
                     <TableCell>
                       <Select 
                         value={quote.supplierId} 
-                        onValueChange={(value) => onQuoteChange(material.id, index, 'supplierId', value)}
+                        onValueChange={(value) => handleSupplierChange(material.id, index, value)}
                         disabled={isLoadingSuppliers}
                       >
                         <SelectTrigger className="h-9">
