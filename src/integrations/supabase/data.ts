@@ -41,6 +41,9 @@ import {
   getPriceHistoryByMaterialId, // Exported
   getAllAuditLogs, // NEW: Exported
   logAudit, // NEW: Exported
+  getQuotesByMaterial, // NEW: Exported
+  createOrUpdateQuote, // NEW: Exported
+  deleteQuote, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -140,4 +143,7 @@ export {
   getPriceHistoryByMaterialId,
   getAllAuditLogs,
   logAudit,
+  getQuotesByMaterial, // NEW
+  createOrUpdateQuote, // NEW
+  deleteQuote, // NEW
 };

@@ -25,8 +25,9 @@ import PurchaseOrderDetails from "./pages/PurchaseOrderDetails";
 import EditPurchaseOrder from "./pages/EditPurchaseOrder";
 import Settings from "./pages/Settings";
 import FichaTecnicaUpload from "./pages/FichaTecnicaUpload";
-import PriceComparison from "./pages/PriceComparison";
-import AuditLog from "./pages/AuditLog"; // Import new page
+import PriceHistory from "./pages/PriceHistory";
+import AuditLog from "./pages/AuditLog";
+import QuoteComparison from "./pages/QuoteComparison"; // NEW IMPORT
 
 const queryClient = new QueryClient();
 
@@ -63,8 +64,9 @@ const App = () => (
                 <Route path="/purchase-orders/edit/:id" element={<EditPurchaseOrder />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/ficha-tecnica-upload" element={<FichaTecnicaUpload />} />
-                <Route path="/price-comparison" element={<PriceComparison />} />
-                <Route path="/audit-log" element={<AuditLog />} /> {/* NEW ROUTE */}
+                <Route path="/price-history" element={<PriceHistory />} />
+                <Route path="/audit-log" element={<AuditLog />} />
+                <Route path="/quote-comparison" element={<QuoteComparison />} /> {/* NEW ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

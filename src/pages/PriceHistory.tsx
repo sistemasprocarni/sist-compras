@@ -35,7 +35,7 @@ interface PriceHistoryEntry {
   };
 }
 
-const PriceComparison = () => {
+const PriceHistory = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialSearchResult | null>(null);
@@ -223,9 +223,9 @@ const PriceComparison = () => {
       </div>
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary">Comparación de Precios Históricos</CardTitle>
+          <CardTitle className="text-procarni-primary">Historial de Precios (Órdenes de Compra)</CardTitle>
           <CardDescription>
-            Selecciona un material para ver el historial de precios pagados a diferentes proveedores.
+            Selecciona un material para ver el historial de precios pagados en órdenes de compra anteriores.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -302,4 +302,4 @@ const PriceComparison = () => {
   );
 };
 
-export default PriceComparison;
+export default PriceHistory;

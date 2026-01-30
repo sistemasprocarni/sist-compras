@@ -111,3 +111,17 @@ export interface FichaTecnica {
   created_at: string;
   suppliers?: { name: string }; // For fetching list
 }
+
+export interface SupplierQuote {
+  id: string;
+  material_id: string;
+  supplier_id: string;
+  user_id: string;
+  unit_price: number;
+  currency: 'USD' | 'VES';
+  exchange_rate?: number | null;
+  quote_request_id?: string | null;
+  valid_until?: string | null;
+  delivery_days?: number | null;
+  created_at: string;
+}

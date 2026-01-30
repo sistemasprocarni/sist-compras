@@ -152,3 +152,17 @@ export type SupplierMaterial = {
   updated_at: string | null;
   user_id: string | null;
 };
+
+export type SupplierQuote = {
+  id: string;
+  material_id: string;
+  supplier_id: string;
+  user_id: string;
+  unit_price: number;
+  currency: 'USD' | 'VES';
+  exchange_rate: number | null;
+  quote_request_id: string | null;
+  valid_until: string | null;
+  delivery_days: number | null;
+  created_at: string;
+};
