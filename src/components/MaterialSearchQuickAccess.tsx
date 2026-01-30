@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import SmartSearch from '@/components/SmartSearch';
-import { searchMaterials } from '@/integrations/supabase/data/materials';
+import { searchMaterials } from '@/integrations/supabase/data'; // Import from centralized data file
 
 interface SearchResult {
   id: string;
