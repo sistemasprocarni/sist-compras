@@ -535,22 +535,27 @@ serve(async (req) => {
         hasUsdTotal = true;
       }
       
+      // Calculate required height based on total rows + padding
       const totalSectionHeight = LINE_HEIGHT * totalRows + 10;
 
       state = checkPageBreak(state, totalSectionHeight + LINE_HEIGHT * 3); 
 
+      // Draw the outer box
       drawBorderedRect(state, totalSectionX, state.y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
         borderColor: LIGHT_GRAY,
         borderWidth: 1,
       });
       
-      let currentY = state.y - 5;
+      // Start drawing content slightly below the top edge of the box
+      let currentY = state.y - 5; // Initial padding from top edge
 
       const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
         const fontToUse = isBold ? boldFont : font;
         
+        // Draw label (left aligned)
         drawText(state, label, totalSectionX + 5, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
         
+        // Draw value (right aligned)
         const valueWidth = fontToUse.widthOfTextAtSize(value, size);
         drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, currentY - (LINE_HEIGHT - size) / 2, { font: fontToUse, size, color });
         
@@ -558,6 +563,7 @@ serve(async (req) => {
       };
 
       const drawInternalSeparator = () => {
+        // Draw separator line slightly above the next row's starting Y position
         state.page.drawLine({
           start: { x: totalSectionX, y: currentY + LINE_HEIGHT - 5 },
           end: { x: totalSectionX + totalSectionWidth, y: currentY + LINE_HEIGHT - 5 },
@@ -579,6 +585,7 @@ serve(async (req) => {
         drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, rgb(0, 0, 0), FONT_SIZE);
       }
 
+      // Update state.y to be below the total box
       state.y = state.y - totalSectionHeight - LINE_HEIGHT;
 
       const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
