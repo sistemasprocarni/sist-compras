@@ -96,6 +96,9 @@ const PurchaseOrderDetails = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  
+  // Ref para acceder al componente interno y llamar a su función de cierre
+  const pdfViewerRef = React.useRef<{ handleClose: () => void }>(null);
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
@@ -297,10 +300,18 @@ const PurchaseOrderDetails = () => {
 
   const isEditable = order.status !== 'Approved' && order.status !== 'Archived';
 
+  const handleModalOpenChange = (open: boolean) => {
+    setIsModalOpen(open);
+    // Si el modal se está cerrando (open es false) y tenemos la referencia, llamamos a la función de cierre interna
+    if (!open && pdfViewerRef.current) {
+      pdfViewerRef.current.handleClose();
+    }
+  };
+
   const ActionButtons = () => (
     <>
       {/* 1. Previsualizar PDF */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
         <DialogTrigger asChild>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             <span className="flex items-center">
@@ -316,6 +327,7 @@ const PurchaseOrderDetails = () => {
             orderId={order.id}
             onClose={() => setIsModalOpen(false)}
             fileName={generateFileName()}
+            ref={pdfViewerRef} // Pasar la referencia al componente interno
           />
         </DialogContent>
       </Dialog>

@@ -23,6 +23,10 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       return;
     }
 
+    // Dismiss any previous loading toast before starting a new one
+    if (loadingToastId) dismissToast(loadingToastId);
+    if (successToastId) dismissToast(successToastId);
+
     setIsLoadingPdf(true);
     const toastId = showLoading('Generando previsualización del PDF...');
     setLoadingToastId(toastId);
@@ -47,10 +51,8 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       setPdfUrl(url);
 
       // Dismiss loading toast and show success message
-      if (loadingToastId) {
-        dismissToast(loadingToastId);
-        setLoadingToastId(null);
-      }
+      dismissToast(toastId);
+      setLoadingToastId(null);
 
       // Show success toast that will auto-dismiss
       const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
@@ -58,18 +60,14 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
 
       // Auto-dismiss the success toast after 2 seconds
       setTimeout(() => {
-        if (successId) {
-          dismissToast(successId);
-          setSuccessToastId(null);
-        }
+        dismissToast(successId);
+        setSuccessToastId(null);
       }, 2000);
 
     } catch (error: any) {
       console.error('[QuoteRequestPreviewModal] Error generating PDF:', error);
-      if (loadingToastId) {
-        dismissToast(loadingToastId);
-        setLoadingToastId(null);
-      }
+      dismissToast(toastId);
+      setLoadingToastId(null);
       showError(error.message || 'Error desconocido al generar el PDF.');
     } finally {
       setIsLoadingPdf(false);
@@ -80,7 +78,7 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
     if (pdfUrl) {
       URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
     }
-    // Clear all toasts when closing the modal
+    // Ensure all toasts are dismissed upon explicit close
     if (loadingToastId) {
       dismissToast(loadingToastId);
     }
@@ -96,6 +94,7 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
+      // Ensure toasts are dismissed on unmount
       if (loadingToastId) {
         dismissToast(loadingToastId);
       }

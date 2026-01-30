@@ -35,6 +35,10 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       return;
     }
 
+    // Dismiss any previous loading toast before starting a new one
+    if (loadingToastId) dismissToast(loadingToastId);
+    if (successToastId) dismissToast(successToastId);
+
     setIsLoadingPdf(true);
     const toastId = showLoading('Generando PDF de la Orden de Compra...');
     setLoadingToastId(toastId);
@@ -59,27 +63,23 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
       
-      if (loadingToastId) {
-        dismissToast(loadingToastId);
-        setLoadingToastId(null);
-      }
+      // Dismiss loading toast and show success toast
+      dismissToast(toastId);
+      setLoadingToastId(null);
 
       const successId = showLoading('PDF generado. Puedes previsualizarlo.', 2000);
       setSuccessToastId(successId);
 
+      // Auto-dismiss the success toast after 2 seconds
       setTimeout(() => {
-        if (successId) {
-          dismissToast(successId);
-          setSuccessToastId(null);
-        }
+        dismissToast(successId);
+        setSuccessToastId(null);
       }, 2000);
 
     } catch (error: any) {
       console.error('[PurchaseOrderPDFViewer] Error generating PDF:', error);
-      if (loadingToastId) {
-        dismissToast(loadingToastId);
-        setLoadingToastId(null);
-      }
+      dismissToast(toastId);
+      setLoadingToastId(null);
       showError(error.message || 'Error desconocido al generar el PDF.');
     } finally {
       setIsLoadingPdf(false);
@@ -90,6 +90,7 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
     if (pdfUrl) {
       URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
     }
+    // Ensure all toasts are dismissed upon explicit close
     if (loadingToastId) {
       dismissToast(loadingToastId);
     }
@@ -102,10 +103,13 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
   useEffect(() => {
     fetchOrderDetails();
     generatePdf();
+    
+    // Cleanup function runs on unmount
     return () => {
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
+      // Ensure toasts are dismissed on unmount
       if (loadingToastId) {
         dismissToast(loadingToastId);
       }
@@ -113,7 +117,7 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
         dismissToast(successToastId);
       }
     };
-  }, [orderId]);
+  }, [orderId]); // Dependencia de orderId para regenerar si cambia
 
   const itemsForCalculation = orderData?.purchase_order_items.map((item: any) => ({
     quantity: item.quantity,
@@ -142,7 +146,6 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       </div>
 
       <div className="flex justify-end gap-2 mb-4">
-        {/* Usar PDFDownloadButton para la descarga consistente */}
         <PDFDownloadButton
           orderId={orderId}
           fileName={fileName}

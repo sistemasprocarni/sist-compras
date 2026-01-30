@@ -79,6 +79,9 @@ const QuoteRequestDetails = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  
+  // Ref para acceder al componente interno y llamar a su función de cierre
+  const qrViewerRef = React.useRef<{ handleClose: () => void }>(null);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -261,10 +264,18 @@ const QuoteRequestDetails = () => {
 
   const isEditable = request.status !== 'Approved' && request.status !== 'Archived';
 
+  const handleModalOpenChange = (open: boolean) => {
+    setIsModalOpen(open);
+    // Si el modal se está cerrando (open es false) y tenemos la referencia, llamamos a la función de cierre interna
+    if (!open && qrViewerRef.current) {
+      qrViewerRef.current.handleClose();
+    }
+  };
+
   const ActionButtons = () => (
     <>
       {/* 1. Previsualizar PDF */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={handleModalOpenChange}>
         <DialogTrigger asChild>
           <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
             <span className="flex items-center">
@@ -280,6 +291,7 @@ const QuoteRequestDetails = () => {
             requestId={request.id}
             onClose={() => setIsModalOpen(false)}
             fileName={generateFileName()}
+            ref={qrViewerRef} // Pasar la referencia al componente interno
           />
         </DialogContent>
       </Dialog>
