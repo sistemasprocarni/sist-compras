@@ -109,7 +109,8 @@ serve(async (req) => {
     // --- Header ---
     drawText(state, 'REPORTE DE COMPARACIÓN DE COTIZACIONES', MARGIN, state.y, { font: boldFont, size: 16, color: PROC_RED });
     state.y -= LINE_HEIGHT * 2;
-    drawText(state, `Moneda Base: ${baseCurrency}`, MARGIN, state.y, { font: boldFont, size: 12 });
+    // La moneda base de comparación siempre es USD
+    drawText(state, `Moneda Base de Comparación: USD`, MARGIN, state.y, { font: boldFont, size: 12 });
     state.y -= LINE_HEIGHT;
     if (globalExchangeRate) {
         drawText(state, `Tasa Global (USD/VES): ${globalExchangeRate.toFixed(2)}`, MARGIN, state.y, { font: boldFont, size: 12 });
@@ -134,9 +135,9 @@ serve(async (req) => {
       tableWidth * 0.15,  // Precio Original
       tableWidth * 0.10,  // Moneda
       tableWidth * 0.15,  // Tasa
-      tableWidth * 0.30,  // Precio Comparado
+      tableWidth * 0.30,  // Precio Comparado (USD)
     ];
-    const colHeaders = ['Proveedor', 'Precio Original', 'Moneda', 'Tasa', `Precio Comparado (${baseCurrency})`];
+    const colHeaders = ['Proveedor', 'Precio Original', 'Moneda', 'Tasa', `Precio Comparado (USD)`];
 
     const drawComparisonTable = (state: PDFState, materialName: string, results: any[], bestPrice: number | null): PDFState => {
         // Draw Material Title
@@ -196,7 +197,7 @@ serve(async (req) => {
 
             currentX = MARGIN;
             // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) - FONT_SIZE/4 (ADJUSTED baseline adjustment)
-            // Using -FONT_SIZE/4 to push it down slightly more than just centering the baseline
+            // Usamos -FONT_SIZE/4 para bajar el texto ligeramente.
             const verticalCenterY = state.y - rowHeight / 2 - FONT_SIZE / 4;
 
             // 1. Proveedor
@@ -218,18 +219,22 @@ serve(async (req) => {
                 currentX += cellWidth;
             };
 
-            // 2. Precio Original
-            drawCellData(`${quote.currency} ${quote.unitPrice.toFixed(2)}`, 1);
+            // 2. Precio Original (sin moneda)
+            drawCellData(quote.unitPrice.toFixed(2), 1);
 
-            // 3. Moneda
-            currentX += colWidths[2]; // Skip drawing, already in original price
+            // 3. Moneda (centrado)
+            const currencyText = quote.currency;
+            const currencyWidth = state.font.widthOfTextAtSize(currencyText, FONT_SIZE);
+            const currencyXPos = currentX + colWidths[2] / 2 - currencyWidth / 2;
+            drawText(state, currencyText, currencyXPos, verticalCenterY);
+            currentX += colWidths[2];
 
             // 4. Tasa
             drawCellData(quote.exchangeRate ? quote.exchangeRate.toFixed(4) : 'N/A', 3);
 
-            // 5. Precio Comparado
+            // 5. Precio Comparado (Siempre USD)
             const priceComparedText = quote.isValid 
-                ? `${baseCurrency} ${quote.convertedPrice.toFixed(2)}`
+                ? `USD ${quote.convertedPrice.toFixed(2)}`
                 : `INVÁLIDO (${quote.error})`;
             
             const color = isBestPrice ? PROC_RED : (quote.isValid ? rgb(0, 0, 0) : DARK_GRAY);

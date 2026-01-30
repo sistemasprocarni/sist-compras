@@ -46,7 +46,8 @@ const QuoteComparison = () => {
   const navigate = useNavigate();
   
   const [materialsToCompare, setMaterialsToCompare] = useState<MaterialComparison[]>([]);
-  const [baseCurrency, setBaseCurrency] = useState<'USD' | 'VES'>('USD');
+  // Renombrado: Esta es la moneda por defecto para las nuevas entradas de precio.
+  const [globalInputCurrency, setGlobalInputCurrency] = useState<'USD' | 'VES'>('USD'); 
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   
   // State for adding a new material via SmartSearch
@@ -89,7 +90,8 @@ const QuoteComparison = () => {
             supplierId: '', 
             supplierName: '', 
             unitPrice: 0, 
-            currency: 'USD', 
+            // Usar la moneda global de ingreso como valor por defecto
+            currency: globalInputCurrency, 
             exchangeRate: undefined 
           }]
         };
@@ -140,6 +142,9 @@ const QuoteComparison = () => {
 
   // --- Core Comparison Logic (Memoized) ---
   const comparisonResults = useMemo(() => {
+    // La moneda base de comparación SIEMPRE es USD
+    const comparisonBaseCurrency = 'USD'; 
+
     return materialsToCompare.map(materialComp => {
       const results = materialComp.quotes.map(quote => {
         // 1. Validate required fields
@@ -147,19 +152,20 @@ const QuoteComparison = () => {
             return { ...quote, convertedPrice: null, isValid: false, error: 'Datos incompletos o inválidos.' };
         }
 
-        // 2. Convert price to base currency
+        // 2. Convert price to comparisonBaseCurrency (USD)
         let convertedPrice: number | null = quote.unitPrice;
         const rate = quote.exchangeRate || exchangeRate; // Use quote rate first, then global rate
 
-        if (quote.currency === baseCurrency) {
-            // No conversion needed
-        } else if (baseCurrency === 'USD' && quote.currency === 'VES') {
+        if (quote.currency === comparisonBaseCurrency) {
+            // No conversion needed (USD -> USD)
+        } else if (quote.currency === 'VES' && comparisonBaseCurrency === 'USD') {
             if (rate && rate > 0) {
                 convertedPrice = quote.unitPrice / rate;
             } else {
                 return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
             }
-        } else if (baseCurrency === 'VES' && quote.currency === 'USD') {
+        } else if (quote.currency === 'USD' && comparisonBaseCurrency === 'VES') {
+            // Este caso no debería ocurrir si la moneda base es siempre USD, pero lo mantenemos por si acaso.
             if (rate && rate > 0) {
                 convertedPrice = quote.unitPrice * rate;
             } else {
@@ -182,7 +188,7 @@ const QuoteComparison = () => {
         bestPrice: bestPrice,
       };
     });
-  }, [materialsToCompare, baseCurrency, exchangeRate]);
+  }, [materialsToCompare, exchangeRate]);
   // -----------------------------
 
   const renderComparisonTable = () => {
@@ -196,7 +202,7 @@ const QuoteComparison = () => {
           <div key={materialComp.material.id}>
             <MaterialQuoteComparisonRow
               comparisonData={materialComp}
-              baseCurrency={baseCurrency}
+              baseCurrency={'USD'} // Siempre USD para la comparación
               globalExchangeRate={exchangeRate}
               onAddQuoteEntry={handleAddQuoteEntry}
               onRemoveQuoteEntry={handleRemoveQuoteEntry}
@@ -207,7 +213,7 @@ const QuoteComparison = () => {
             <div className="flex justify-end mt-2">
                 <QuoteComparisonPDFButton
                     comparisonResults={[materialComp]} // Pass only the current material
-                    baseCurrency={baseCurrency}
+                    baseCurrency={'USD'} // Siempre USD para el PDF
                     globalExchangeRate={exchangeRate}
                     label={`Descargar PDF de ${materialComp.material.code}`}
                     variant="outline"
@@ -262,9 +268,9 @@ const QuoteComparison = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg">
             <div>
-              <Label htmlFor="base-currency">Moneda Base de Comparación</Label>
-              <Select value={baseCurrency} onValueChange={(value) => setBaseCurrency(value as 'USD' | 'VES')}>
-                <SelectTrigger id="base-currency">
+              <Label htmlFor="global-input-currency">Moneda Global de Ingreso (Por defecto)</Label>
+              <Select value={globalInputCurrency} onValueChange={(value) => setGlobalInputCurrency(value as 'USD' | 'VES')}>
+                <SelectTrigger id="global-input-currency">
                   <SelectValue placeholder="Selecciona moneda" />
                 </SelectTrigger>
                 <SelectContent>
@@ -272,6 +278,7 @@ const QuoteComparison = () => {
                   <SelectItem value="VES">VES (Bolívares)</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">Moneda por defecto para nuevas cotizaciones.</p>
             </div>
             <div>
               <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD a VES)</Label>
@@ -283,12 +290,12 @@ const QuoteComparison = () => {
                 value={exchangeRate || ''}
                 onChange={(e) => setExchangeRate(parseFloat(e.target.value) || undefined)}
               />
-              <p className="text-xs text-muted-foreground mt-1">Se usa si la cotización en VES no especifica su propia tasa.</p>
+              <p className="text-xs text-muted-foreground mt-1">Se usa para conversiones VES &harr; USD si no se especifica una tasa por cotización.</p>
             </div>
             <div className="flex justify-end items-end">
                 <QuoteComparisonPDFButton
                     comparisonResults={comparisonResults}
-                    baseCurrency={baseCurrency}
+                    baseCurrency={'USD'} // Siempre USD para el PDF
                     globalExchangeRate={exchangeRate}
                     label="Descargar Reporte General"
                     variant="default"

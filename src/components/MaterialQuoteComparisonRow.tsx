@@ -38,7 +38,7 @@ interface ComparisonResult {
 
 interface MaterialQuoteComparisonRowProps {
   comparisonData: ComparisonResult;
-  baseCurrency: 'USD' | 'VES';
+  baseCurrency: 'USD' | 'VES'; // This will now always be 'USD' from the parent
   globalExchangeRate?: number;
   onAddQuoteEntry: (materialId: string) => void;
   onRemoveQuoteEntry: (materialId: string, quoteIndex: number) => void;
@@ -118,9 +118,9 @@ const MaterialQuoteComparisonRow: React.FC<MaterialQuoteComparisonRowProps> = ({
               <TableRow>
                 <TableHead className="w-[25%]">Proveedor</TableHead>
                 <TableHead className="w-[15%]">Precio Original</TableHead>
-                <TableHead className="w-[15%]">Moneda</TableHead>
+                <TableHead className="w-[10%]">Moneda</TableHead> {/* Moneda ahora es su propia columna */}
                 <TableHead className="w-[15%]">Tasa (si VES)</TableHead>
-                <TableHead className="w-[20%] text-right font-bold">Precio Comparado ({baseCurrency})</TableHead>
+                <TableHead className="w-[20%] text-right font-bold">Precio Comparado (USD)</TableHead> {/* Siempre USD */}
                 <TableHead className="w-[10%] text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
@@ -187,7 +187,7 @@ const MaterialQuoteComparisonRow: React.FC<MaterialQuoteComparisonRowProps> = ({
                       )}
                     </TableCell>
                     <TableCell className={cn("text-right font-bold", isBestPrice && "text-procarni-secondary")}>
-                      {formatPrice(quote.convertedPrice, baseCurrency)}
+                      {formatPrice(quote.convertedPrice, 'USD')}
                       {!quote.isValid && quote.error && (
                         <p className="text-xs text-red-600 mt-1">{quote.error}</p>
                       )}
