@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle, Scale, Download, X } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Scale, Download, X, Loader2, RefreshCw } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
@@ -10,9 +10,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow';
-import QuoteComparisonPDFButton from '@/components/QuoteComparisonPDFButton'; // NEW IMPORT
+import QuoteComparisonPDFButton from '@/components/QuoteComparisonPDFButton';
 
 interface MaterialSearchResult {
   id: string;
@@ -46,13 +46,72 @@ const QuoteComparison = () => {
   const navigate = useNavigate();
   
   const [materialsToCompare, setMaterialsToCompare] = useState<MaterialComparison[]>([]);
-  // Renombrado: Esta es la moneda por defecto para las nuevas entradas de precio.
   const [globalInputCurrency, setGlobalInputCurrency] = useState<'USD' | 'VES'>('USD'); 
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   
+  // New states for rate management
+  const [dailyRate, setDailyRate] = useState<number | undefined>(undefined);
+  const [rateSource, setRateSource] = useState<'custom' | 'daily'>('custom');
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+
   // State for adding a new material via SmartSearch
   const [newMaterialQuery, setNewMaterialQuery] = useState('');
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<MaterialSearchResult | null>(null);
+
+  const fetchDailyRate = useCallback(async () => {
+    setIsLoadingRate(true);
+    try {
+        const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+        if (!response.ok) {
+            throw new Error('Failed to fetch daily rate');
+        }
+        const data = await response.json();
+        
+        // Assuming the API returns an object with 'promedio' or 'valor'
+        const rate = data.promedio || data.valor; 
+        
+        if (typeof rate === 'number' && rate > 0) {
+            setDailyRate(rate);
+            showSuccess(`Tasa del día cargada: ${rate.toFixed(2)} VES/USD`);
+        } else {
+            throw new Error('Formato de tasa de cambio inválido.');
+        }
+        
+    } catch (e: any) {
+        console.error('[QuoteComparison] Error fetching daily rate:', e);
+        showError(`Error al cargar la tasa del día: ${e.message}`);
+        setDailyRate(undefined);
+    } finally {
+        setIsLoadingRate(false);
+    }
+  }, []);
+
+  // Effect to manage rate fetching and default selection when globalInputCurrency changes
+  useEffect(() => {
+    if (globalInputCurrency === 'VES') {
+        fetchDailyRate();
+        setRateSource('daily'); // Default to daily rate when switching to VES
+    } else {
+        setDailyRate(undefined);
+        setRateSource('custom');
+        setExchangeRate(undefined); // Clear exchange rate when switching to USD
+    }
+  }, [globalInputCurrency, fetchDailyRate]);
+
+  // Effect to synchronize exchangeRate based on rateSource and dailyRate
+  useEffect(() => {
+    if (globalInputCurrency === 'VES') {
+        if (rateSource === 'daily' && dailyRate !== undefined) {
+            setExchangeRate(dailyRate);
+        } else if (rateSource === 'custom') {
+            // If switching to custom, keep the current exchangeRate value unless it was the daily rate and dailyRate is now undefined
+            // We rely on the custom input field to update exchangeRate when rateSource is 'custom'.
+        }
+    } else {
+        setExchangeRate(undefined);
+    }
+  }, [globalInputCurrency, rateSource, dailyRate]);
+
 
   const handleMaterialSelect = (material: MaterialSearchResult) => {
     setSelectedMaterialToAdd(material);
@@ -90,7 +149,6 @@ const QuoteComparison = () => {
             supplierId: '', 
             supplierName: '', 
             unitPrice: 0, 
-            // Usar la moneda global de ingreso como valor por defecto
             currency: globalInputCurrency, 
             exchangeRate: undefined 
           }]
@@ -112,7 +170,6 @@ const QuoteComparison = () => {
     }));
   };
 
-  // Updated handler to accept supplierName when supplierId changes
   const handleQuoteChange = (materialId: string, quoteIndex: number, field: keyof QuoteEntry, value: any, supplierName?: string) => {
     setMaterialsToCompare(prev => prev.map(m => {
       if (m.material.id === materialId) {
@@ -120,12 +177,10 @@ const QuoteComparison = () => {
           if (i === quoteIndex) {
             const newQuote = { ...q, [field]: value };
             
-            // Handle currency change logic
             if (field === 'currency' && value === 'USD') {
                 newQuote.exchangeRate = undefined;
             }
             
-            // Handle supplier name update if supplierId changed
             if (field === 'supplierId' && supplierName) {
                 newQuote.supplierName = supplierName;
             }
@@ -147,35 +202,28 @@ const QuoteComparison = () => {
     return materialsToCompare.map(materialComp => {
       const results = materialComp.quotes.map(quote => {
         
-        // Determine the rate to use: quote-specific rate, or global rate
-        const rateToUse = quote.exchangeRate || exchangeRate; // exchangeRate is the global state variable
+        const rateToUse = quote.exchangeRate || exchangeRate; 
 
-        // 1. Validate required fields
         if (!quote.supplierId || quote.unitPrice <= 0) {
             return { ...quote, convertedPrice: null, isValid: false, error: 'Datos incompletos o inválidos.' };
         }
         
-        // 1b. Validate rate if currency is VES
         if (quote.currency === 'VES' && (!rateToUse || rateToUse <= 0)) {
             return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
         }
 
-        // 2. Convert price to comparisonBaseCurrency (USD)
         let convertedPrice: number | null = quote.unitPrice;
         
         if (quote.currency === comparisonBaseCurrency) {
-            // No conversion needed (USD -> USD)
+            // USD -> USD
         } else if (quote.currency === 'VES' && comparisonBaseCurrency === 'USD') {
             if (rateToUse && rateToUse > 0) {
                 convertedPrice = quote.unitPrice / rateToUse;
             } else {
-                // Should be caught by 1b, but kept for safety
                 return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
             }
         } 
-        // Note: The USD -> VES conversion case is irrelevant since comparisonBaseCurrency is fixed to USD.
         
-        // Ensure conversion result is a number
         if (convertedPrice === null || isNaN(convertedPrice)) {
              return { ...quote, convertedPrice: null, isValid: false, error: 'Error de cálculo.' };
         }
@@ -183,7 +231,6 @@ const QuoteComparison = () => {
         return { ...quote, convertedPrice: convertedPrice, isValid: true, error: null };
       });
 
-      // Find the best price among valid quotes
       const validResults = results.filter(r => r.isValid && r.convertedPrice !== null);
       const bestPrice = validResults.length > 0 
         ? Math.min(...validResults.map(r => r.convertedPrice!)) 
@@ -209,7 +256,7 @@ const QuoteComparison = () => {
           <div key={materialComp.material.id}>
             <MaterialQuoteComparisonRow
               comparisonData={materialComp}
-              baseCurrency={comparisonBaseCurrency} // Siempre USD para la comparación
+              baseCurrency={comparisonBaseCurrency}
               globalExchangeRate={exchangeRate}
               onAddQuoteEntry={handleAddQuoteEntry}
               onRemoveQuoteEntry={handleRemoveQuoteEntry}
@@ -219,8 +266,8 @@ const QuoteComparison = () => {
             {/* Individual PDF Download Button */}
             <div className="flex justify-end mt-2">
                 <QuoteComparisonPDFButton
-                    comparisonResults={[materialComp]} // Pass only the current material
-                    baseCurrency={comparisonBaseCurrency} // Siempre USD para el PDF
+                    comparisonResults={[materialComp]}
+                    baseCurrency={comparisonBaseCurrency}
                     globalExchangeRate={exchangeRate}
                     label={`Descargar PDF de ${materialComp.material.code}`}
                     variant="outline"
@@ -230,6 +277,69 @@ const QuoteComparison = () => {
           </div>
         ))}
       </div>
+    );
+  };
+
+  const renderExchangeRateInput = () => {
+    if (globalInputCurrency === 'USD') {
+        // If input currency is USD, the exchange rate is irrelevant for the global setting
+        return (
+            <div className="text-sm text-muted-foreground mt-1">
+                Tasa no requerida si la moneda de ingreso es USD.
+            </div>
+        );
+    }
+
+    // If input currency is VES, show rate selection
+    return (
+        <div className="space-y-2">
+            <Select value={rateSource} onValueChange={(value) => setRateSource(value as 'custom' | 'daily')}>
+                <SelectTrigger id="rate-source">
+                    <SelectValue placeholder="Selecciona fuente de tasa" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="daily" disabled={dailyRate === undefined}>
+                        Tasa del día {dailyRate ? `(${dailyRate.toFixed(2)} VES/USD)` : '(Cargando...)'}
+                    </SelectItem>
+                    <SelectItem value="custom">Tasa personalizada</SelectItem>
+                </SelectContent>
+            </Select>
+
+            {rateSource === 'daily' && (
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="number"
+                        step="0.01"
+                        value={dailyRate || ''}
+                        placeholder="Tasa del día"
+                        disabled
+                        className="bg-gray-100 dark:bg-gray-700"
+                    />
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={fetchDailyRate} 
+                        disabled={isLoadingRate}
+                    >
+                        {isLoadingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    </Button>
+                </div>
+            )}
+
+            {rateSource === 'custom' && (
+                <Input
+                    id="exchange-rate"
+                    type="number"
+                    step="0.01"
+                    placeholder="Ingresa tasa personalizada"
+                    value={exchangeRate || ''}
+                    onChange={(e) => setExchangeRate(parseFloat(e.target.value) || undefined)}
+                />
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+                Tasa actual utilizada: {exchangeRate ? exchangeRate.toFixed(4) : 'N/USD'}
+            </p>
+        </div>
     );
   };
 
@@ -273,7 +383,7 @@ const QuoteComparison = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-start p-4 border rounded-lg">
             <div>
               <Label htmlFor="global-input-currency">Moneda Global de Ingreso (Por defecto)</Label>
               <Select value={globalInputCurrency} onValueChange={(value) => setGlobalInputCurrency(value as 'USD' | 'VES')}>
@@ -289,15 +399,7 @@ const QuoteComparison = () => {
             </div>
             <div>
               <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD a VES)</Label>
-              <Input
-                id="exchange-rate"
-                type="number"
-                step="0.01"
-                placeholder="Opcional: Tasa global"
-                value={exchangeRate || ''}
-                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || undefined)}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Se usa para conversiones VES &harr; USD si no se especifica una tasa por cotización.</p>
+              {renderExchangeRateInput()}
             </div>
             <div className="flex justify-end items-end">
                 <QuoteComparisonPDFButton
