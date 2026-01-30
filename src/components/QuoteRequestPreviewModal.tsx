@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
@@ -10,12 +10,37 @@ interface QuoteRequestPreviewModalProps {
   fileName: string; // Nuevo: Nombre de archivo para la descarga
 }
 
-const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ requestId, onClose, fileName }) => {
+export interface QuoteRequestPreviewModalRef {
+  handleClose: () => void;
+}
+
+const QuoteRequestPreviewModal = React.forwardRef<QuoteRequestPreviewModalRef, QuoteRequestPreviewModalProps>(({ requestId, onClose, fileName }, ref) => {
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [successToastId, setSuccessToastId] = useState<string | null>(null);
+
+  const handleClose = () => {
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
+    }
+    // Ensure all toasts are dismissed upon explicit close
+    if (loadingToastId) {
+      dismissToast(loadingToastId);
+      setLoadingToastId(null);
+    }
+    if (successToastId) {
+      dismissToast(successToastId);
+      setSuccessToastId(null);
+    }
+    onClose();
+  };
+
+  // Expose handleClose function to the parent component via ref
+  useImperativeHandle(ref, () => ({
+    handleClose,
+  }));
 
   const generatePdf = async () => {
     if (!session) {
@@ -74,20 +99,6 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
     }
   };
 
-  const handleClose = () => {
-    if (pdfUrl) {
-      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
-    }
-    // Ensure all toasts are dismissed upon explicit close
-    if (loadingToastId) {
-      dismissToast(loadingToastId);
-    }
-    if (successToastId) {
-      dismissToast(successToastId);
-    }
-    onClose();
-  };
-
   useEffect(() => {
     generatePdf();
     return () => {
@@ -142,6 +153,8 @@ const QuoteRequestPreviewModal: React.FC<QuoteRequestPreviewModalProps> = ({ req
       </div>
     </div>
   );
-};
+});
+
+QuoteRequestPreviewModal.displayName = "QuoteRequestPreviewModal";
 
 export default QuoteRequestPreviewModal;

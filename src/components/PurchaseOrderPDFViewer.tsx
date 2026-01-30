@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { showError, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
@@ -12,7 +12,11 @@ interface PurchaseOrderPDFViewerProps {
   fileName: string; // Nuevo: Nombre de archivo para la descarga
 }
 
-const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId, onClose, fileName }) => {
+export interface PurchaseOrderPDFViewerRef {
+  handleClose: () => void;
+}
+
+const PurchaseOrderPDFViewer = React.forwardRef<PurchaseOrderPDFViewerRef, PurchaseOrderPDFViewerProps>(({ orderId, onClose, fileName }, ref) => {
   const { session } = useSession();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
@@ -28,6 +32,27 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       console.error("Error fetching order details for viewer:", e);
     }
   };
+
+  const handleClose = () => {
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
+    }
+    // Ensure all toasts are dismissed upon explicit close
+    if (loadingToastId) {
+      dismissToast(loadingToastId);
+      setLoadingToastId(null);
+    }
+    if (successToastId) {
+      dismissToast(successToastId);
+      setSuccessToastId(null);
+    }
+    onClose();
+  };
+
+  // Expose handleClose function to the parent component via ref
+  useImperativeHandle(ref, () => ({
+    handleClose,
+  }));
 
   const generatePdf = async () => {
     if (!session) {
@@ -84,20 +109,6 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
     } finally {
       setIsLoadingPdf(false);
     }
-  };
-
-  const handleClose = () => {
-    if (pdfUrl) {
-      URL.revokeObjectURL(pdfUrl); // Limpiar URL temporal
-    }
-    // Ensure all toasts are dismissed upon explicit close
-    if (loadingToastId) {
-      dismissToast(loadingToastId);
-    }
-    if (successToastId) {
-      dismissToast(successToastId);
-    }
-    onClose();
   };
 
   useEffect(() => {
@@ -176,6 +187,8 @@ const PurchaseOrderPDFViewer: React.FC<PurchaseOrderPDFViewerProps> = ({ orderId
       </div>
     </div>
   );
-};
+});
+
+PurchaseOrderPDFViewer.displayName = "PurchaseOrderPDFViewer";
 
 export default PurchaseOrderPDFViewer;

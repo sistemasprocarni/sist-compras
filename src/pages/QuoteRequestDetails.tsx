@@ -9,7 +9,7 @@ import { getQuoteRequestDetails, updateQuoteRequestStatus } from '@/integrations
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
+import QuoteRequestPreviewModal, { QuoteRequestPreviewModalRef } from '@/components/QuoteRequestPreviewModal';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
 import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
@@ -81,7 +81,7 @@ const QuoteRequestDetails = () => {
   const [isApproving, setIsApproving] = useState(false);
   
   // Ref para acceder al componente interno y llamar a su función de cierre
-  const qrViewerRef = React.useRef<{ handleClose: () => void }>(null);
+  const qrViewerRef = React.useRef<QuoteRequestPreviewModalRef>(null);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
     queryKey: ['quoteRequestDetails', id],
@@ -266,7 +266,7 @@ const QuoteRequestDetails = () => {
 
   const handleModalOpenChange = (open: boolean) => {
     setIsModalOpen(open);
-    // Si el modal se está cerrando (open es false) y tenemos la referencia, llamamos a la función de cierre interna
+    // Si el modal se está cerrando (open es false), llamamos a la función de cierre interna
     if (!open && qrViewerRef.current) {
       qrViewerRef.current.handleClose();
     }

@@ -9,7 +9,7 @@ import { getPurchaseOrderDetails, updatePurchaseOrderStatus } from '@/integratio
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import PurchaseOrderPDFViewer from '@/components/PurchaseOrderPDFViewer';
+import PurchaseOrderPDFViewer, { PurchaseOrderPDFViewerRef } from '@/components/PurchaseOrderPDFViewer';
 import PDFDownloadButton from '@/components/PDFDownloadButton';
 import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
@@ -98,7 +98,7 @@ const PurchaseOrderDetails = () => {
   const [isApproving, setIsApproving] = useState(false);
   
   // Ref para acceder al componente interno y llamar a su función de cierre
-  const pdfViewerRef = React.useRef<{ handleClose: () => void }>(null);
+  const pdfViewerRef = React.useRef<PurchaseOrderPDFViewerRef>(null);
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
@@ -302,7 +302,7 @@ const PurchaseOrderDetails = () => {
 
   const handleModalOpenChange = (open: boolean) => {
     setIsModalOpen(open);
-    // Si el modal se está cerrando (open es false) y tenemos la referencia, llamamos a la función de cierre interna
+    // Si el modal se está cerrando (open es false), llamamos a la función de cierre interna
     if (!open && pdfViewerRef.current) {
       pdfViewerRef.current.handleClose();
     }
