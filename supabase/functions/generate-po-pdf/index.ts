@@ -584,29 +584,16 @@ serve(async (req) => {
         currentY -= totalRowHeight; // Move Y down by the fixed row height
       };
 
-      const drawInternalSeparator = () => {
-        // Draw separator line at the bottom of the row that was just drawn (currentY + totalRowHeight)
-        // We draw it slightly above the next row's starting Y position (which is currentY after the drawTotalRow call)
-        state.page.drawLine({
-          start: { x: totalSectionX, y: currentY + totalRowHeight },
-          end: { x: totalSectionX + totalSectionWidth, y: currentY + totalRowHeight },
-          thickness: 0.5,
-          color: LIGHT_GRAY,
-        });
-      };
+      // NOTE: Removing drawInternalSeparator() calls
 
       // Draw rows
       drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
-      drawInternalSeparator();
 
       drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
-      drawInternalSeparator();
 
       drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); // Make TOTAL bigger and red
       
       if (hasUsdTotal) {
-        drawInternalSeparator(); // Separator before USD total
-        const totalInUSD = (calculatedTotals.total / order.exchange_rate!).toFixed(2);
         drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, DARK_GRAY, FONT_SIZE);
       }
 
