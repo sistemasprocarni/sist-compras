@@ -226,7 +226,8 @@ serve(async (req) => {
       tableWidth * 0.15,  // 5. IVA
       tableWidth * 0.20   // 6. Total
     ];
-    const colHeaders = ['Material / Descripción', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+    // UPDATED HEADER NAME
+    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
 
     // PDF State Management
     interface PDFState {
@@ -310,7 +311,6 @@ serve(async (req) => {
         }
       }
 
-      const headerBlockHeight = LOGO_SIZE + LINE_HEIGHT;
       const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
 
       // 1. Draw Company Logo and Name (Top Left)
@@ -435,9 +435,13 @@ serve(async (req) => {
         
         // Add supplier code and description if available
         if (item.supplier_code || item.description) {
-            materialContent += `\n(Cód. Prov: ${item.supplier_code || 'N/A'})`;
+            // Only add supplier code if it exists
+            if (item.supplier_code) {
+                materialContent += `\n(Cód. Prov: ${item.supplier_code})`;
+            }
+            // Add description if it exists
             if (item.description) {
-                materialContent += ` ${item.description}`;
+                materialContent += `\n${item.description}`;
             }
         }
         
