@@ -17,7 +17,11 @@ const LINE_HEIGHT = FONT_SIZE * 1.2;
 const COMPANY_NAME_FONT_SIZE = 12;
 const LOGO_SIZE = 50;
 
-// --- UTILITY FUNCTIONS (Kept outside serve) ---
+// Table column configuration
+const COL_WIDTHS = [0.30, 0.10, 0.10, 0.15, 0.15, 0.20]; // Material, Cantidad, Unidad, P. Unitario, IVA, Total
+const COL_HEADERS = ['Material', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+
+// --- UTILITY FUNCTIONS ---
 
 const calculateTotals = (items: Array<{ quantity: number; unit_price: number; tax_rate?: number; is_exempt?: boolean }>) => {
   let baseImponible = 0;
@@ -45,7 +49,7 @@ const calculateTotals = (items: Array<{ quantity: number; unit_price: number; ta
 };
 
 const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']; // FIXED TYPO: NOVNTA -> NOVENTA
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
 const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
 
@@ -138,6 +142,421 @@ const formatSequenceNumber = (sequence?: number, dateString?: string): string =>
   return `OC-${year}-${month}-${seq}`;
 };
 
+// --- PDF STATE AND DRAWING HELPERS ---
+
+interface PDFState {
+  page: PDFPage;
+  y: number;
+  width: number;
+  height: number;
+  font: PDFFont;
+  boldFont: PDFFont;
+  italicFont: PDFFont;
+  tableColWidths: number[];
+}
+
+const drawText = (state: PDFState, text: string, x: number, yPos: number, options: any = {}) => {
+  const safeText = String(text || 'N/A'); 
+  state.page.drawText(safeText, {
+    x,
+    y: yPos,
+    font: state.font,
+    size: FONT_SIZE,
+    color: rgb(0, 0, 0),
+    ...options,
+  });
+};
+
+const drawBorderedRect = (state: PDFState, x: number, y: number, w: number, h: number, options: any = {}) => {
+  state.page.drawRectangle({
+    x,
+    y,
+    width: w,
+    height: h,
+    borderColor: options.borderColor || LIGHT_GRAY,
+    borderWidth: options.borderWidth || 1,
+    color: options.color || rgb(1, 1, 1),
+  });
+};
+
+const drawTableHeader = (state: PDFState): PDFState => {
+  const tableWidth = state.width - 2 * MARGIN;
+  let currentX = MARGIN;
+  
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y - LINE_HEIGHT },
+    end: { x: MARGIN + tableWidth, y: state.y - LINE_HEIGHT },
+    thickness: 1,
+    color: LIGHT_GRAY,
+  });
+  
+  for (let i = 0; i < COL_HEADERS.length; i++) {
+    drawText(state, COL_HEADERS[i], currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
+      font: state.boldFont, 
+      size: 10,
+      color: PROC_RED
+    });
+    currentX += state.tableColWidths[i];
+  }
+  state.y -= LINE_HEIGHT;
+  return state;
+};
+
+const checkPageBreak = (state: PDFState, pdfDoc: PDFDocument, requiredSpace: number): PDFState => {
+  // Check if required space pushes content below the footer area
+  if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 6) {
+    state.page = pdfDoc.addPage();
+    state.y = state.height - MARGIN;
+    state = drawTableHeader(state); // Redraw headers on new page
+  }
+  return state;
+};
+
+// --- MODULAR DRAWING FUNCTIONS ---
+
+const drawHeader = async (state: PDFState, order: any, pdfDoc: PDFDocument): Promise<PDFState> => {
+  let companyLogoImage = null;
+  if (order.companies?.logo_url) {
+    try {
+      const logoResponse = await fetch(order.companies.logo_url);
+      if (logoResponse.ok) {
+        const logoBytes = await logoResponse.arrayBuffer();
+        companyLogoImage = await pdfDoc.embedPng(logoBytes);
+      }
+    } catch (logoError) {
+      console.warn(`[generate-po-pdf] Could not load company logo:`, logoError);
+    }
+  }
+
+  const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
+
+  // 1. Draw Company Logo and Name (Top Left)
+  if (companyLogoImage) {
+    const logoX = MARGIN;
+    const logoY = state.y - LOGO_SIZE;
+
+    state.page.drawImage(companyLogoImage, {
+      x: logoX,
+      y: logoY,
+      width: LOGO_SIZE,
+      height: LOGO_SIZE,
+    });
+
+    drawText(state, order.companies?.name || 'N/A', logoX + LOGO_SIZE + 10, state.y - (LOGO_SIZE / 2) + (COMPANY_NAME_FONT_SIZE / 2), { 
+      font: state.boldFont, 
+      size: COMPANY_NAME_FONT_SIZE, 
+      color: PROC_RED 
+    });
+  } else {
+    drawText(state, order.companies?.name || 'N/A', MARGIN, state.y, { font: state.boldFont, size: COMPANY_NAME_FONT_SIZE, color: PROC_RED });
+  }
+
+  // 2. Draw Document Title and Number (Top Right)
+  const titleX = state.width - MARGIN - 150;
+  drawText(state, 'ORDEN DE COMPRA', titleX, state.y, { font: state.boldFont, size: 16, color: PROC_RED });
+  
+  drawText(state, `Nº: ${formattedSequence}`, titleX, state.y - LINE_HEIGHT * 2, { font: state.boldFont, size: 10 }); 
+  drawText(state, `Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, titleX, state.y - LINE_HEIGHT, { size: 10 });
+
+  // Update Y position based on the tallest element in the header
+  state.y -= Math.max(companyLogoImage ? LOGO_SIZE : LINE_HEIGHT * 3, LINE_HEIGHT * 3);
+  
+  // Separator line (Red, 2pt)
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y },
+    end: { x: state.width - MARGIN, y: state.y },
+    thickness: 2,
+    color: PROC_RED,
+  });
+  state.y -= LINE_HEIGHT * 2;
+  return state;
+};
+
+const drawSupplierDetails = (state: PDFState, order: any): PDFState => {
+  // Draw title
+  drawText(state, 'DATOS DEL PROVEEDOR:', MARGIN, state.y, { font: state.boldFont, size: 12, color: PROC_RED });
+  
+  // Draw separator line immediately below the title text area
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y - FONT_SIZE - 2 },
+    end: { x: state.width - MARGIN, y: state.y - FONT_SIZE - 2 },
+    thickness: 0.5,
+    color: LIGHT_GRAY,
+  });
+  
+  state.y -= LINE_HEIGHT * 2;
+  
+  // Max width for supplier details (approx 60 characters per line)
+  const maxChars = 60; 
+  
+  // 1. Supplier Name (Bold)
+  const namePrefix = 'Nombre: ';
+  const nameLines = wrapText(order.suppliers?.name || 'N/A', maxChars - namePrefix.length);
+  
+  drawText(state, namePrefix, MARGIN, state.y, { font: state.boldFont });
+  let currentX = MARGIN + state.font.widthOfTextAtSize(namePrefix, FONT_SIZE);
+  
+  for (const line of nameLines) {
+    drawText(state, line, currentX, state.y);
+    state.y -= LINE_HEIGHT;
+    currentX = MARGIN + state.font.widthOfTextAtSize(namePrefix, FONT_SIZE);
+  }
+  
+  // 2. RIF
+  drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
+  state.y -= LINE_HEIGHT;
+  
+  // 3. Address
+  const addressPrefix = 'Dirección: ';
+  const addressLines = wrapText(order.suppliers?.address || 'N/A', maxChars - addressPrefix.length);
+  
+  drawText(state, addressPrefix, MARGIN, state.y, { font: state.boldFont });
+  currentX = MARGIN + state.font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
+  
+  for (const line of addressLines) {
+    drawText(state, line, currentX, state.y);
+    state.y -= LINE_HEIGHT;
+    currentX = MARGIN + state.font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
+  }
+  
+  state.y -= LINE_HEIGHT;
+  return state;
+};
+
+const drawOrderDetails = (state: PDFState, order: any): PDFState => {
+  const formatPaymentTerms = (order: any) => {
+    if (order.payment_terms === 'Otro' && order.custom_payment_terms) {
+      return order.custom_payment_terms;
+    }
+    if (order.payment_terms === 'Crédito' && order.credit_days) {
+      return `Crédito (${order.credit_days} días)`;
+    }
+    return order.payment_terms || 'Contado';
+  };
+  
+  const paymentTerms = formatPaymentTerms(order);
+
+  // Draw title
+  drawText(state, 'DETALLES DE LA ORDEN:', MARGIN, state.y, { font: state.boldFont, size: 12, color: PROC_RED });
+  
+  // Draw separator line immediately below the title text area
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y - FONT_SIZE - 2 },
+    end: { x: state.width - MARGIN, y: state.y - FONT_SIZE - 2 },
+    thickness: 0.5,
+    color: LIGHT_GRAY,
+  });
+  
+  state.y -= LINE_HEIGHT * 2;
+  
+  drawText(state, `Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, MARGIN, state.y);
+  state.y -= LINE_HEIGHT;
+  drawText(state, `Condición de Pago: ${paymentTerms}`, MARGIN, state.y);
+  state.y -= LINE_HEIGHT * 2;
+  return state;
+};
+
+const drawObservations = (state: PDFState, order: any, pdfDoc: PDFDocument): PDFState => {
+  if (!order.observations) return state;
+
+  // Draw title
+  drawText(state, 'OBSERVACIONES:', MARGIN, state.y, { font: state.boldFont, size: 12, color: PROC_RED });
+  
+  // Draw separator line immediately below the title text area
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y - FONT_SIZE - 2 },
+    end: { x: state.width - MARGIN, y: state.y - FONT_SIZE - 2 },
+    thickness: 0.5,
+    color: LIGHT_GRAY,
+  });
+  
+  state.y -= LINE_HEIGHT * 2;
+  
+  const observationsText = order.observations;
+  const maxCharsPerLine = 100; 
+  const textRuns = wrapText(observationsText, maxCharsPerLine);
+  
+  for (const run of textRuns) {
+    state = checkPageBreak(state, pdfDoc, LINE_HEIGHT);
+    drawText(state, run, MARGIN, state.y);
+    state.y -= LINE_HEIGHT;
+  }
+  state.y -= LINE_HEIGHT; 
+  return state;
+};
+
+const drawItemsTable = (state: PDFState, items: any[], pdfDoc: PDFDocument): PDFState => {
+  const tableWidth = state.width - 2 * MARGIN;
+  
+  // Draw title
+  drawText(state, 'ÍTEMS DE LA ORDEN:', MARGIN, state.y, { font: state.boldFont, size: 12, color: PROC_RED });
+  
+  // Draw separator line immediately below the title text area
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y - FONT_SIZE - 2 },
+    end: { x: state.width - MARGIN, y: state.y - FONT_SIZE - 2 },
+    thickness: 0.5,
+    color: LIGHT_GRAY,
+  });
+  
+  state.y -= LINE_HEIGHT * 2;
+  
+  state = drawTableHeader(state);
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    
+    let materialContent = String(item.material_name || '');
+    
+    if (item.supplier_code || item.description) {
+        if (item.supplier_code) {
+            materialContent += `\n(Cód. Prov: ${item.supplier_code})`;
+        }
+        if (item.description) {
+            materialContent += `\n${item.description}`;
+        }
+    }
+    
+    const materialLines = wrapText(materialContent, 35); 
+    const lineSpacing = (FONT_SIZE - 1) * 1.2;
+    const requiredHeight = materialLines.length * lineSpacing + 5;
+
+    state = checkPageBreak(state, pdfDoc, requiredHeight + 10); 
+
+    state.page.drawLine({
+      start: { x: MARGIN, y: state.y },
+      end: { x: MARGIN + tableWidth, y: state.y },
+      thickness: 0.5,
+      color: LIGHT_GRAY,
+    });
+
+    const subtotal = item.quantity * item.unit_price;
+    const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+    const totalItem = subtotal + itemIva;
+
+    let currentX = MARGIN;
+    let currentY = state.y - 3; 
+
+    // 1. Material/Description (Multi-line)
+    for (const line of materialLines) {
+      drawText(state, line, currentX + 5, currentY - (FONT_SIZE - 1), { size: FONT_SIZE - 1 });
+      currentY -= lineSpacing;
+    }
+    currentX += state.tableColWidths[0];
+
+    const finalY = state.y - requiredHeight;
+    
+    const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true) => {
+        const cellWidth = state.tableColWidths[colIndex];
+        const textWidth = state.font.widthOfTextAtSize(text, FONT_SIZE);
+        
+        const verticalCenterY = finalY + requiredHeight / 2 - FONT_SIZE / 2;
+
+        const xPos = isRightAligned 
+            ? currentX + cellWidth - 5 - textWidth 
+            : currentX + 5;
+        
+        drawText(state, text, xPos, verticalCenterY);
+        currentX += cellWidth;
+    };
+
+    // 2. Cantidad
+    drawCellData(item.quantity.toString(), 1);
+
+    // 3. Unidad
+    drawCellData(item.unit || 'UND', 2);
+
+    // 4. P. Unitario
+    drawCellData(`${order.currency} ${item.unit_price.toFixed(2)}`, 3);
+
+    // 5. IVA
+    drawCellData(item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`, 4);
+
+    // 6. Total
+    drawCellData(`${order.currency} ${totalItem.toFixed(2)}`, 5);
+
+    state.y = finalY;
+  }
+  
+  state.page.drawLine({
+    start: { x: MARGIN, y: state.y },
+    end: { x: MARGIN + tableWidth, y: state.y },
+    thickness: 1,
+    color: LIGHT_GRAY,
+  });
+  
+  state.y -= LINE_HEIGHT * 2;
+  return state;
+};
+
+const drawTotalsAndSummary = (state: PDFState, order: any, items: any[], pdfDoc: PDFDocument): PDFState => {
+  const calculatedTotals = calculateTotals(items);
+  const totalSectionWidth = 200;
+  const totalSectionX = state.width - MARGIN - totalSectionWidth; 
+  
+  let totalRows = 3;
+  let hasUsdTotal = false;
+  if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
+    totalRows = 4;
+    hasUsdTotal = true;
+  }
+  
+  const totalRowHeight = LINE_HEIGHT * 1.5;
+  const totalSectionHeight = totalRowHeight * totalRows + 5;
+
+  state = checkPageBreak(state, pdfDoc, totalSectionHeight + LINE_HEIGHT * 3); 
+
+  // Draw the outer box
+  drawBorderedRect(state, totalSectionX, state.y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
+    borderColor: LIGHT_GRAY,
+    borderWidth: 1,
+  });
+  
+  let currentY = state.y - 5;
+
+  const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
+    const fontToUse = isBold ? state.boldFont : state.font;
+    
+    const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
+    
+    drawText(state, label, totalSectionX + 5, verticalCenterY, { font: fontToUse, size, color });
+    
+    const valueWidth = fontToUse.widthOfTextAtSize(value, size);
+    drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, verticalCenterY, { font: fontToUse, size, color });
+    
+    currentY -= totalRowHeight;
+  };
+
+  drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+  drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+  drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2);
+  
+  if (hasUsdTotal) {
+    const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
+    drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, DARK_GRAY, FONT_SIZE);
+  }
+
+  state.y = state.y - totalSectionHeight - LINE_HEIGHT;
+
+  const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
+  drawText(state, `Monto en Letras: ${amountInWords}`, MARGIN, state.y, { font: state.italicFont });
+  state.y -= LINE_HEIGHT * 3;
+  return state;
+};
+
+const drawFooter = (state: PDFState, order: any, user: any): PDFState => {
+  const footerY = MARGIN;
+  state.page.drawLine({
+    start: { x: state.width / 2 - 100, y: footerY + LINE_HEIGHT },
+    end: { x: state.width / 2 + 100, y: footerY + LINE_HEIGHT },
+    thickness: 1,
+    color: DARK_GRAY,
+  });
+  drawText(state, 'Firma Autorizada', state.width / 2 - 50, footerY, { font: state.font, size: 9 });
+  drawText(state, `Generado por: ${order.created_by || user.email}`, MARGIN, footerY + LINE_HEIGHT * 2);
+  return state;
+};
+
 // --- MAIN SERVE HANDLER ---
 
 serve(async (req) => {
@@ -196,17 +615,6 @@ serve(async (req) => {
       });
     }
 
-    // Helper function to format payment terms
-    const formatPaymentTerms = (order: any) => {
-      if (order.payment_terms === 'Otro' && order.custom_payment_terms) {
-        return order.custom_payment_terms;
-      }
-      if (order.payment_terms === 'Crédito' && order.credit_days) {
-        return `Crédito (${order.credit_days} días)`;
-      }
-      return order.payment_terms || 'Contado';
-    };
-
     // --- PDF Setup ---
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage(); 
@@ -215,445 +623,28 @@ serve(async (req) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-
-    // Table column configuration (Original 6 columns)
+    
     const tableWidth = width - 2 * MARGIN;
-    const originalColWidths = [
-      tableWidth * 0.30,  // 1. Material/Description
-      tableWidth * 0.10,  // 2. Cantidad
-      tableWidth * 0.10,  // 3. Unidad
-      tableWidth * 0.15,  // 4. P. Unitario
-      tableWidth * 0.15,  // 5. IVA
-      tableWidth * 0.20   // 6. Total
-    ];
-    // UPDATED HEADER NAME
-    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+    const tableColWidths = COL_WIDTHS.map(ratio => tableWidth * ratio);
 
-    // PDF State Management
-    interface PDFState {
-      page: PDFPage;
-      y: number;
-    }
-
-    let state: PDFState = { page, y: height - MARGIN };
-
-    // --- Core Drawing Helpers ---
-
-    const drawText = (state: PDFState, text: string, x: number, yPos: number, options: any = {}) => {
-      const safeText = String(text || 'N/A'); 
-      state.page.drawText(safeText, {
-        x,
-        y: yPos,
-        font: font,
-        size: FONT_SIZE,
-        color: rgb(0, 0, 0),
-        ...options,
-      });
-    };
-
-    const drawBorderedRect = (state: PDFState, x: number, y: number, w: number, h: number, options: any = {}) => {
-      state.page.drawRectangle({
-        x,
-        y,
-        width: w,
-        height: h,
-        borderColor: options.borderColor || LIGHT_GRAY,
-        borderWidth: options.borderWidth || 1,
-        color: options.color || rgb(1, 1, 1),
-      });
-    };
-
-    const drawTableHeader = (state: PDFState): PDFState => {
-      let currentX = MARGIN;
-      
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y - LINE_HEIGHT },
-        end: { x: MARGIN + tableWidth, y: state.y - LINE_HEIGHT },
-        thickness: 1,
-        color: LIGHT_GRAY,
-      });
-      
-      for (let i = 0; i < colHeaders.length; i++) {
-        drawText(state, colHeaders[i], currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
-          font: boldFont, 
-          size: 10,
-          color: PROC_RED
-        });
-        currentX += originalColWidths[i];
-      }
-      state.y -= LINE_HEIGHT;
-      return state;
-    };
-
-    const checkPageBreak = (state: PDFState, requiredSpace: number): PDFState => {
-      // Check if required space pushes content below the footer area
-      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 6) {
-        state.page = pdfDoc.addPage();
-        state.y = height - MARGIN;
-        state = drawTableHeader(state); // Redraw headers on new page
-      }
-      return state;
-    };
-
-    // --- Modular Drawing Functions ---
-
-    const drawHeader = async (state: PDFState, order: any): Promise<PDFState> => {
-      let companyLogoImage = null;
-      if (order.companies?.logo_url) {
-        try {
-          const logoResponse = await fetch(order.companies.logo_url);
-          if (logoResponse.ok) {
-            const logoBytes = await logoResponse.arrayBuffer();
-            companyLogoImage = await pdfDoc.embedPng(logoBytes);
-          }
-        } catch (logoError) {
-          console.warn(`[generate-po-pdf] Could not load company logo:`, logoError);
-        }
-      }
-
-      const formattedSequence = formatSequenceNumber(order.sequence_number, order.created_at);
-
-      // 1. Draw Company Logo and Name (Top Left)
-      if (companyLogoImage) {
-        const logoX = MARGIN;
-        const logoY = state.y - LOGO_SIZE;
-
-        state.page.drawImage(companyLogoImage, {
-          x: logoX,
-          y: logoY,
-          width: LOGO_SIZE,
-          height: LOGO_SIZE,
-        });
-
-        drawText(state, order.companies?.name || 'N/A', logoX + LOGO_SIZE + 10, state.y - (LOGO_SIZE / 2) + (COMPANY_NAME_FONT_SIZE / 2), { 
-          font: boldFont, 
-          size: COMPANY_NAME_FONT_SIZE, 
-          color: PROC_RED 
-        });
-      } else {
-        drawText(state, order.companies?.name || 'N/A', MARGIN, state.y, { font: boldFont, size: COMPANY_NAME_FONT_SIZE, color: PROC_RED });
-      }
-
-      // 2. Draw Document Title and Number (Top Right)
-      const titleX = width - MARGIN - 150;
-      drawText(state, 'ORDEN DE COMPRA', titleX, state.y, { font: boldFont, size: 16, color: PROC_RED });
-      
-      drawText(state, `Nº: ${formattedSequence}`, titleX, state.y - LINE_HEIGHT * 2, { font: boldFont, size: 10 }); 
-      drawText(state, `Fecha: ${new Date(order.created_at).toLocaleDateString('es-VE')}`, titleX, state.y - LINE_HEIGHT, { size: 10 });
-
-      // Update Y position based on the tallest element in the header
-      state.y -= Math.max(companyLogoImage ? LOGO_SIZE : LINE_HEIGHT * 3, LINE_HEIGHT * 3);
-      
-      // Separator line (Red, 2pt)
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y },
-        end: { x: width - MARGIN, y: state.y },
-        thickness: 2,
-        color: PROC_RED,
-      });
-      state.y -= LINE_HEIGHT * 2;
-      return state;
-    };
-
-    const drawSupplierDetails = (state: PDFState, order: any): PDFState => {
-      // Draw title
-      drawText(state, 'DATOS DEL PROVEEDOR:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
-      
-      // Draw separator line immediately below the title text area
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
-        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
-        thickness: 0.5,
-        color: LIGHT_GRAY,
-      });
-      
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
-      
-      // Max width for supplier details (approx 60 characters per line)
-      const maxChars = 60; 
-      
-      // 1. Supplier Name (Bold)
-      const namePrefix = 'Nombre: ';
-      const nameLines = wrapText(order.suppliers?.name || 'N/A', maxChars - namePrefix.length);
-      
-      drawText(state, namePrefix, MARGIN, state.y, { font: boldFont });
-      let currentX = MARGIN + font.widthOfTextAtSize(namePrefix, FONT_SIZE);
-      
-      for (const line of nameLines) {
-        drawText(state, line, currentX, state.y);
-        state.y -= LINE_HEIGHT;
-        currentX = MARGIN + font.widthOfTextAtSize(namePrefix, FONT_SIZE); // Subsequent lines start indented
-      }
-      
-      // 2. RIF
-      drawText(state, `RIF: ${order.suppliers?.rif || 'N/A'}`, MARGIN, state.y);
-      state.y -= LINE_HEIGHT;
-      
-      // 3. Address
-      const addressPrefix = 'Dirección: ';
-      const addressLines = wrapText(order.suppliers?.address || 'N/A', maxChars - addressPrefix.length);
-      
-      drawText(state, addressPrefix, MARGIN, state.y, { font: boldFont });
-      currentX = MARGIN + font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
-      
-      for (const line of addressLines) {
-        drawText(state, line, currentX, state.y);
-        state.y -= LINE_HEIGHT;
-        currentX = MARGIN + font.widthOfTextAtSize(addressPrefix, FONT_SIZE);
-      }
-      
-      state.y -= LINE_HEIGHT; // Extra space after details
-      return state;
-    };
-
-    const drawOrderDetails = (state: PDFState, order: any): PDFState => {
-      const paymentTerms = formatPaymentTerms(order);
-
-      // Draw title
-      drawText(state, 'DETALLES DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
-      
-      // Draw separator line immediately below the title text area
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
-        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
-        thickness: 0.5,
-        color: LIGHT_GRAY,
-      });
-      
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
-      
-      drawText(state, `Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, MARGIN, state.y);
-      state.y -= LINE_HEIGHT;
-      drawText(state, `Condición de Pago: ${paymentTerms}`, MARGIN, state.y);
-      state.y -= LINE_HEIGHT * 2;
-      return state;
-    };
-
-    const drawObservations = (state: PDFState, order: any): PDFState => {
-      if (!order.observations) return state;
-
-      // Draw title
-      drawText(state, 'OBSERVACIONES:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
-      
-      // Draw separator line immediately below the title text area
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
-        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
-        thickness: 0.5,
-        color: LIGHT_GRAY,
-      });
-      
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
-      
-      const observationsText = order.observations;
-      const maxCharsPerLine = 100; 
-      const textRuns = wrapText(observationsText, maxCharsPerLine);
-      
-      for (const run of textRuns) {
-        state = checkPageBreak(state, LINE_HEIGHT);
-        drawText(state, run, MARGIN, state.y);
-        state.y -= LINE_HEIGHT;
-      }
-      state.y -= LINE_HEIGHT; 
-      return state;
-    };
-
-    const drawItemsTable = (state: PDFState, items: any[]): PDFState => {
-      // Draw title
-      drawText(state, 'ÍTEMS DE LA ORDEN:', MARGIN, state.y, { font: boldFont, size: 12, color: PROC_RED });
-      
-      // Draw separator line immediately below the title text area
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
-        end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
-        thickness: 0.5,
-        color: LIGHT_GRAY,
-      });
-      
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
-      
-      state = drawTableHeader(state);
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        
-        // Combine material name and description for the first column
-        let materialContent = String(item.material_name || ''); // ENSURE IT STARTS AS STRING
-        
-        // Add supplier code and description if available
-        if (item.supplier_code || item.description) {
-            // Only add supplier code if it exists
-            if (item.supplier_code) {
-                materialContent += `\n(Cód. Prov: ${item.supplier_code})`;
-            }
-            // Add description if it exists
-            if (item.description) {
-                materialContent += `\n${item.description}`;
-            }
-        }
-        
-        // Wrap the combined content for the first column (30% width, approx 35 chars per line)
-        const materialLines = wrapText(materialContent, 35); 
-        const lineSpacing = (FONT_SIZE - 1) * 1.2;
-        const requiredHeight = materialLines.length * lineSpacing + 5; // Calculate height based on smaller font size + padding
-
-        state = checkPageBreak(state, requiredHeight + 10); 
-
-        // Draw thin gray line above the row content (to separate rows)
-        state.page.drawLine({
-          start: { x: MARGIN, y: state.y },
-          end: { x: MARGIN + tableWidth, y: state.y },
-          thickness: 0.5,
-          color: LIGHT_GRAY,
-        });
-
-        const subtotal = item.quantity * item.unit_price;
-        const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
-        const totalItem = subtotal + itemIva;
-
-        let currentX = MARGIN;
-        // Adjusted currentY to start drawing 3 points below the top line (state.y)
-        let currentY = state.y - 3; 
-
-        // 1. Material/Description (Multi-line)
-        for (const line of materialLines) {
-          drawText(state, line, currentX + 5, currentY - (FONT_SIZE - 1), { size: FONT_SIZE - 1 }); // Draw text, adjusting for font size
-          currentY -= lineSpacing;
-        }
-        currentX += originalColWidths[0];
-
-        // Calculate the final Y position for the row based on the wrapped text height
-        const finalY = state.y - requiredHeight;
-        
-        // Helper to draw data centered vertically in the remaining columns
-        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true) => {
-            const cellWidth = originalColWidths[colIndex];
-            const textWidth = font.widthOfTextAtSize(text, FONT_SIZE);
-            
-            // Calculate vertical center position: finalY (bottom of cell) + requiredHeight/2 (center) - FONT_SIZE/2 (baseline adjustment)
-            const verticalCenterY = finalY + requiredHeight / 2 - FONT_SIZE / 2;
-
-            const xPos = isRightAligned 
-                ? currentX + cellWidth - 5 - textWidth 
-                : currentX + 5;
-            
-            drawText(state, text, xPos, verticalCenterY);
-            currentX += cellWidth;
-        };
-
-        // 2. Cantidad
-        drawCellData(item.quantity.toString(), 1);
-
-        // 3. Unidad
-        drawCellData(item.unit || 'UND', 2);
-
-        // 4. P. Unitario
-        drawCellData(`${order.currency} ${item.unit_price.toFixed(2)}`, 3);
-
-        // 5. IVA
-        drawCellData(item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`, 4);
-
-        // 6. Total
-        drawCellData(`${order.currency} ${totalItem.toFixed(2)}`, 5);
-
-        state.y = finalY; // Update Y position for the next row
-      }
-      
-      state.page.drawLine({
-        start: { x: MARGIN, y: state.y },
-        end: { x: MARGIN + tableWidth, y: state.y },
-        thickness: 1,
-        color: LIGHT_GRAY,
-      });
-      
-      state.y -= LINE_HEIGHT * 2;
-      return state;
-    };
-
-    const drawTotalsAndSummary = (state: PDFState, order: any, items: any[]): PDFState => {
-      const calculatedTotals = calculateTotals(items);
-      const totalSectionWidth = 200;
-      const totalSectionX = width - MARGIN - totalSectionWidth; 
-      
-      let totalRows = 3;
-      let hasUsdTotal = false;
-      if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
-        totalRows = 4;
-        hasUsdTotal = true;
-      }
-      
-      // Use a fixed row height for the totals table for consistent spacing
-      const totalRowHeight = LINE_HEIGHT * 1.5; // Increased height for padding
-      const totalSectionHeight = totalRowHeight * totalRows + 5; // 5 points padding at top/bottom
-
-      state = checkPageBreak(state, totalSectionHeight + LINE_HEIGHT * 3); 
-
-      // Draw the outer box
-      drawBorderedRect(state, totalSectionX, state.y - totalSectionHeight, totalSectionWidth, totalSectionHeight, {
-        borderColor: LIGHT_GRAY,
-        borderWidth: 1,
-      });
-      
-      // Start drawing content slightly below the top edge of the box
-      let currentY = state.y - 5; // Initial padding from top edge
-
-      const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
-        const fontToUse = isBold ? boldFont : font;
-        
-        // Calculate vertical center position: currentY (top of the row) - half the row height + half the font size
-        const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
-        
-        // Draw label (left aligned)
-        drawText(state, label, totalSectionX + 5, verticalCenterY, { font: fontToUse, size, color });
-        
-        // Draw value (right aligned)
-        const valueWidth = fontToUse.widthOfTextAtSize(value, size);
-        drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, verticalCenterY, { font: fontToUse, size, color });
-        
-        currentY -= totalRowHeight; // Move Y down by the fixed row height
-      };
-
-      // Draw rows
-      drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
-
-      drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
-
-      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); // Make TOTAL bigger and red
-      
-      if (hasUsdTotal) {
-        const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
-        drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, DARK_GRAY, FONT_SIZE);
-      }
-
-      // Update state.y to be below the total box
-      state.y = state.y - totalSectionHeight - LINE_HEIGHT;
-
-      const amountInWords = numberToWords(calculatedTotals.total, order.currency as 'VES' | 'USD');
-      drawText(state, `Monto en Letras: ${amountInWords}`, MARGIN, state.y, { font: italicFont });
-      state.y -= LINE_HEIGHT * 3;
-      return state;
-    };
-
-    const drawFooter = (state: PDFState, order: any, user: any): PDFState => {
-      const footerY = MARGIN;
-      state.page.drawLine({
-        start: { x: width / 2 - 100, y: footerY + LINE_HEIGHT },
-        end: { x: width / 2 + 100, y: footerY + LINE_HEIGHT },
-        thickness: 1,
-        color: DARK_GRAY,
-      });
-      drawText(state, 'Firma Autorizada', width / 2 - 50, footerY, { font: font, size: 9 });
-      drawText(state, `Generado por: ${order.created_by || user.email}`, MARGIN, footerY + LINE_HEIGHT * 2);
-      return state;
+    let state: PDFState = { 
+      page, 
+      y: height - MARGIN, 
+      width, 
+      height, 
+      font, 
+      boldFont, 
+      italicFont,
+      tableColWidths
     };
 
     // --- Execution Flow ---
-    state = await drawHeader(state, order);
+    state = await drawHeader(state, order, pdfDoc);
     state = drawSupplierDetails(state, order);
     state = drawOrderDetails(state, order);
-    state = drawObservations(state, order);
-    state = drawItemsTable(state, items);
-    state = drawTotalsAndSummary(state, order, items);
+    state = drawObservations(state, order, pdfDoc);
+    state = drawItemsTable(state, items, pdfDoc);
+    state = drawTotalsAndSummary(state, order, items, pdfDoc);
     state = drawFooter(state, order, user);
 
     const pdfBytes = await pdfDoc.save();
