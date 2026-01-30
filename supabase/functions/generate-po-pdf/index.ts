@@ -45,7 +45,7 @@ const calculateTotals = (items: Array<{ quantity: number; unit_price: number; ta
 };
 
 const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVNTA'];
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']; // FIXED TYPO: NOVNTA -> NOVENTA
 const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
 
@@ -448,7 +448,7 @@ serve(async (req) => {
         const item = items[i];
         
         // Combine material name and description for the first column
-        let materialContent = item.material_name;
+        let materialContent = String(item.material_name || ''); // ENSURE IT STARTS AS STRING
         
         // Add supplier code and description if available
         if (item.supplier_code || item.description) {
@@ -584,8 +584,6 @@ serve(async (req) => {
         currentY -= totalRowHeight; // Move Y down by the fixed row height
       };
 
-      // NOTE: Removing drawInternalSeparator() calls
-
       // Draw rows
       drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
 
@@ -594,6 +592,7 @@ serve(async (req) => {
       drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); // Make TOTAL bigger and red
       
       if (hasUsdTotal) {
+        const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);
         drawTotalRow('TOTAL (USD):', `USD ${totalInUSD}`, true, DARK_GRAY, FONT_SIZE);
       }
 
