@@ -171,7 +171,6 @@ serve(async (req) => {
             const isBestPrice = quote.isValid && quote.convertedPrice === bestPrice;
             
             // Calculate row height based on content (Proveedor name might wrap, but usually not in this context)
-            // We use a fixed height slightly larger than LINE_HEIGHT for padding
             const rowHeight = LINE_HEIGHT * 1.5; 
             state = checkPageBreak(pdfDoc, state, rowHeight);
 
@@ -196,8 +195,8 @@ serve(async (req) => {
             });
 
             currentX = MARGIN;
-            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) + FONT_SIZE/2 (baseline adjustment)
-            const verticalCenterY = state.y - rowHeight / 2 + FONT_SIZE / 2;
+            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) + FONT_SIZE/4 (ADJUSTED baseline adjustment)
+            const verticalCenterY = state.y - rowHeight / 2 + FONT_SIZE / 4;
 
             // 1. Proveedor
             drawText(state, quote.supplierName || 'N/A', currentX + 5, verticalCenterY, { 
@@ -242,15 +241,15 @@ serve(async (req) => {
             currentX += colWidths[4];
 
             state.y -= rowHeight;
+            
+            // Draw separator line below row
+            state.page.drawLine({
+                start: { x: MARGIN, y: state.y },
+                end: { x: MARGIN + tableWidth, y: state.y },
+                thickness: 0.5,
+                color: LIGHT_GRAY,
+            });
         }
-        
-        // Draw final bottom border for the table
-        state.page.drawLine({
-            start: { x: MARGIN, y: state.y },
-            end: { x: MARGIN + tableWidth, y: state.y },
-            thickness: 1,
-            color: LIGHT_GRAY,
-        });
         
         state.y -= LINE_HEIGHT;
         return state;
