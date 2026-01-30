@@ -195,8 +195,8 @@ serve(async (req) => {
             });
 
             currentX = MARGIN;
-            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) + FONT_SIZE/4 (ADJUSTED baseline adjustment)
-            const verticalCenterY = state.y - rowHeight / 2 + FONT_SIZE / 4;
+            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) + 0 (ADJUSTED baseline adjustment)
+            const verticalCenterY = state.y - rowHeight / 2;
 
             // 1. Proveedor
             drawText(state, quote.supplierName || 'N/A', currentX + 5, verticalCenterY, { 
