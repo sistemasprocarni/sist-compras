@@ -138,6 +138,9 @@ serve(async (req) => {
       tableWidth * 0.30,  // Precio Comparado (USD)
     ];
     const colHeaders = ['Proveedor', 'Precio Original', 'Moneda', 'Tasa', `Precio Comparado (USD)`];
+    
+    const TIGHT_LINE_SPACING = FONT_SIZE * 1.1; // 11 points (tighter line spacing for wrapped text)
+    const MIN_ROW_HEIGHT = LINE_HEIGHT * 1.5; // Minimum height for single line content
 
     const drawComparisonTable = (state: PDFState, materialName: string, results: any[], bestPrice: number | null): PDFState => {
         // Draw Material Title
@@ -171,9 +174,18 @@ serve(async (req) => {
         for (const quote of results) {
             const isBestPrice = quote.isValid && quote.convertedPrice === bestPrice;
             
-            // Calculate row height based on content (Proveedor name might wrap, but usually not in this context)
-            const rowHeight = LINE_HEIGHT * 1.5; 
-            state = checkPageBreak(pdfDoc, state, rowHeight);
+            // --- 1. Calculate required row height based on wrapped Supplier Name ---
+            // Max characters per line for 30% width (approx 30 chars per line)
+            const maxCharsPerLine = 30; 
+            const supplierLines = wrapText(quote.supplierName || 'N/A', maxCharsPerLine);
+            
+            // Calculate height based on tighter line spacing
+            const requiredTextHeight = supplierLines.length * TIGHT_LINE_SPACING;
+            
+            // Determine final row height
+            const rowHeight = Math.max(MIN_ROW_HEIGHT, requiredTextHeight + 5); // Add 5 points padding
+            
+            state = checkPageBreak(pdfDoc, state, rowHeight + 10); // Check page break with padding
 
             // Draw row background/border if it's the best price
             if (isBestPrice) {
@@ -196,15 +208,23 @@ serve(async (req) => {
             });
 
             currentX = MARGIN;
-            // Calculate vertical center position: state.y (top of row) - rowHeight/2 (center) - FONT_SIZE/4 (ADJUSTED baseline adjustment)
-            // Usamos -FONT_SIZE/4 para bajar el texto ligeramente.
-            const verticalCenterY = state.y - rowHeight / 2 - FONT_SIZE / 4;
+            
+            // Calculate the final Y position for the row based on the calculated row height
+            const finalY = state.y - rowHeight;
+            
+            // Calculate vertical center position for single-line cells
+            const verticalCenterY = finalY + rowHeight / 2 - FONT_SIZE / 2;
 
-            // 1. Proveedor
-            drawText(state, quote.supplierName || 'N/A', currentX + 5, verticalCenterY, { 
-                font: isBestPrice ? boldFont : font,
-                color: isBestPrice ? PROC_RED : rgb(0, 0, 0)
-            });
+            // 1. Proveedor (Multi-line)
+            let currentY = state.y - 3; // Start drawing 3 points below the top line
+            for (const line of supplierLines) {
+                drawText(state, line, currentX + 5, currentY - FONT_SIZE, { 
+                    font: isBestPrice ? boldFont : font,
+                    color: isBestPrice ? PROC_RED : rgb(0, 0, 0),
+                    size: FONT_SIZE
+                });
+                currentY -= TIGHT_LINE_SPACING;
+            }
             currentX += colWidths[0];
 
             // Helper to draw data centered vertically and right-aligned
@@ -246,7 +266,7 @@ serve(async (req) => {
             });
             currentX += colWidths[4];
 
-            state.y -= rowHeight;
+            state.y = finalY; // Update Y position for the next row
             
             // Draw separator line below row
             state.page.drawLine({
