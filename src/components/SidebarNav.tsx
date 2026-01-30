@@ -7,19 +7,25 @@ import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardL
 
 const navItems = [
   {
-    category: 'Gestión Principal',
+    category: 'Inicio y Búsqueda',
     items: [
       { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
-      { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
-      { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
+      { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
+      { to: '/quote-comparison', icon: <Scale className="h-5 w-5" />, label: 'Comparación de Cotizaciones' },
+      { to: '/price-history', icon: <DollarSign className="h-5 w-5" />, label: 'Historial de Precios' },
     ]
   },
   {
-    category: 'Procesos',
+    category: 'Maestros de Datos',
     items: [
-      { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
-      { to: '/quote-comparison', icon: <Scale className="h-5 w-5" />, label: 'Comparación de Cotizaciones' }, // NEW LINK
-      { to: '/price-history', icon: <DollarSign className="h-5 w-5" />, label: 'Historial de Precios' },
+      { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
+      { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
+      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
+    ]
+  },
+  {
+    category: 'Órdenes y Cotizaciones',
+    items: [
       { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
       { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
       { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
@@ -27,19 +33,18 @@ const navItems = [
     ]
   },
   {
-    category: 'Configuración',
+    category: 'Administración',
     items: [
-      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
       { to: '/bulk-upload', icon: <Upload className="h-5 w-5" />, label: 'Carga Masiva' },
       { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
       { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
-      { to: '/audit-log', icon: <ScrollText className="h-5 w-5" />, label: 'Historial de Auditoría' }, // NEW LINK
+      { to: '/audit-log', icon: <ScrollText className="h-5 w-5" />, label: 'Historial de Auditoría' },
     ]
   }
 ];
 
 const SidebarNav = () => {
-  const [openItems, setOpenItems] = useState<string[]>(['Gestión Principal', 'Procesos', 'Configuración']);
+  const [openItems, setOpenItems] = useState<string[]>(['Inicio y Búsqueda', 'Maestros de Datos', 'Órdenes y Cotizaciones', 'Administración']);
 
   const handleValueChange = (value: string[]) => {
     setOpenItems(value);
