@@ -68,7 +68,7 @@ const Layout = () => {
 
   if (isMobile) {
     return (
-      <div className="flex min-h-screen w-full flex-col">
+      <div className="flex h-screen w-full flex-col">
         <MobileHeader />
         <main ref={mainContentRef} className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
           <Outlet />
@@ -95,7 +95,7 @@ const Layout = () => {
               <h1 className="text-lg font-semibold text-procarni-primary"></h1>
             </div>
           </header>
-          <main ref={mainContentRef} className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto h-full">
+          <main ref={mainContentRef} className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-y-auto">
             <Outlet />
           </main>
         </div>
