@@ -301,8 +301,6 @@ const PurchaseOrderManagement = () => {
                           <TableHead>N° Orden</TableHead>
                           <TableHead>Proveedor</TableHead>
                           <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead>Fecha Creación</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
@@ -314,8 +312,6 @@ const PurchaseOrderManagement = () => {
                             <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
                             <TableCell>{order.suppliers.name}</TableCell>
                             <TableCell>{order.companies.name}</TableCell>
-                            <TableCell>{order.currency}</TableCell>
-                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>
                               <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
                                 {STATUS_TRANSLATIONS[order.status] || order.status}
