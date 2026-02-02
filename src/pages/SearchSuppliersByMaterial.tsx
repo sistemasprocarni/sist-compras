@@ -9,6 +9,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Phone, Instagram, PlusCircle, Eye, ArrowLeft, Tag, MapPin, Clock, DollarSign } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Material {
   id: string;
@@ -34,6 +36,7 @@ interface SupplierResult {
 const SearchSuppliersByMaterial = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [suppliers, setSuppliers] = useState<SupplierResult[]>([]);
@@ -217,20 +220,22 @@ const SearchSuppliersByMaterial = () => {
                       
                       <Separator className="my-4" />
 
-                      <div className="flex justify-end gap-2">
+                      <div className={cn("flex justify-end gap-2", isMobile && "flex-col")}>
                         <Button 
                           variant="outline" 
-                          className="bg-procarni-secondary text-white hover:bg-green-700 hover:text-white"
+                          className={cn("bg-procarni-secondary text-white hover:bg-green-700 hover:text-white", isMobile && "w-full")}
                           onClick={() => handleCreateQuoteRequest(supplier)}
                         >
-                          <PlusCircle className="mr-2 h-4 w-4" /> Crear Solicitud de Cotización
+                          <PlusCircle className="mr-2 h-4 w-4" /> 
+                          {isMobile ? 'Crear SC' : 'Crear Solicitud de Cotización'}
                         </Button>
                         <Button 
                           variant="outline" 
-                          className="bg-procarni-primary text-white hover:bg-procarni-primary/90 hover:text-white"
+                          className={cn("bg-procarni-primary text-white hover:bg-procarni-primary/90 hover:text-white", isMobile && "w-full")}
                           onClick={() => handleViewSupplierDetails(supplier)}
                         >
-                          <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                          <Eye className={cn(isMobile ? "h-4 w-4" : "mr-2 h-4 w-4")} /> 
+                          {!isMobile && 'Ver Detalles'}
                         </Button>
                       </div>
                     </AccordionContent>
