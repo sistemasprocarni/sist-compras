@@ -35,13 +35,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToSignup, onSwitchToPassw
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
+    const usernameLower = data.username.toLowerCase(); // Normalize username input
 
     try {
       // 1. Look up the user's email based on the username
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('username', data.username.toLowerCase())
+        .eq('username', usernameLower) // Use normalized username
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
