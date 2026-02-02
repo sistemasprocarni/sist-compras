@@ -46,19 +46,19 @@ const SearchManagement = () => {
   ];
 
   return (
-    <div className="container mx-auto p-0">
+    <div className="container mx-auto p-4"> {/* Added p-4 for consistent padding */}
       {/* KPI Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 mb-6">
         {kpis.map((kpi, index) => (
-          <Card key={index}>
+          <Card key={index} className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-procarni-primary">
                 {kpi.title}
               </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
+              <kpi.icon className="h-5 w-5 text-procarni-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">
                 {kpi.value}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -70,10 +70,10 @@ const SearchManagement = () => {
       </div>
 
       {/* Quick Actions Section */}
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-procarni-primary flex items-center">
-            <Zap className="mr-2 h-4 w-4" /> Acciones Rápidas
+          <CardTitle className="text-lg font-semibold text-procarni-primary flex items-center">
+            <Zap className="mr-2 h-5 w-5" /> Acciones Rápidas
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -81,23 +81,23 @@ const SearchManagement = () => {
             <Button 
               variant="outline" 
               onClick={() => navigate('/generate-po')}
-              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
+              className="flex items-center justify-center py-4 text-sm border-procarni-primary/30 hover:bg-procarni-primary/10 hover:border-procarni-primary"
             >
-              <FilePlus className="mr-2 h-4 w-4" /> + Nueva Orden de Compra
+              <FilePlus className="mr-2 h-4 w-4 text-procarni-primary" /> + Nueva Orden de Compra
             </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate('/generate-quote')}
-              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
+              className="flex items-center justify-center py-4 text-sm border-procarni-primary/30 hover:bg-procarni-primary/10 hover:border-procarni-primary"
             >
-              <ClipboardPlus className="mr-2 h-4 w-4" /> + Nueva Cotización
+              <ClipboardPlus className="mr-2 h-4 w-4 text-procarni-primary" /> + Nueva Solicitud de Cotización
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/price-comparison')}
-              className="flex items-center justify-center py-4 text-sm hover:bg-procarni-primary/10"
+              onClick={() => navigate('/quote-comparison')}
+              className="flex items-center justify-center py-4 text-sm border-procarni-primary/30 hover:bg-procarni-primary/10 hover:border-procarni-primary"
             >
-              <BarChart2 className="mr-2 h-4 w-4" /> Comparar Precios
+              <BarChart2 className="mr-2 h-4 w-4 text-procarni-primary" /> Comparar Precios
             </Button>
           </div>
         </CardContent>
