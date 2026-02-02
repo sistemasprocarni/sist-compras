@@ -249,7 +249,7 @@ const MaterialManagement = () => {
                     <CardTitle className="text-lg mb-2 flex items-center">
                       {material.name}
                       {material.is_exempt && (
-                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-procarni-primary text-white rounded-full">
                           EXENTO
                         </span>
                       )}
@@ -301,7 +301,7 @@ const MaterialManagement = () => {
                         <TableCell className="flex items-center">
                           {material.name}
                           {material.is_exempt && (
-                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-procarni-primary text-white rounded-full">
                               EXENTO
                             </span>
                           )}
