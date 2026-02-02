@@ -317,13 +317,7 @@ const SupplierManagement = () => {
                       <Tag className="mr-1 h-3 w-3" /> Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}
                     </CardDescription>
                     <div className="text-sm space-y-1 mt-2 w-full">
-                      {/* Aplicar truncate al email */}
-                      {supplier.email && (
-                        <p className="flex items-center overflow-hidden">
-                          <Mail className="mr-1 h-3 w-3 flex-shrink-0" /> 
-                          <span className="truncate">Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></span>
-                        </p>
-                      )}
+                      {/* Eliminado el email para ahorrar espacio */}
                       {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>}
                       <p>
                         <strong>Términos:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}
