@@ -308,11 +308,10 @@ const SupplierManagement = () => {
                 {filteredSuppliers.map((supplier) => (
                   <Card key={supplier.id} className="p-4 w-full shadow-md">
                     <div className="flex justify-between items-start mb-2">
-                      {/* Aplicar max-w-[60%] para forzar saltos de línea más tempranos */}
+                      {/* Título del proveedor */}
                       <CardTitle className="text-lg break-words max-w-[60%]">{supplier.name}</CardTitle>
-                      <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
-                        {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                      {/* Espacio vacío donde estaba el badge de estado */}
+                      <div className="w-[30%] text-right"></div>
                     </div>
                     <CardDescription className="mb-2 flex items-center">
                       <Tag className="mr-1 h-3 w-3" /> Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}
@@ -320,9 +319,18 @@ const SupplierManagement = () => {
                     <div className="text-sm space-y-1 mt-2 w-full">
                       {supplier.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></p>}
                       {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>}
-                      <p><strong>Términos:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
+                      <p>
+                        <strong>Términos:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}
+                      </p>
+                      {/* Etiqueta de estado movida aquí */}
+                      <p>
+                        <strong>Estado:</strong> 
+                        <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
+                          {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </p>
                     </div>
-                    <div className="flex justify-end gap-2 mt-4 border-t pt-3">
+                    <div className="flex justify-start gap-2 mt-4 border-t pt-3">
                       <Button
                         variant="outline"
                         size="sm"
