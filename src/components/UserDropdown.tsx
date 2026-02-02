@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { UserCircle, Settings } from 'lucide-react';
+import { UserCircle } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 
 const UserDropdown = () => {
@@ -27,10 +27,6 @@ const UserDropdown = () => {
       navigate('/login');
     }
   };
-  
-  const handleAccountSettings = () => {
-    navigate('/account-settings');
-  };
 
   if (!session?.user) {
     return null; // No mostrar si no hay usuario logueado
@@ -46,11 +42,6 @@ const UserDropdown = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel className="truncate">{session.user.email}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleAccountSettings} className="cursor-pointer">
-          <Settings className="mr-2 h-4 w-4" />
-          Configuración de Cuenta
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
           Cerrar Sesión
