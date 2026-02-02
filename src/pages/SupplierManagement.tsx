@@ -251,8 +251,15 @@ const SupplierManagement = () => {
           </div>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddSupplier} className="bg-procarni-secondary hover:bg-green-700">
-                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Proveedor
+              <Button 
+                onClick={handleAddSupplier} 
+                className={cn(
+                  "bg-procarni-secondary hover:bg-green-700",
+                  isMobile && "w-10 h-10 p-0" // Hacer el botón cuadrado y sin padding en móvil
+                )}
+              >
+                <PlusCircle className={cn("h-4 w-4", !isMobile && "mr-2")} /> 
+                {!isMobile && 'Añadir Proveedor'}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] md:max-w-2xl max-h-[90vh] overflow-y-auto" description={editingSupplier ? 'Edita los detalles del proveedor existente.' : 'Completa los campos para añadir un nuevo proveedor.'}>
