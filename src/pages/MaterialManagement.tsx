@@ -253,7 +253,7 @@ const MaterialManagement = () => {
               <div className="grid gap-4">
                 {filteredMaterials.map((material) => (
                   <Card key={material.id} className="p-4 shadow-md">
-                    <CardTitle className="text-lg mb-2 flex items-center">
+                    <CardTitle className="text-lg mb-2 flex items-baseline">
                       {material.name}
                       {material.is_exempt && (
                         <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-procarni-primary text-white rounded-full">
@@ -306,7 +306,7 @@ const MaterialManagement = () => {
                     {filteredMaterials.map((material) => (
                       <TableRow key={material.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <TableCell>{material.code}</TableCell>
-                        <TableCell className="flex items-center font-medium">
+                        <TableCell className="flex items-baseline font-medium">
                           {material.name}
                           {material.is_exempt && (
                             <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-procarni-primary text-white rounded-full">
