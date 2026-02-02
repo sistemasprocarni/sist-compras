@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { showError, showSuccess } from '@/utils/toast';
 import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow';
 import QuoteComparisonPDFButton from '@/components/QuoteComparisonPDFButton';
-import { Separator } from '@/components/ui/separator';
 
 interface MaterialSearchResult {
   id: string;
@@ -43,12 +42,6 @@ interface MaterialComparison {
   quotes: QuoteEntry[];
 }
 
-interface ComparisonResult {
-  material: MaterialSearchResult;
-  results: (QuoteEntry & { convertedPrice: number | null; isValid: boolean; error: string | null })[];
-  bestPrice: number | null;
-}
-
 const QuoteComparison = () => {
   const navigate = useNavigate();
   
@@ -56,10 +49,12 @@ const QuoteComparison = () => {
   const [globalInputCurrency, setGlobalInputCurrency] = useState<'USD' | 'VES'>('USD'); 
   const [exchangeRate, setExchangeRate] = useState<number | undefined>(undefined);
   
+  // New states for rate management
   const [dailyRate, setDailyRate] = useState<number | undefined>(undefined);
   const [rateSource, setRateSource] = useState<'custom' | 'daily'>('custom');
   const [isLoadingRate, setIsLoadingRate] = useState(false);
 
+  // State for adding a new material via SmartSearch
   const [newMaterialQuery, setNewMaterialQuery] = useState('');
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<MaterialSearchResult | null>(null);
 
@@ -72,6 +67,7 @@ const QuoteComparison = () => {
         }
         const data = await response.json();
         
+        // Assuming the API returns an object with 'promedio' or 'valor'
         const rate = data.promedio || data.valor; 
         
         if (typeof rate === 'number' && rate > 0) {
@@ -90,21 +86,26 @@ const QuoteComparison = () => {
     }
   }, []);
 
+  // Effect to manage rate fetching and default selection when globalInputCurrency changes
   useEffect(() => {
     if (globalInputCurrency === 'VES') {
         fetchDailyRate();
-        setRateSource('daily');
+        setRateSource('daily'); // Default to daily rate when switching to VES
     } else {
         setDailyRate(undefined);
         setRateSource('custom');
-        setExchangeRate(undefined);
+        setExchangeRate(undefined); // Clear exchange rate when switching to USD
     }
   }, [globalInputCurrency, fetchDailyRate]);
 
+  // Effect to synchronize exchangeRate based on rateSource and dailyRate
   useEffect(() => {
     if (globalInputCurrency === 'VES') {
         if (rateSource === 'daily' && dailyRate !== undefined) {
             setExchangeRate(dailyRate);
+        } else if (rateSource === 'custom') {
+            // If switching to custom, keep the current exchangeRate value unless it was the daily rate and dailyRate is now undefined
+            // We rely on the custom input field to update exchangeRate when rateSource is 'custom'.
         }
     } else {
         setExchangeRate(undefined);
@@ -281,6 +282,7 @@ const QuoteComparison = () => {
 
   const renderExchangeRateInput = () => {
     if (globalInputCurrency === 'USD') {
+        // If input currency is USD, the exchange rate is irrelevant for the global setting
         return (
             <div className="text-sm text-muted-foreground mt-1">
                 Tasa no requerida si la moneda de ingreso es USD.
@@ -288,6 +290,7 @@ const QuoteComparison = () => {
         );
     }
 
+    // If input currency is VES, show rate selection
     return (
         <div className="space-y-2">
             <Select value={rateSource} onValueChange={(value) => setRateSource(value as 'custom' | 'daily')}>
@@ -315,7 +318,7 @@ const QuoteComparison = () => {
                     <Button 
                         variant="outline" 
                         size="icon" 
-                        onClick={handleRefreshRate} 
+                        onClick={fetchDailyRate} 
                         disabled={isLoadingRate}
                     >
                         {isLoadingRate ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -347,11 +350,9 @@ const QuoteComparison = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary text-2xl flex items-center">
-            <Scale className="mr-2 h-6 w-6" /> Comparación Inmediata de Cotizaciones
-          </CardTitle>
+          <CardTitle className="text-procarni-primary">Comparación Inmediata de Cotizaciones</CardTitle>
           <CardDescription>
             Compara precios de diferentes proveedores para múltiples materiales en tiempo real.
           </CardDescription>
@@ -359,7 +360,7 @@ const QuoteComparison = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg bg-muted/20">
             <div className="md:col-span-2">
-              <Label htmlFor="material-search" className="font-semibold">Añadir Material a Comparar</Label>
+              <Label htmlFor="material-search">Añadir Material a Comparar</Label>
               <SmartSearch
                 placeholder="Buscar material por nombre o código"
                 onSelect={handleMaterialSelect}
@@ -382,11 +383,9 @@ const QuoteComparison = () => {
             </Button>
           </div>
 
-          <Separator className="my-6" />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 items-start p-4 border rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-start p-4 border rounded-lg">
             <div>
-              <Label htmlFor="global-input-currency" className="font-semibold">Moneda Global de Ingreso (Por defecto)</Label>
+              <Label htmlFor="global-input-currency">Moneda Global de Ingreso (Por defecto)</Label>
               <Select value={globalInputCurrency} onValueChange={(value) => setGlobalInputCurrency(value as 'USD' | 'VES')}>
                 <SelectTrigger id="global-input-currency">
                   <SelectValue placeholder="Selecciona moneda" />
@@ -399,10 +398,10 @@ const QuoteComparison = () => {
               <p className="text-xs text-muted-foreground mt-1">Moneda por defecto para nuevas cotizaciones.</p>
             </div>
             <div>
-              <Label htmlFor="exchange-rate" className="font-semibold">Tasa de Cambio Global (USD a VES)</Label>
+              <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD a VES)</Label>
               {renderExchangeRateInput()}
             </div>
-            <div className="flex justify-end items-end h-full">
+            <div className="flex justify-end items-end">
                 <QuoteComparisonPDFButton
                     comparisonResults={comparisonResults}
                     baseCurrency={comparisonBaseCurrency}
@@ -413,8 +412,8 @@ const QuoteComparison = () => {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 flex items-center text-procarni-primary">
-            <Scale className="mr-2 h-5 w-5" />
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <Scale className="mr-2 h-5 w-5 text-procarni-primary" />
             Resultados de la Comparación
           </h3>
           {renderComparisonTable()}

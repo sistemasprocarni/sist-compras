@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { ArrowLeft, Search, TrendingUp, TrendingDown } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
@@ -12,7 +12,6 @@ import { format } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 
 interface MaterialSearchResult {
   id: string;
@@ -140,11 +139,11 @@ const PriceHistory = () => {
     }
 
     if (!selectedMaterial) {
-      return <div className="text-center text-muted-foreground p-8 border rounded-lg">Selecciona un material para ver su historial de precios.</div>;
+      return <div className="text-center text-muted-foreground p-8">Selecciona un material para ver su historial de precios.</div>;
     }
 
     if (comparisonData.length === 0) {
-      return <div className="text-center text-muted-foreground p-8 border rounded-lg">No se encontró historial de precios para este material en la moneda base seleccionada.</div>;
+      return <div className="text-center text-muted-foreground p-8">No se encontró historial de precios para este material en la moneda base seleccionada.</div>;
     }
 
     const formatPrice = (price: number | null, currency: string) => {
@@ -156,17 +155,16 @@ const PriceHistory = () => {
       return (
         <div className="grid gap-4">
           {comparisonData.map((data, index) => (
-            <Card key={index} className="p-4 border-l-4 border-procarni-primary">
-              <CardTitle className="text-lg mb-2 text-procarni-secondary">{data.supplierName}</CardTitle>
+            <Card key={index} className="p-4">
+              <CardTitle className="text-lg mb-2">{data.supplierName}</CardTitle>
               <CardDescription className="mb-2">Cód: {data.supplierCode || 'N/A'}</CardDescription>
-              <Separator className="my-2" />
               <div className="text-sm space-y-1">
                 <p>
                   <strong>Último Precio ({data.baseCurrency}):</strong> {formatPrice(data.latestPrice, data.baseCurrency)} 
                   {data.latestEntry.recorded_at && isValidDate(data.latestEntry.recorded_at) && ` (${format(new Date(data.latestEntry.recorded_at), 'dd/MM/yy')})`}
                 </p>
-                <p className="text-green-600"><strong>Precio Mínimo ({data.baseCurrency}):</strong> {formatPrice(data.minPrice, data.baseCurrency)}</p>
-                <p className="text-red-600"><strong>Precio Máximo ({data.baseCurrency}):</strong> {formatPrice(data.maxPrice, data.baseCurrency)}</p>
+                <p><strong>Precio Mínimo ({data.baseCurrency}):</strong> {formatPrice(data.minPrice, data.baseCurrency)}</p>
+                <p><strong>Precio Máximo ({data.baseCurrency}):</strong> {formatPrice(data.maxPrice, data.baseCurrency)}</p>
                 <p><strong>Promedio ({data.baseCurrency}):</strong> {formatPrice(data.avgPrice, data.baseCurrency)}</p>
                 <p><strong>Registros:</strong> {data.priceCount}</p>
               </div>
@@ -193,8 +191,8 @@ const PriceHistory = () => {
           </TableHeader>
           <TableBody>
             {comparisonData.map((data, index) => (
-              <TableRow key={index} className="hover:bg-muted/50 transition-colors">
-                <TableCell className="font-medium text-procarni-secondary">{data.supplierName}</TableCell>
+              <TableRow key={index}>
+                <TableCell className="font-medium">{data.supplierName}</TableCell>
                 <TableCell>{data.supplierCode || 'N/A'}</TableCell>
                 <TableCell>
                   {formatPrice(data.latestPrice, data.baseCurrency)}
@@ -204,8 +202,8 @@ const PriceHistory = () => {
                     ? format(new Date(data.latestEntry.recorded_at), 'dd/MM/yyyy') 
                     : 'N/A'}
                 </TableCell>
-                <TableCell className="text-green-600 font-semibold">{formatPrice(data.minPrice, data.baseCurrency)}</TableCell>
-                <TableCell className="text-red-600 font-semibold">{formatPrice(data.maxPrice, data.baseCurrency)}</TableCell>
+                <TableCell className="text-green-600">{formatPrice(data.minPrice, data.baseCurrency)}</TableCell>
+                <TableCell className="text-red-600">{formatPrice(data.maxPrice, data.baseCurrency)}</TableCell>
                 <TableCell>{formatPrice(data.avgPrice, data.baseCurrency)}</TableCell>
                 <TableCell>{data.priceCount}</TableCell>
               </TableRow>
@@ -223,19 +221,17 @@ const PriceHistory = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary text-2xl flex items-center">
-            <DollarSign className="mr-2 h-6 w-6" /> Historial de Precios
-          </CardTitle>
+          <CardTitle className="text-procarni-primary">Historial de Precios (Órdenes de Compra)</CardTitle>
           <CardDescription>
             Selecciona un material para ver el historial de precios pagados en órdenes de compra anteriores.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 items-end p-4 border rounded-lg bg-muted/20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
             <div className="md:col-span-2">
-              <Label htmlFor="material-search" className="font-semibold">Material</Label>
+              <Label htmlFor="material-search">Material</Label>
               <SmartSearch
                 placeholder="Buscar material por nombre o código"
                 onSelect={handleMaterialSelect}
@@ -249,7 +245,7 @@ const PriceHistory = () => {
               )}
             </div>
             <div>
-              <Label htmlFor="base-currency" className="font-semibold">Moneda Base de Comparación</Label>
+              <Label htmlFor="base-currency">Moneda Base de Comparación</Label>
               <Select value={baseCurrency} onValueChange={(value) => setBaseCurrency(value as 'USD' | 'VES')}>
                 <SelectTrigger id="base-currency">
                   <SelectValue placeholder="Selecciona moneda" />
@@ -262,14 +258,13 @@ const PriceHistory = () => {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mb-4 text-procarni-primary">Comparativa de Precios por Proveedor</h3>
+          <h3 className="text-lg font-semibold mb-4">Historial y Comparativa</h3>
           {renderComparisonTable()}
           
           {/* Detailed History Table (Optional, but useful) */}
           {priceHistory && priceHistory.length > 0 && !isMobile && (
             <div className="mt-8">
-              <h4 className="text-lg font-semibold mb-2 text-procarni-secondary">Detalle de Transacciones (Moneda Original)</h4>
-              <Separator className="mb-4" />
+              <h4 className="text-md font-semibold mb-2">Detalle de Transacciones (Moneda Original)</h4>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
