@@ -308,8 +308,8 @@ const SupplierManagement = () => {
                 {filteredSuppliers.map((supplier) => (
                   <Card key={supplier.id} className="p-4 w-full shadow-md">
                     <div className="flex justify-between items-start mb-2">
-                      {/* Eliminado truncate y max-w para permitir saltos de línea */}
-                      <CardTitle className="text-lg break-words max-w-[70%]">{supplier.name}</CardTitle>
+                      {/* Aplicar max-w-[60%] para forzar saltos de línea más tempranos */}
+                      <CardTitle className="text-lg break-words max-w-[60%]">{supplier.name}</CardTitle>
                       <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
                         {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
                       </span>
