@@ -57,7 +57,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     setMaterialName('');
     setCategory(MATERIAL_CATEGORIES[0]);
     setUnit(MATERIAL_UNITS[0]);
-    setIsExempt(false);
+    setIsExempt(MATERIAL_CATEGORIES[0] === 'FRESCA'); // Default based on initial category
     setSpecification('');
     setSuggestedMaterial(null);
     setIsCheckingExistence(false);
@@ -67,6 +67,18 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
     resetForm();
     onClose();
   };
+
+  // Effect to enforce is_exempt=true when category is FRESCA
+  useEffect(() => {
+    if (category === 'FRESCA') {
+      setIsExempt(true);
+    } else {
+      // Only reset if we are not currently loading a suggestion that might override it
+      if (!suggestedMaterial) {
+        setIsExempt(false);
+      }
+    }
+  }, [category, suggestedMaterial]);
 
   // Logic to check for existing material as the user types (debounced check)
   useEffect(() => {
@@ -93,17 +105,18 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
             if (bestMatch.name.toUpperCase() === trimmedName.toUpperCase()) {
               setCategory(bestMatch.category || MATERIAL_CATEGORIES[0]);
               setUnit(bestMatch.unit || MATERIAL_UNITS[0]);
-              setIsExempt(bestMatch.is_exempt || false);
+              // Use existing material's exemption status
+              setIsExempt(bestMatch.is_exempt || false); 
             } else {
               // If it's just a suggestion, keep current form values but show suggestion
               // We only reset fields if the user accepts the suggestion
             }
           } else {
             setSuggestedMaterial(null);
-            // Reset fields to default if no match found
+            // Reset fields to default if no match found, respecting FRESCA rule
             setCategory(MATERIAL_CATEGORIES[0]);
             setUnit(MATERIAL_UNITS[0]);
-            setIsExempt(false);
+            setIsExempt(MATERIAL_CATEGORIES[0] === 'FRESCA');
           }
         } catch (e) {
           console.error("Error checking material existence:", e);
@@ -129,7 +142,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
       setMaterialName(suggestedMaterial.name);
       setCategory(suggestedMaterial.category || MATERIAL_CATEGORIES[0]);
       setUnit(suggestedMaterial.unit || MATERIAL_UNITS[0]);
-      setIsExempt(suggestedMaterial.is_exempt || false);
+      setIsExempt(suggestedMaterial.is_exempt || false); // Use suggested material's exemption status
       setSuggestedMaterial(null); // Clear suggestion after acceptance
     }
   };
@@ -155,6 +168,9 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
       const existingMaterials = await searchMaterials(trimmedMaterialName);
       const exactMatch = existingMaterials.find(m => m.name.toUpperCase() === trimmedMaterialName);
 
+      // Determine final is_exempt status (forced true if FRESCA)
+      const finalIsExempt = category === 'FRESCA' ? true : isExempt;
+
       if (exactMatch) {
         materialToAssociate = exactMatch;
         showSuccess(`Material existente "${materialToAssociate.name}" encontrado.`);
@@ -164,7 +180,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
           name: trimmedMaterialName,
           category,
           unit,
-          is_exempt: isExempt,
+          is_exempt: finalIsExempt, // Use the determined final status
           user_id: session.user.id,
         });
 
@@ -189,7 +205,7 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
         } else {
           showSuccess(`Material "${materialToAssociate.name}" asociado con el proveedor exitosamente.`);
         }
-      } else if (!supplierId && materialToAssociate) {
+      } else if (materialToAssociate) {
         showSuccess(`Material "${materialToAssociate.name}" creado.`);
       }
       
@@ -308,12 +324,17 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
               <Label>Exento de IVA</Label>
               <p className="text-sm text-muted-foreground">
                 Marcar si este material no debe incluir IVA.
+                {category === 'FRESCA' && (
+                    <span className="block text-procarni-alert font-semibold">
+                      (Forzado a SÍ por categoría FRESCA)
+                    </span>
+                  )}
               </p>
             </div>
             <Switch
               checked={isExempt}
               onCheckedChange={setIsExempt}
-              disabled={isSubmitting || isExactMatch}
+              disabled={isSubmitting || isExactMatch || category === 'FRESCA'}
             />
           </div>
 

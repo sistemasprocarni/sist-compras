@@ -82,7 +82,14 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
       return (
         <div key={index} className="border rounded-md p-3 space-y-3 bg-white shadow-sm">
           <div className="flex justify-between items-center border-b pb-2">
-            <h4 className="font-semibold text-procarni-primary truncate">{item.material_name || 'Nuevo Ítem'}</h4>
+            <h4 className="font-semibold text-procarni-primary truncate flex items-center">
+              {item.material_name || 'Nuevo Ítem'}
+              {item.is_exempt && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                  EXENTO
+                </span>
+              )}
+            </h4>
             <div className="flex gap-1">
               <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
                 <PlusCircle className="h-4 w-4" />
@@ -194,6 +201,11 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             disabled={!supplierId}
           />
           {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+          {item.is_exempt && (
+            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+              EXENTO
+            </span>
+          )}
         </td>
         <td className="px-2 py-2 whitespace-nowrap w-[8%]">
           <Input

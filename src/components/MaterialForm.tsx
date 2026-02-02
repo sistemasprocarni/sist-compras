@@ -61,26 +61,45 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
     defaultValues: {
       code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
       name: '',
-      category: MATERIAL_CATEGORIES[0],
-      unit: MATERIAL_UNITS[0],
-      is_exempt: false, // Valor por defecto para el switch
+      category: initialData?.category || MATERIAL_CATEGORIES[0],
+      unit: initialData?.unit || MATERIAL_UNITS[0],
+      is_exempt: initialData?.is_exempt || (initialData?.category === 'FRESCA' ? true : false), // Set initial default based on category
     },
   });
+
+  const watchedCategory = form.watch('category');
 
   // Set form values when initialData changes (for editing)
   React.useEffect(() => {
     if (initialData) {
-      form.reset(initialData);
+      form.reset({
+        ...initialData,
+        is_exempt: initialData.is_exempt || (initialData.category === 'FRESCA' ? true : false),
+      });
     } else {
       form.reset({
         code: '', // Aseguramos que el código esté vacío para que el trigger lo genere
         name: '',
         category: MATERIAL_CATEGORIES[0],
         unit: MATERIAL_UNITS[0],
-        is_exempt: false,
+        is_exempt: MATERIAL_CATEGORIES[0] === 'FRESCA',
       });
     }
   }, [initialData, form]);
+  
+  // Effect to enforce is_exempt=true when category is FRESCA
+  React.useEffect(() => {
+    if (watchedCategory === 'FRESCA' && form.getValues('is_exempt') !== true) {
+      form.setValue('is_exempt', true, { shouldDirty: true });
+    } else if (watchedCategory !== 'FRESCA' && initialData?.category !== watchedCategory && form.getValues('is_exempt') === true) {
+      // If switching away from FRESCA, reset is_exempt to false only if it was forced true by FRESCA
+      // If they switch away, let them manually control it again, but default to false.
+      if (initialData?.category !== 'FRESCA') {
+         form.setValue('is_exempt', false, { shouldDirty: true });
+      }
+    }
+  }, [watchedCategory, form, initialData]);
+
 
   return (
     <Form {...form}>
@@ -152,6 +171,11 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
                 <FormLabel>Exento de IVA</FormLabel>
                 <FormDescription>
                   Marcar si este material no debe incluir IVA en los cálculos de costos.
+                  {watchedCategory === 'FRESCA' && (
+                    <span className="block text-procarni-alert font-semibold">
+                      (Forzado a SÍ por categoría FRESCA)
+                    </span>
+                  )}
                 </FormDescription>
               </div>
               <FormControl>
@@ -159,6 +183,7 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
                   checked={field.value}
                   onCheckedChange={field.onChange}
                   aria-label="Material exento de IVA"
+                  disabled={watchedCategory === 'FRESCA' || isSubmitting}
                 />
               </FormControl>
             </FormItem>
