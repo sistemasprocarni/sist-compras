@@ -10,3 +10,4 @@ export * from './fichaTecnicaService';
 export * from './priceHistoryService';
 export * from './auditLogService';
 export * from './supplierQuoteService';
+export * from './profileService';
