@@ -169,7 +169,7 @@ const CompanyManagement = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle className="text-procarni-primary">Gestión de Empresas</CardTitle>
@@ -210,7 +210,7 @@ const CompanyManagement = () => {
             <div className="grid gap-4">
               {filteredCompanies.length > 0 ? (
                 filteredCompanies.map((company) => (
-                  <Card key={company.id} className="p-4 shadow-sm">
+                  <Card key={company.id} className="p-4">
                     <CardTitle className="text-lg mb-2">{company.name}</CardTitle>
                     <CardDescription className="mb-2">RIF: {company.rif}</CardDescription>
                     <div className="text-sm space-y-1">

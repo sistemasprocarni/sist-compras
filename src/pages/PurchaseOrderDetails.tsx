@@ -409,7 +409,7 @@ const PurchaseOrderDetails = () => {
         </DropdownMenu>
       </div>
 
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Orden de Compra {formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
           <CardDescription>Detalles completos de la orden de compra.</CardDescription>
@@ -434,7 +434,7 @@ const PurchaseOrderDetails = () => {
             </div>
           )}
 
-          <h3 className="text-lg font-semibold mt-8 mb-4 text-procarni-primary">Ítems de la Orden</h3>
+          <h3 className="text-lg font-semibold mt-8 mb-4">Ítems de la Orden</h3>
           {order.purchase_order_items && order.purchase_order_items.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
@@ -442,7 +442,7 @@ const PurchaseOrderDetails = () => {
                   const subtotal = item.quantity * item.unit_price;
                   const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
                   return (
-                        <Card key={item.id} className="p-3 shadow-sm">
+                        <Card key={item.id} className="p-3">
                           <p className="font-semibold text-procarni-primary">{item.material_name}</p>
                           <div className="text-sm mt-1 grid grid-cols-2 gap-2">
                             <p><strong>Cód. Prov:</strong> {item.supplier_code || 'N/A'}</p>

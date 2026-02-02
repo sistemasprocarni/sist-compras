@@ -200,7 +200,7 @@ const FichaTecnicaUpload = () => {
       return (
         <div className="grid gap-4">
           {filteredFichas.map((ficha) => (
-            <Card key={ficha.id} className="p-4 shadow-sm">
+            <Card key={ficha.id} className="p-4">
               <CardTitle className="text-lg mb-1 truncate">{ficha.nombre_producto}</CardTitle>
               <CardDescription className="mb-2">Proveedor: {ficha.suppliers?.name || 'N/A'}</CardDescription>
               <div className="flex justify-end gap-2 mt-4">
@@ -258,7 +258,7 @@ const FichaTecnicaUpload = () => {
         </Button>
       </div>
 
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Subir Ficha Técnica (PDF)</CardTitle>
           <CardDescription>Asocia un documento PDF (ficha técnica) a un proveedor y producto.</CardDescription>
@@ -312,9 +312,9 @@ const FichaTecnicaUpload = () => {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-procarni-primary">Fichas Técnicas Registradas</CardTitle>
+          <CardTitle>Fichas Técnicas Registradas</CardTitle>
           <CardDescription>Lista de documentos subidos.</CardDescription>
         </CardHeader>
         <CardContent>

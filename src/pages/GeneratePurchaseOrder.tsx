@@ -348,7 +348,7 @@ const GeneratePurchaseOrder = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Orden de Compra (OC)</CardTitle>
           <CardDescription>Crea una nueva orden de compra para tus proveedores.</CardDescription>

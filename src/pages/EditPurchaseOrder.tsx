@@ -276,7 +276,7 @@ const EditPurchaseOrder = () => {
         </Button>
       </div>
 
-      <Card className="mb-6 shadow-lg">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Editar Orden de Compra #{initialOrder.sequence_number}</CardTitle>
           <CardDescription>Modifica los detalles de esta orden de compra.</CardDescription>
