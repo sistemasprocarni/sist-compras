@@ -311,8 +311,6 @@ const QuoteRequestManagement = () => {
                           <TableHead>ID</TableHead>
                           <TableHead>Proveedor</TableHead>
                           <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead>Fecha Creación</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
@@ -324,8 +322,6 @@ const QuoteRequestManagement = () => {
                             <TableCell className="text-xs">{request.id.substring(0, 8)}</TableCell>
                             <TableCell className="font-medium">{request.suppliers.name}</TableCell>
                             <TableCell>{request.companies.name}</TableCell>
-                            <TableCell>{request.currency}</TableCell>
-                            <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>
                               <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
                                 {STATUS_TRANSLATIONS[request.status] || request.status}
