@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Filter, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Filter, ArrowLeft, Tag } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllMaterials, createMaterial, updateMaterial, deleteMaterial } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Material {
   id: string;
@@ -192,7 +193,6 @@ const MaterialManagement = () => {
             <CardDescription>Administra la información de tus materiales.</CardDescription>
           </div>
           <div className="flex gap-2">
-            {/* El botón de Carga Masiva (Excel) ha sido eliminado */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <DialogTrigger asChild>
                 <Button onClick={handleAddMaterial} className="bg-procarni-secondary hover:bg-green-700">
@@ -245,7 +245,7 @@ const MaterialManagement = () => {
             isMobile ? (
               <div className="grid gap-4">
                 {filteredMaterials.map((material) => (
-                  <Card key={material.id} className="p-4">
+                  <Card key={material.id} className="p-4 shadow-md">
                     <CardTitle className="text-lg mb-2 flex items-center">
                       {material.name}
                       {material.is_exempt && (
@@ -254,28 +254,29 @@ const MaterialManagement = () => {
                         </span>
                       )}
                     </CardTitle>
-                    <CardDescription className="mb-2">Código: {material.code}</CardDescription>
-                    <div className="text-sm space-y-1">
-                      <p>Categoría: {material.category || 'N/A'}</p>
-                      <p>Unidad: {material.unit || 'N/A'}</p>
-                      <p>Exento de IVA: {material.is_exempt ? 'Sí' : 'No'}</p>
+                    <CardDescription className="mb-2 flex items-center">
+                      <Tag className="mr-1 h-3 w-3" /> Código: {material.code}
+                    </CardDescription>
+                    <div className="text-sm space-y-1 mt-2 w-full">
+                      <p><strong>Categoría:</strong> {material.category || 'N/A'}</p>
+                      <p><strong>Unidad:</strong> {material.unit || 'N/A'}</p>
                     </div>
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4 border-t pt-3">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); handleEditMaterial(material); }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4 mr-2" /> Editar
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="destructive"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); confirmDeleteMaterial(material.id); }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>
@@ -296,9 +297,9 @@ const MaterialManagement = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredMaterials.map((material) => (
-                      <TableRow key={material.id}>
+                      <TableRow key={material.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <TableCell>{material.code}</TableCell>
-                        <TableCell className="flex items-center">
+                        <TableCell className="flex items-center font-medium">
                           {material.name}
                           {material.is_exempt && (
                             <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-procarni-primary text-white rounded-full">

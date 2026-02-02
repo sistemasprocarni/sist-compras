@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, ArrowLeft, Tag, MapPin } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllCompanies, createCompany, updateCompany, deleteCompany } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -14,6 +14,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface Company {
   id: string;
@@ -206,87 +207,89 @@ const CompanyManagement = () => {
             />
           </div>
 
-          {isMobile ? (
-            <div className="grid gap-4">
-              {filteredCompanies.length > 0 ? (
-                filteredCompanies.map((company) => (
-                  <Card key={company.id} className="p-4">
-                    <CardTitle className="text-lg mb-2">{company.name}</CardTitle>
-                    <CardDescription className="mb-2">RIF: {company.rif}</CardDescription>
-                    <div className="text-sm space-y-1">
+          {filteredCompanies.length > 0 ? (
+            isMobile ? (
+              <div className="grid gap-4">
+                {filteredCompanies.map((company) => (
+                  <Card key={company.id} className="p-4 shadow-md">
+                    <CardTitle className="text-lg mb-1">{company.name}</CardTitle>
+                    <CardDescription className="mb-2 flex items-center">
+                      <Tag className="mr-1 h-3 w-3" /> RIF: {company.rif}
+                    </CardDescription>
+                    <div className="text-sm space-y-1 mt-2 w-full">
                       {company.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${company.email}`} className="text-blue-600 hover:underline ml-1">{company.email}</a></p>}
                       {company.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {company.phone}</p>}
-                      {company.address && <p>Dirección: {company.address}</p>}
+                      {company.address && <p className="flex items-center"><MapPin className="mr-1 h-3 w-3" /> Dirección: {company.address}</p>}
                     </div>
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4 border-t pt-3">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); handleEditCompany(company); }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4 mr-2" /> Editar
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="destructive"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); confirmDeleteCompany(company.id); }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>
                 ))
               ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay empresas registradas o no se encontraron resultados para tu búsqueda.
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>RIF</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Teléfono</TableHead>
+                        <TableHead>Dirección</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCompanies.map((company) => (
+                        <TableRow key={company.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <TableCell className="font-medium">{company.name}</TableCell>
+                          <TableCell>{company.rif}</TableCell>
+                          <TableCell>{company.email || 'N/A'}</TableCell>
+                          <TableCell>{company.phone || 'N/A'}</TableCell>
+                          <TableCell>{company.address || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => { e.stopPropagation(); handleEditCompany(company); }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => { e.stopPropagation(); confirmDeleteCompany(company.id); }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
-            </div>
+            </CardContent>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RIF</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Dirección</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCompanies.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell>{company.name}</TableCell>
-                      <TableCell>{company.rif}</TableCell>
-                      <TableCell>{company.email || 'N/A'}</TableCell>
-                      <TableCell>{company.phone || 'N/A'}</TableCell>
-                      <TableCell>{company.address || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleEditCompany(company); }}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); confirmDeleteCompany(company.id); }}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="text-center text-muted-foreground p-8">
+              No hay empresas registradas o no se encontraron resultados para tu búsqueda.
             </div>
           )}
         </CardContent>

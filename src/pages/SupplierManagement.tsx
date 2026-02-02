@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram, Filter } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram, Filter, Tag } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
+import { cn } from '@/lib/utils';
 
 interface MaterialAssociation {
   id?: string;
@@ -207,6 +208,17 @@ const SupplierManagement = () => {
     }
   };
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return 'bg-procarni-secondary text-white';
+      case 'Inactive':
+        return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 text-center text-muted-foreground">
@@ -290,115 +302,123 @@ const SupplierManagement = () => {
             </div>
           </div>
 
-          {isMobile ? (
-            <div className="grid gap-4">
-              {filteredSuppliers.length > 0 ? (
-                filteredSuppliers.map((supplier) => (
-                  <Card key={supplier.id} className="p-4 w-full">
-                    <CardTitle className="text-lg mb-1">{supplier.name}</CardTitle>
-                    <CardDescription className="mb-2">Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}</CardDescription>
+          {filteredSuppliers.length > 0 ? (
+            isMobile ? (
+              <div className="grid gap-4">
+                {filteredSuppliers.map((supplier) => (
+                  <Card key={supplier.id} className="p-4 w-full shadow-md">
+                    <div className="flex justify-between items-start mb-2">
+                      <CardTitle className="text-lg">{supplier.name}</CardTitle>
+                      <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
+                        {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <CardDescription className="mb-2 flex items-center">
+                      <Tag className="mr-1 h-3 w-3" /> Cód: {supplier.code || 'N/A'} | RIF: {supplier.rif}
+                    </CardDescription>
                     <div className="text-sm space-y-1 mt-2 w-full">
                       {supplier.email && <p className="flex items-center"><Mail className="mr-1 h-3 w-3" /> Email: <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline ml-1">{supplier.email}</a></p>}
-                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 1: {supplier.phone}</p>}
-                      {supplier.phone_2 && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono 2: {supplier.phone_2}</p>}
-                      {supplier.instagram && <p className="flex items-center"><Instagram className="mr-1 h-3 w-3" /> Instagram: {supplier.instagram}</p>}
-                      <p><strong>Términos de Pago:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
-                      <p><strong>Días de Crédito:</strong> {supplier.credit_days}</p>
-                      <p><strong>Estado:</strong> {supplier.status}</p>
+                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>}
+                      <p><strong>Términos:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}</p>
                     </div>
-                    <div className="flex justify-end gap-2 mt-4">
+                    <div className="flex justify-end gap-2 mt-4 border-t pt-3">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 mr-2" /> Ver
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
                         disabled={deleteMutation.isPending || isLoadingEditData}
                       >
                         {isLoadingEditData && editingSupplier?.id === supplier.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-4 w-4 mr-2" />
                         )}
+                        Editar
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="destructive"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>
                 ))
               ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>RIF</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Teléfono</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSuppliers.map((supplier) => (
+                        <TableRow key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <TableCell>{supplier.code || 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell>{supplier.rif}</TableCell>
+                          <TableCell>{supplier.email || 'N/A'}</TableCell>
+                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                          <TableCell>
+                            <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
+                              {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
+                              disabled={deleteMutation.isPending || isLoadingEditData}
+                            >
+                              {isLoadingEditData && editingSupplier?.id === supplier.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
-            </div>
+            </CardContent>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>RIF</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell>{supplier.code || 'N/A'}</TableCell>
-                      <TableCell>{supplier.name}</TableCell>
-                      <TableCell>{supplier.rif}</TableCell>
-                      <TableCell>{supplier.email || 'N/A'}</TableCell>
-                      <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                      <TableCell>{supplier.status}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
-                          disabled={deleteMutation.isPending || isLoadingEditData}
-                        >
-                          {isLoadingEditData && editingSupplier?.id === supplier.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Edit className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="text-center text-muted-foreground p-8">
+              No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
             </div>
           )}
         </CardContent>
