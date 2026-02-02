@@ -195,8 +195,15 @@ const MaterialManagement = () => {
           <div className="flex gap-2">
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAddMaterial} className="bg-procarni-secondary hover:bg-green-700">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir Material
+                <Button 
+                  onClick={handleAddMaterial} 
+                  className={cn(
+                    "bg-procarni-secondary hover:bg-green-700",
+                    isMobile && "w-10 h-10 p-0" // Hacer el botón cuadrado y sin padding en móvil
+                  )}
+                >
+                  <PlusCircle className={cn("h-4 w-4", !isMobile && "mr-2")} /> 
+                  {!isMobile && 'Añadir Material'}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]" description={editingMaterial ? 'Edita los detalles del material existente.' : 'Completa los campos para añadir un nuevo material.'}>
