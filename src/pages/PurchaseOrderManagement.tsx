@@ -30,6 +30,14 @@ interface PurchaseOrder {
   user_id: string;
 }
 
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  'Draft': 'Borrador',
+  'Sent': 'Enviada',
+  'Approved': 'Aprobada',
+  'Rejected': 'Rechazada',
+  'Archived': 'Archivada',
+};
+
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
   if (!sequence) return 'N/A';
   
@@ -86,7 +94,8 @@ const PurchaseOrderManagement = () => {
       formatSequenceNumber(order.sequence_number, order.created_at).toLowerCase().includes(lowerCaseSearchTerm) ||
       order.suppliers.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       order.companies.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      order.currency.toLowerCase().includes(lowerCaseSearchTerm)
+      order.currency.toLowerCase().includes(lowerCaseSearchTerm) ||
+      (STATUS_TRANSLATIONS[order.status] || order.status).toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [currentOrders, searchTerm]);
 
@@ -216,14 +225,14 @@ const PurchaseOrderManagement = () => {
       <div className="flex justify-between items-start mb-2">
         <CardTitle className="text-lg truncate">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
         <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
-          {order.status}
+          {STATUS_TRANSLATIONS[order.status] || order.status}
         </span>
       </div>
       <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
       <div className="text-sm space-y-1">
         <p><strong>Empresa:</strong> {order.companies.name}</p>
         <p><strong>Moneda:</strong> {order.currency}</p>
-        <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+        <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString('es-VE')}</p>
       </div>
       <div className="flex justify-end gap-2 mt-4 border-t pt-3">
         <Button variant="outline" size="sm" onClick={() => handleViewDetails(order.id)}>
@@ -309,10 +318,10 @@ const PurchaseOrderManagement = () => {
                             <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>
                               <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
-                                {order.status}
+                                {STATUS_TRANSLATIONS[order.status] || order.status}
                               </span>
                             </TableCell>
-                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(order.created_at).toLocaleDateString('es-VE')}</TableCell>
                             {renderActions(order)}
                           </TableRow>
                         ))}

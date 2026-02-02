@@ -69,6 +69,13 @@ interface QuoteRequestDetailsData {
   quote_request_items: QuoteRequestItem[];
 }
 
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  'Draft': 'Borrador',
+  'Sent': 'Enviada',
+  'Approved': 'Aprobada',
+  'Archived': 'Archivada',
+};
+
 const QuoteRequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -414,12 +421,12 @@ const QuoteRequestDetails = () => {
             </p>}
             <p className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
-              <strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}
+              <strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString('es-VE')}
             </p>
             <p className="md:col-span-3">
               <strong>Estado:</strong> 
               <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
-                {request.status}
+                {STATUS_TRANSLATIONS[request.status] || request.status}
               </span>
             </p>
           </div>

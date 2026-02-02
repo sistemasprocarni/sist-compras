@@ -30,6 +30,13 @@ interface QuoteRequest {
   user_id: string;
 }
 
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  'Draft': 'Borrador',
+  'Sent': 'Enviada',
+  'Approved': 'Aprobada',
+  'Archived': 'Archivada',
+};
+
 const QuoteRequestManagement = () => {
   const queryClient = useQueryClient();
   const { session } = useSession();
@@ -76,7 +83,8 @@ const QuoteRequestManagement = () => {
       request.suppliers.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       request.companies.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       request.currency.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.id.toLowerCase().includes(lowerCaseSearchTerm)
+      request.id.toLowerCase().includes(lowerCaseSearchTerm) ||
+      (STATUS_TRANSLATIONS[request.status] || request.status).toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [currentRequests, searchTerm]);
 
@@ -226,7 +234,7 @@ const QuoteRequestManagement = () => {
       <div className="flex justify-between items-start mb-2">
         <CardTitle className="text-lg truncate">{request.suppliers.name}</CardTitle>
         <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
-          {request.status}
+          {STATUS_TRANSLATIONS[request.status] || request.status}
         </span>
       </div>
       <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
@@ -234,7 +242,7 @@ const QuoteRequestManagement = () => {
         <p><strong>ID:</strong> {request.id.substring(0, 8)}</p>
         <p><strong>Moneda:</strong> {request.currency}</p>
         {request.exchange_rate && <p><strong>Tasa:</strong> {request.exchange_rate.toFixed(2)}</p>}
-        <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
+        <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString('es-VE')}</p>
       </div>
       <div className="flex justify-end gap-2 mt-4 border-t pt-3">
         <Button variant="outline" size="sm" onClick={() => handleViewDetails(request.id)}>
@@ -320,10 +328,10 @@ const QuoteRequestManagement = () => {
                             <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
                             <TableCell>
                               <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
-                                {request.status}
+                                {STATUS_TRANSLATIONS[request.status] || request.status}
                               </span>
                             </TableCell>
-                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(request.created_at).toLocaleDateString('es-VE')}</TableCell>
                             {renderActions(request)}
                           </TableRow>
                         ))}

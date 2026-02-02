@@ -76,6 +76,14 @@ interface PurchaseOrderDetailsData {
   observations?: string;
 }
 
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  'Draft': 'Borrador',
+  'Sent': 'Enviada',
+  'Approved': 'Aprobada',
+  'Rejected': 'Rechazada',
+  'Archived': 'Archivada',
+};
+
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
   if (!sequence) return 'N/A';
   
@@ -214,7 +222,7 @@ const PurchaseOrderDetails = () => {
         <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
         <p><strong>Empresa:</strong> ${order.companies?.name}</p>
         <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
-        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
+        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: { code: 'es-VE' } as any }) : 'N/A'}</p>
         <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
         ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
         <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
@@ -446,7 +454,7 @@ const PurchaseOrderDetails = () => {
             </p>}
             <p className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
-              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}
+              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: { code: 'es-VE' } as any }) : 'N/A'}
             </p>
             <p className="md:col-span-3">
               <strong>Condición de Pago:</strong> {displayPaymentTerms()}
@@ -454,7 +462,7 @@ const PurchaseOrderDetails = () => {
             <p className="md:col-span-3">
               <strong>Estado:</strong> 
               <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
-                {order.status}
+                {STATUS_TRANSLATIONS[order.status] || order.status}
               </span>
             </p>
           </div>
