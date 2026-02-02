@@ -6,9 +6,6 @@ export type Profile = {
   last_name: string | null;
   avatar_url: string | null;
   updated_at: string | null;
-  role: string; // Added role based on schema check
-  username: string | null; // NEW
-  email: string | null; // NEW
 };
 
 export type Supplier = {

@@ -44,8 +44,6 @@ import {
   getQuotesByMaterial, // NEW: Exported
   createOrUpdateQuote, // NEW: Exported
   deleteQuote, // NEW: Exported
-  getAllProfiles, // NEW: Exported
-  updateProfile, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -148,6 +146,4 @@ export {
   getQuotesByMaterial, // NEW
   createOrUpdateQuote, // NEW
   deleteQuote, // NEW
-  getAllProfiles, // NEW
-  updateProfile, // NEW
 };

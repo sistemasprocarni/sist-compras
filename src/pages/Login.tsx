@@ -1,53 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { Auth } from '@supabase/auth-ui-react';
+import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import LoginForm from '@/components/auth/LoginForm';
-import SignupForm from '@/components/auth/SignupForm';
-import PasswordRecoveryForm from '@/components/auth/PasswordRecoveryForm';
-import { useSearchParams } from 'react-router-dom';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 const currentYear = new Date().getFullYear();
 
-type AuthView = 'login' | 'signup' | 'recovery' | 'success';
-
 const Login = () => {
-  const [view, setView] = useState<AuthView>('login');
-  const [searchParams] = useSearchParams();
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const type = searchParams.get('type');
-    if (type === 'recovery') {
-      setSuccessMessage('Tu contraseña ha sido restablecida exitosamente. Por favor, inicia sesión.');
-      setView('login');
-    } else if (type === 'signup') {
-      setSuccessMessage('¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.');
-      setView('login');
-    }
-  }, [searchParams]);
-
-  const handleSignupSuccess = () => {
-    setSuccessMessage('¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.');
-    setView('login');
-  };
-
-  const handleRecoverySent = () => {
-    setSuccessMessage('Se ha enviado un enlace de recuperación a tu correo.');
-    setView('login');
-  };
-
-  const renderForm = () => {
-    if (view === 'signup') {
-      return <SignupForm onSwitchToLogin={() => { setView('login'); setSuccessMessage(null); }} onSignupSuccess={handleSignupSuccess} />;
-    }
-    if (view === 'recovery') {
-      return <PasswordRecoveryForm onSwitchToLogin={() => { setView('login'); setSuccessMessage(null); }} onRecoverySent={handleRecoverySent} />;
-    }
-    return <LoginForm onSwitchToSignup={() => { setView('signup'); setSuccessMessage(null); }} onSwitchToPasswordRecovery={() => { setView('recovery'); setSuccessMessage(null); }} />;
-  };
-
   return (
     <div className="min-h-screen flex w-full">
       {/* 1. Left Panel (Branding and Context) - Hidden on small screens */}
@@ -79,19 +37,74 @@ const Login = () => {
               className="h-16 w-auto object-contain drop-shadow-md mb-4" 
             />
             <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
-              {view === 'login' ? 'Acceso al Sistema' : (view === 'signup' ? 'Registro de Usuario' : 'Recuperación')}
+              Acceso al Sistema
             </h1>
           </div>
           
-          {successMessage && (
-            <Alert className="bg-green-50 border-green-400 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Éxito</AlertTitle>
-              <AlertDescription>{successMessage}</AlertDescription>
-            </Alert>
-          )}
-
-          {renderForm()}
+          <Auth
+            supabaseClient={supabase}
+            providers={[]}
+            appearance={{
+              theme: ThemeSupa,
+              variables: {
+                default: {
+                  colors: {
+                    // Usar Hex color para mayor robustez en Supabase Auth UI
+                    brand: '#880a0a', // Procarni Primary Red
+                    brandAccent: '#660808', // Rojo ligeramente más oscuro para hover/focus
+                  },
+                },
+              },
+            }}
+            theme="light"
+            redirectTo={window.location.origin}
+            localization={{
+              variables: {
+                sign_in: {
+                  button_label: 'Iniciar Sesión',
+                  email_label: 'Correo Electrónico',
+                  password_label: 'Contraseña',
+                  forgot_password_link: '¿Olvidaste tu contraseña?',
+                  loading_button_label: 'Iniciando sesión...',
+                  social_provider_text: 'Iniciar sesión con {{provider}}',
+                  confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
+                  email_input_placeholder: 'Tu correo electrónico',
+                  password_input_placeholder: 'Tu contraseña',
+                  no_account_text: '¿No tienes una cuenta?',
+                  link_text: '¿Ya tienes una cuenta? Inicia sesión',
+                },
+                sign_up: {
+                  button_label: 'Registrarse',
+                  email_label: 'Correo Electrónico',
+                  password_label: 'Contraseña',
+                  confirm_password_label: 'Confirmar Contraseña',
+                  loading_button_label: 'Registrando...',
+                  social_provider_text: 'Registrarse con {{provider}}',
+                  confirmation_text: 'Te hemos enviado un correo para confirmar tu cuenta.',
+                  email_input_placeholder: 'Tu correo electrónico',
+                  password_input_placeholder: 'Tu contraseña',
+                  confirm_password_input_placeholder: 'Confirma tu contraseña',
+                  link_text: '¿No tienes una cuenta? Regístrate',
+                },
+                forgotten_password: {
+                  button_label: 'Enviar enlace de restablecimiento',
+                  email_label: 'Correo Electrónico',
+                  loading_button_label: 'Enviando...',
+                  link_text: '¿Olvidaste tu contraseña?',
+                  confirmation_text: 'Te hemos enviado un correo con instrucciones para restablecer tu contraseña.',
+                  email_input_placeholder: 'Tu correo electrónico',
+                },
+                update_password: {
+                  button_label: 'Actualizar contraseña',
+                  password_label: 'Nueva contraseña',
+                  confirm_password_label: 'Confirmar nueva contraseña',
+                  loading_button_label: 'Actualizando...',
+                  password_input_placeholder: 'Tu nueva contraseña',
+                  confirm_password_input_placeholder: 'Confirma tu nueva contraseña',
+                },
+              },
+            }}
+          />
           
           <p className="text-center text-xs text-gray-500 dark:text-gray-400 pt-4">
             &copy; {currentYear} Procarni System. Todos los derechos reservados.

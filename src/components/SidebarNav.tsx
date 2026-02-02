@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign, ScrollText, Scale, UserCog } from 'lucide-react'; // Import UserCog icon
+import { Search, ShoppingCart, FileText, Factory, Users, Box, Upload, ClipboardList, Building2, ListOrdered, Settings, Cog, FileUp, DollarSign, ScrollText, Scale } from 'lucide-react'; // Import Scale icon
 
 const navItems = [
   {
@@ -39,7 +39,6 @@ const navItems = [
       { to: '/ficha-tecnica-upload', icon: <FileUp className="h-5 w-5" />, label: 'Subir Ficha Técnica' },
       { to: '/settings', icon: <Cog className="h-5 w-5" />, label: 'Secuencias' },
       { to: '/audit-log', icon: <ScrollText className="h-5 w-5" />, label: 'Historial de Auditoría' },
-      { to: '/user-management', icon: <UserCog className="h-5 w-5" />, label: 'Gestión de Usuarios' }, // NEW LINK
     ]
   }
 ];
