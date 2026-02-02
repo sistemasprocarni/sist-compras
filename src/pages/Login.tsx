@@ -3,6 +3,8 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
+const currentYear = new Date().getFullYear();
+
 const Login = () => {
   return (
     <div className="min-h-screen flex w-full">
@@ -103,6 +105,10 @@ const Login = () => {
               },
             }}
           />
+          
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400 pt-4">
+            &copy; {currentYear} Procarni System. Todos los derechos reservados.
+          </p>
         </div>
       </div>
       <MadeWithDyad />
