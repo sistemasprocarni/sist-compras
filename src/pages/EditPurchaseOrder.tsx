@@ -128,7 +128,7 @@ const EditPurchaseOrder = () => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
-    handleItemChange(index, 'supplier_code', material.code || '');
+    // Do not automatically set supplier_code, leave it blank/unchanged
     if (material.specification) {
       handleItemChange(index, 'description', material.specification);
     }

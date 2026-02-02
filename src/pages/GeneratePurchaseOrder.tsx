@@ -166,7 +166,7 @@ const GeneratePurchaseOrder = () => {
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
-      supplier_code: material.code || '',
+      // supplier_code is intentionally left blank/unchanged, as requested by the user.
       description: material.specification || '',
     });
   };
