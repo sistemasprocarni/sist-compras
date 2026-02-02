@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, Search, TrendingUp, TrendingDown, DollarSign, Clock, Users } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
@@ -12,6 +12,8 @@ import { format } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 interface MaterialSearchResult {
   id: string;
@@ -156,16 +158,25 @@ const PriceHistory = () => {
         <div className="grid gap-4">
           {comparisonData.map((data, index) => (
             <Card key={index} className="p-4">
-              <CardTitle className="text-lg mb-2">{data.supplierName}</CardTitle>
+              <CardTitle className="text-lg mb-2 flex items-center">
+                <Users className="mr-2 h-5 w-5 text-procarni-primary" />
+                {data.supplierName}
+              </CardTitle>
               <CardDescription className="mb-2">Cód: {data.supplierCode || 'N/A'}</CardDescription>
               <div className="text-sm space-y-1">
                 <p>
                   <strong>Último Precio ({data.baseCurrency}):</strong> {formatPrice(data.latestPrice, data.baseCurrency)} 
                   {data.latestEntry.recorded_at && isValidDate(data.latestEntry.recorded_at) && ` (${format(new Date(data.latestEntry.recorded_at), 'dd/MM/yy')})`}
                 </p>
-                <p><strong>Precio Mínimo ({data.baseCurrency}):</strong> {formatPrice(data.minPrice, data.baseCurrency)}</p>
-                <p><strong>Precio Máximo ({data.baseCurrency}):</strong> {formatPrice(data.maxPrice, data.baseCurrency)}</p>
-                <p><strong>Promedio ({data.baseCurrency}):</strong> {formatPrice(data.avgPrice, data.baseCurrency)}</p>
+                <p className="flex items-center text-green-600">
+                  <TrendingDown className="mr-2 h-4 w-4" />
+                  <strong>Precio Mínimo:</strong> {formatPrice(data.minPrice, data.baseCurrency)}
+                </p>
+                <p className="flex items-center text-red-600">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  <strong>Precio Máximo:</strong> {formatPrice(data.maxPrice, data.baseCurrency)}
+                </p>
+                <p><strong>Promedio:</strong> {formatPrice(data.avgPrice, data.baseCurrency)}</p>
                 <p><strong>Registros:</strong> {data.priceCount}</p>
               </div>
             </Card>
@@ -202,8 +213,14 @@ const PriceHistory = () => {
                     ? format(new Date(data.latestEntry.recorded_at), 'dd/MM/yyyy') 
                     : 'N/A'}
                 </TableCell>
-                <TableCell className="text-green-600">{formatPrice(data.minPrice, data.baseCurrency)}</TableCell>
-                <TableCell className="text-red-600">{formatPrice(data.maxPrice, data.baseCurrency)}</TableCell>
+                <TableCell className="text-green-600 font-semibold flex items-center">
+                  <TrendingDown className="mr-1 h-4 w-4" />
+                  {formatPrice(data.minPrice, data.baseCurrency)}
+                </TableCell>
+                <TableCell className="text-red-600 font-semibold flex items-center">
+                  <TrendingUp className="mr-1 h-4 w-4" />
+                  {formatPrice(data.maxPrice, data.baseCurrency)}
+                </TableCell>
                 <TableCell>{formatPrice(data.avgPrice, data.baseCurrency)}</TableCell>
                 <TableCell>{data.priceCount}</TableCell>
               </TableRow>
@@ -229,7 +246,7 @@ const PriceHistory = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg bg-muted/50">
             <div className="md:col-span-2">
               <Label htmlFor="material-search">Material</Label>
               <SmartSearch
@@ -258,17 +275,24 @@ const PriceHistory = () => {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-4">Historial y Comparativa</h3>
+          <h3 className="text-lg font-semibold mb-4 flex items-center text-procarni-primary">
+            <DollarSign className="mr-2 h-5 w-5" />
+            Comparativa de Precios por Proveedor
+          </h3>
           {renderComparisonTable()}
           
-          {/* Detailed History Table (Optional, but useful) */}
-          {priceHistory && priceHistory.length > 0 && !isMobile && (
+          {/* Detailed History Table */}
+          {priceHistory && priceHistory.length > 0 && (
             <div className="mt-8">
-              <h4 className="text-md font-semibold mb-2">Detalle de Transacciones (Moneda Original)</h4>
+              <Separator className="mb-4" />
+              <h4 className="text-md font-semibold mb-4 flex items-center text-procarni-primary">
+                <Clock className="mr-2 h-4 w-4" />
+                Detalle de Transacciones (Moneda Original)
+              </h4>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-gray-50">
                       <TableHead>Proveedor</TableHead>
                       <TableHead>Precio Unitario</TableHead>
                       <TableHead>Moneda</TableHead>
@@ -278,7 +302,7 @@ const PriceHistory = () => {
                   </TableHeader>
                   <TableBody>
                     {priceHistory.map((entry) => (
-                      <TableRow key={entry.id}>
+                      <TableRow key={entry.id} className={cn(entry.currency === 'VES' ? 'bg-blue-50/50 dark:bg-blue-900/20' : '')}>
                         <TableCell>{entry.suppliers.name}</TableCell>
                         <TableCell>{entry.unit_price.toFixed(2)}</TableCell>
                         <TableCell>{entry.currency}</TableCell>

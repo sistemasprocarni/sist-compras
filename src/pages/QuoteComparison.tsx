@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle, Scale, Download, X, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Scale, Download, X, Loader2, RefreshCw, DollarSign } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { useNavigate } from 'react-router-dom';
 import SmartSearch from '@/components/SmartSearch';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { showError, showSuccess } from '@/utils/toast';
 import MaterialQuoteComparisonRow from '@/components/MaterialQuoteComparisonRow';
 import QuoteComparisonPDFButton from '@/components/QuoteComparisonPDFButton';
+import { Separator } from '@/components/ui/separator';
 
 interface MaterialSearchResult {
   id: string;
@@ -76,11 +77,12 @@ const QuoteComparison = () => {
         } else {
             throw new Error('Formato de tasa de cambio inválido.');
         }
-        
+        return rate;
     } catch (e: any) {
         console.error('[QuoteComparison] Error fetching daily rate:', e);
         showError(`Error al cargar la tasa del día: ${e.message}`);
         setDailyRate(undefined);
+        return undefined;
     } finally {
         setIsLoadingRate(false);
     }
@@ -89,8 +91,15 @@ const QuoteComparison = () => {
   // Effect to manage rate fetching and default selection when globalInputCurrency changes
   useEffect(() => {
     if (globalInputCurrency === 'VES') {
-        fetchDailyRate();
-        setRateSource('daily'); // Default to daily rate when switching to VES
+        fetchDailyRate().then(rate => {
+            if (rate) {
+                setRateSource('daily');
+                setExchangeRate(rate);
+            } else {
+                setRateSource('custom');
+                setExchangeRate(undefined);
+            }
+        });
     } else {
         setDailyRate(undefined);
         setRateSource('custom');
@@ -104,8 +113,7 @@ const QuoteComparison = () => {
         if (rateSource === 'daily' && dailyRate !== undefined) {
             setExchangeRate(dailyRate);
         } else if (rateSource === 'custom') {
-            // If switching to custom, keep the current exchangeRate value unless it was the daily rate and dailyRate is now undefined
-            // We rely on the custom input field to update exchangeRate when rateSource is 'custom'.
+            // Keep custom rate, rely on input field to update it
         }
     } else {
         setExchangeRate(undefined);
@@ -150,7 +158,7 @@ const QuoteComparison = () => {
             supplierName: '', 
             unitPrice: 0, 
             currency: globalInputCurrency, 
-            exchangeRate: undefined 
+            exchangeRate: globalInputCurrency === 'VES' ? exchangeRate : undefined 
           }]
         };
       }
@@ -337,7 +345,7 @@ const QuoteComparison = () => {
                 />
             )}
             <p className="text-xs text-muted-foreground mt-1">
-                Tasa actual utilizada: {exchangeRate ? exchangeRate.toFixed(4) : 'N/USD'}
+                Tasa actual utilizada: {exchangeRate ? exchangeRate.toFixed(4) : 'N/A'} VES/USD
             </p>
         </div>
     );
@@ -352,40 +360,43 @@ const QuoteComparison = () => {
       </div>
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-procarni-primary">Comparación Inmediata de Cotizaciones</CardTitle>
+          <CardTitle className="text-procarni-primary flex items-center">
+            <Scale className="mr-2 h-6 w-6" />
+            Comparación Inmediata de Cotizaciones
+          </CardTitle>
           <CardDescription>
             Compara precios de diferentes proveedores para múltiples materiales en tiempo real.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end p-4 border rounded-lg bg-muted/20">
-            <div className="md:col-span-2">
-              <Label htmlFor="material-search">Añadir Material a Comparar</Label>
-              <SmartSearch
-                placeholder="Buscar material por nombre o código"
-                onSelect={handleMaterialSelect}
-                fetchFunction={searchMaterials}
-                displayValue={newMaterialQuery}
-                selectedId={selectedMaterialToAdd?.id}
-              />
-              {selectedMaterialToAdd && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Material listo para añadir: <span className="font-semibold">{selectedMaterialToAdd.name} ({selectedMaterialToAdd.code})</span>
-                </p>
-              )}
+          <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+            <h3 className="text-md font-semibold mb-3 flex items-center text-procarni-primary">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Materiales
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="md:col-span-2">
+                    <Label htmlFor="material-search">Buscar Material</Label>
+                    <SmartSearch
+                        placeholder="Buscar material por nombre o código"
+                        onSelect={handleMaterialSelect}
+                        fetchFunction={searchMaterials}
+                        displayValue={newMaterialQuery}
+                        selectedId={selectedMaterialToAdd?.id}
+                    />
+                </div>
+                <Button 
+                    onClick={handleAddMaterial} 
+                    disabled={!selectedMaterialToAdd}
+                    className="bg-procarni-secondary hover:bg-green-700 h-10"
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Añadir a la Comparación
+                </Button>
             </div>
-            <Button 
-                onClick={handleAddMaterial} 
-                disabled={!selectedMaterialToAdd}
-                className="bg-procarni-secondary hover:bg-green-700 h-10"
-            >
-                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Material
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-start p-4 border rounded-lg">
             <div>
-              <Label htmlFor="global-input-currency">Moneda Global de Ingreso (Por defecto)</Label>
+              <Label htmlFor="global-input-currency">Moneda Global de Ingreso</Label>
               <Select value={globalInputCurrency} onValueChange={(value) => setGlobalInputCurrency(value as 'USD' | 'VES')}>
                 <SelectTrigger id="global-input-currency">
                   <SelectValue placeholder="Selecciona moneda" />
@@ -398,10 +409,10 @@ const QuoteComparison = () => {
               <p className="text-xs text-muted-foreground mt-1">Moneda por defecto para nuevas cotizaciones.</p>
             </div>
             <div>
-              <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD a VES)</Label>
+              <Label htmlFor="exchange-rate">Tasa de Cambio Global (USD/VES)</Label>
               {renderExchangeRateInput()}
             </div>
-            <div className="flex justify-end items-end">
+            <div className="flex flex-col justify-end items-end h-full">
                 <QuoteComparisonPDFButton
                     comparisonResults={comparisonResults}
                     baseCurrency={comparisonBaseCurrency}
@@ -412,9 +423,9 @@ const QuoteComparison = () => {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Scale className="mr-2 h-5 w-5 text-procarni-primary" />
-            Resultados de la Comparación
+          <h3 className="text-lg font-semibold mb-4 flex items-center text-procarni-primary">
+            <DollarSign className="mr-2 h-5 w-5" />
+            Resultados de la Comparación (Base: USD)
           </h3>
           {renderComparisonTable()}
           
