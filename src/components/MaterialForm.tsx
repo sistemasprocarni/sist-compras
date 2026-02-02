@@ -171,11 +171,6 @@ const MaterialForm: React.FC<MaterialFormProps> = ({ initialData, onSubmit, onCa
                 <FormLabel>Exento de IVA</FormLabel>
                 <FormDescription>
                   Marcar si este material no debe incluir IVA en los cálculos de costos.
-                  {watchedCategory === 'FRESCA' && (
-                    <span className="block text-procarni-alert font-semibold">
-                      (Forzado a SÍ por categoría FRESCA)
-                    </span>
-                  )}
                 </FormDescription>
               </div>
               <FormControl>

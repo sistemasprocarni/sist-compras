@@ -324,11 +324,6 @@ const MaterialCreationDialog: React.FC<MaterialCreationDialogProps> = ({
               <Label>Exento de IVA</Label>
               <p className="text-sm text-muted-foreground">
                 Marcar si este material no debe incluir IVA.
-                {category === 'FRESCA' && (
-                    <span className="block text-procarni-alert font-semibold">
-                      (Forzado a SÍ por categoría FRESCA)
-                    </span>
-                  )}
               </p>
             </div>
             <Switch

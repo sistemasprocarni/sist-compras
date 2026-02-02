@@ -246,7 +246,14 @@ const MaterialManagement = () => {
               <div className="grid gap-4">
                 {filteredMaterials.map((material) => (
                   <Card key={material.id} className="p-4">
-                    <CardTitle className="text-lg mb-2">{material.name}</CardTitle>
+                    <CardTitle className="text-lg mb-2 flex items-center">
+                      {material.name}
+                      {material.is_exempt && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                          EXENTO
+                        </span>
+                      )}
+                    </CardTitle>
                     <CardDescription className="mb-2">Código: {material.code}</CardDescription>
                     <div className="text-sm space-y-1">
                       <p>Categoría: {material.category || 'N/A'}</p>
@@ -283,6 +290,7 @@ const MaterialManagement = () => {
                       <TableHead>Nombre</TableHead>
                       <TableHead>Categoría</TableHead>
                       <TableHead>Unidad</TableHead>
+                      <TableHead>Exento IVA</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -290,9 +298,17 @@ const MaterialManagement = () => {
                     {filteredMaterials.map((material) => (
                       <TableRow key={material.id}>
                         <TableCell>{material.code}</TableCell>
-                        <TableCell>{material.name}</TableCell>
+                        <TableCell className="flex items-center">
+                          {material.name}
+                          {material.is_exempt && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
+                              EXENTO
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>{material.category || 'N/A'}</TableCell>
                         <TableCell>{material.unit || 'N/A'}</TableCell>
+                        <TableCell>{material.is_exempt ? 'Sí' : 'No'}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
