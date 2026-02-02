@@ -123,6 +123,7 @@ const SupplierDetails = () => {
       setCurrentFichaTitle(`Ficha Técnica: ${materialName}`);
       setIsViewerOpen(true);
     } else {
+      // This case should ideally not be reached if the button is only shown when hasFicha is true
       showError(`No se encontró una ficha técnica para el material "${materialName}" de este proveedor.`);
     }
   };
@@ -265,15 +266,16 @@ const SupplierDetails = () => {
                         <p><strong>Especificación:</strong> {sm.specification || 'N/A'}</p>
                       </div>
                       <div className="mt-3 flex justify-end">
-                        <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)} disabled={isLoadingFicha}>
-                          <FileText className="mr-2 h-4 w-4" /> 
-                          Ver Ficha Técnica
-                          {isLoadingFicha ? (
-                            <span className="ml-2 text-xs text-muted-foreground">...</span>
-                          ) : hasFicha ? (
-                            <Check className="ml-2 h-4 w-4 text-green-600" />
-                          ) : null}
-                        </Button>
+                        {isLoadingFicha ? (
+                          <span className="text-sm text-muted-foreground">Cargando estado...</span>
+                        ) : hasFicha ? (
+                          <Button variant="outline" size="sm" onClick={() => handleViewFicha(sm.materials.name)}>
+                            <FileText className="mr-2 h-4 w-4" /> 
+                            Ver Ficha Técnica
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Sin Ficha Técnica</span>
+                        )}
                       </div>
                     </Card>
                   );
@@ -302,14 +304,15 @@ const SupplierDetails = () => {
                           <TableCell>{sm.materials.category || 'N/A'}</TableCell>
                           <TableCell>{sm.specification || 'N/A'}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)} disabled={isLoadingFicha}>
-                              <FileText className="h-4 w-4" />
-                              {isLoadingFicha ? (
-                                <span className="ml-1 text-xs text-muted-foreground">...</span>
-                              ) : hasFicha ? (
-                                <Check className="ml-1 h-4 w-4 text-green-600" />
-                              ) : null}
-                            </Button>
+                            {isLoadingFicha ? (
+                              <span className="text-xs text-muted-foreground">Cargando...</span>
+                            ) : hasFicha ? (
+                              <Button variant="ghost" size="icon" onClick={() => handleViewFicha(sm.materials.name)} title="Ver Ficha Técnica">
+                                <FileText className="h-4 w-4 text-procarni-primary" />
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">N/A</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
