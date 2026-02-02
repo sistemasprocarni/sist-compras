@@ -275,7 +275,7 @@ const SupplierManagement = () => {
             </DialogContent>
           </Dialog>
         </CardHeader>
-        <CardContent>
+        <CardContent className={cn(isMobile ? "px-2 py-4" : "p-6")}>
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
