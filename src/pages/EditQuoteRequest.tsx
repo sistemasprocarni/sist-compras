@@ -5,10 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, Trash2, ArrowLeft, FileText } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, FileText, Loader2, CheckCircle } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { getQuoteRequestDetails, searchSuppliers, searchMaterialsBySupplier, searchCompanies, updateQuoteRequest } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
@@ -16,22 +15,22 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
-import MaterialCreationDialog from '@/components/MaterialCreationDialog'; // Updated import
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import MaterialCreationDialog from '@/components/MaterialCreationDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Company {
   id: string;
   name: string;
-  rif: string; // Added rif for SmartSearch
+  rif: string;
 }
 
 interface QuoteRequestItemForm {
-  id?: string; // Optional for existing items
+  id?: string;
   material_name: string;
   quantity: number;
   description?: string;
   unit?: string;
-  // is_exempt removed
 }
 
 interface MaterialSearchResult {
@@ -40,11 +39,10 @@ interface MaterialSearchResult {
   code: string;
   category?: string;
   unit?: string;
-  is_exempt?: boolean; // Añadido: Campo para exención de IVA
-  specification?: string; // Added specification field
+  is_exempt?: boolean;
+  specification?: string;
 }
 
-// Define las unidades de medida.
 const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
@@ -54,47 +52,41 @@ const EditQuoteRequest = () => {
   const navigate = useNavigate();
   const { session, isLoadingSession } = useSession();
   const isMobile = useIsMobile();
-  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
 
-  const [companyId, setCompanyId] = useState<string>(''); // Now explicitly selected
-  const [companyName, setCompanyName] = useState<string>(''); // For SmartSearch display
+  const [companyId, setCompanyId] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
-  // Moneda y Tasa de Cambio eliminados del estado
   const [items, setItems] = useState<QuoteRequestItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Fetch existing quote request data
   const { data: initialRequest, isLoading: isLoadingRequest, error: requestError } = useQuery({
     queryKey: ['quoteRequestDetails', id],
     queryFn: () => getQuoteRequestDetails(id!),
     enabled: !!id && !!session && !isLoadingSession,
   });
 
-  // Populate form fields when initialRequest data is loaded
   useEffect(() => {
     if (initialRequest) {
       setCompanyId(initialRequest.company_id);
       setCompanyName(initialRequest.companies?.name || '');
       setSupplierId(initialRequest.supplier_id);
       setSupplierName(initialRequest.suppliers?.name || '');
-      // Moneda y Tasa de Cambio ignorados
       setItems(initialRequest.quote_request_items.map(item => ({
         id: item.id,
         material_name: item.material_name,
         quantity: item.quantity,
         description: item.description || '',
         unit: item.unit || MATERIAL_UNITS[0],
-        // is_exempt removed
       })));
     }
   }, [initialRequest]);
 
-  // New wrapper function for material search, filtered by selected supplier
   const searchSupplierMaterials = React.useCallback(async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
@@ -148,7 +140,6 @@ const EditQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    // Import specification into description if available
     if (material.specification) {
       handleItemChange(index, 'description', material.specification);
     }
@@ -160,9 +151,7 @@ const EditQuoteRequest = () => {
   };
 
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
-    // Since the material is created and associated immediately in the dialog, 
-    // we just need to ensure the user can select it now.
-    // The user will select it via SmartSearch.
+    // Material created and associated, user can now select it via SmartSearch.
   };
 
   const handleSubmit = async () => {
@@ -178,8 +167,9 @@ const EditQuoteRequest = () => {
       showError('Por favor, selecciona un proveedor.');
       return;
     }
-    // Validación de ítems
-    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || !item.unit)) {
+    
+    const invalidItem = items.find(item => !item.material_name || item.quantity <= 0 || !item.unit);
+    if (items.length === 0 || invalidItem) {
       showError('Por favor, añade al menos un ítem válido con nombre, cantidad mayor a cero y unidad.');
       return;
     }
@@ -187,9 +177,9 @@ const EditQuoteRequest = () => {
     setIsSubmitting(true);
     const requestData = {
       supplier_id: supplierId,
-      company_id: companyId, // Use the selected company ID
-      currency: 'USD' as const, // Default to USD
-      exchange_rate: null, // Set to null
+      company_id: companyId,
+      currency: 'USD' as const,
+      exchange_rate: null,
       created_by: userEmail || 'unknown',
       user_id: userId,
     };
@@ -198,7 +188,7 @@ const EditQuoteRequest = () => {
 
     if (updatedRequest) {
       showSuccess('Solicitud de cotización actualizada exitosamente.');
-      navigate(`/quote-requests/${id}`); // Go back to details page
+      navigate(`/quote-requests/${id}`);
     }
     setIsSubmitting(false);
   };
@@ -211,69 +201,15 @@ const EditQuoteRequest = () => {
   };
 
   const renderItemFields = (item: QuoteRequestItemForm, index: number) => {
-    const fields = [
-      {
-        label: 'Material',
-        content: (
-          <SmartSearch
-            placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
-            onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-            fetchFunction={searchSupplierMaterials}
-            displayValue={item.material_name}
-            disabled={!supplierId}
-          />
-        ),
-        span: isMobile ? 2 : 2,
-      },
-      {
-        label: 'Cantidad',
-        content: (
-          <Input
-            id={`quantity-${index}`}
-            type="number"
-            value={item.quantity}
-            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
-            min="0"
-          />
-        ),
-        span: isMobile ? 1 : 1,
-      },
-      {
-        label: 'Unidad',
-        content: (
-          <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
-            <SelectTrigger id={`unit-${index}`}>
-              <SelectValue placeholder="Unidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {MATERIAL_UNITS.map(unitOption => (
-                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ),
-        span: isMobile ? 1 : 1,
-      },
-      {
-        label: 'Descripción',
-        content: (
-          <Textarea
-            id={`description-${index}`}
-            value={item.description}
-            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-            placeholder="Especificación, marca, etc."
-            rows={1}
-          />
-        ),
-        span: isMobile ? 2 : 2,
-      },
-    ];
+    const isMaterialSelected = !!item.material_name;
 
     if (isMobile) {
       return (
         <div key={item.id || index} className="border rounded-md p-3 space-y-3 bg-white shadow-sm">
           <div className="flex justify-between items-center border-b pb-2">
-            <h4 className="font-semibold text-procarni-primary truncate">{item.material_name || 'Nuevo Ítem'}</h4>
+            <h4 className="font-semibold text-procarni-primary truncate flex items-center">
+              {item.material_name || 'Nuevo Ítem'}
+            </h4>
             <div className="flex gap-1">
               <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
                 <PlusCircle className="h-4 w-4" />
@@ -284,12 +220,53 @@ const EditQuoteRequest = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            {fields.map((field, fieldIndex) => (
-              <div key={fieldIndex} className={`space-y-1 ${field.span === 2 ? 'col-span-2' : ''}`}>
-                <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
-                {field.content}
-              </div>
-            ))}
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground flex items-center">
+                Material
+                {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+              </label>
+              <SmartSearch
+                placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+                onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+                fetchFunction={searchSupplierMaterials}
+                displayValue={item.material_name}
+                disabled={!supplierId}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Cantidad</label>
+              <Input
+                id={`quantity-${index}`}
+                type="number"
+                value={item.quantity}
+                onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+                min="0"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Unidad</label>
+              <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+                <SelectTrigger id={`unit-${index}`} className="h-9">
+                  <SelectValue placeholder="Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_UNITS.map(unitOption => (
+                    <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+              <Textarea
+                id={`description-${index}`}
+                value={item.description}
+                onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                placeholder="Especificación, marca, etc."
+                rows={2}
+              />
+            </div>
           </div>
         </div>
       );
@@ -297,24 +274,55 @@ const EditQuoteRequest = () => {
 
     // Desktop/Tablet View
     return (
-      <div key={item.id || index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md">
+      <div key={item.id || index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md bg-white shadow-sm">
         <div className="col-span-2">
-          <Label htmlFor={`material_name-${index}`}>Material</Label>
-          {fields[0].content}
+          <Label htmlFor={`material_name-${index}`} className="flex items-center">
+            Material
+            {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+          </Label>
+          <SmartSearch
+            placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+            onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+            fetchFunction={searchSupplierMaterials}
+            displayValue={item.material_name}
+            disabled={!supplierId}
+          />
         </div>
         <div className="col-span-1">
           <Label htmlFor={`quantity-${index}`}>Cantidad</Label>
-          {fields[1].content}
+          <Input
+            id={`quantity-${index}`}
+            type="number"
+            value={item.quantity}
+            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+            min="0"
+          />
         </div>
         <div className="col-span-1">
           <Label htmlFor={`unit-${index}`}>Unidad</Label>
-          {fields[2].content}
+          <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+            <SelectTrigger id={`unit-${index}`}>
+              <SelectValue placeholder="Unidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {MATERIAL_UNITS.map(unitOption => (
+                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="col-span-2">
           <Label htmlFor={`description-${index}`}>Descripción</Label>
-          {fields[3].content}
+          <Textarea
+            id={`description-${index}`}
+            value={item.description}
+            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+            placeholder="Especificación, marca, etc."
+            rows={1}
+            className="min-h-10"
+          />
         </div>
-        <div className="flex flex-col space-y-2 col-span-1">
+        <div className="flex flex-col space-y-2 col-span-1 justify-end">
           <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
             <PlusCircle className="h-4 w-4" />
           </Button>
@@ -332,23 +340,6 @@ const EditQuoteRequest = () => {
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button variant="secondary">
-              <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
-            </DialogHeader>
-            <QuoteRequestPreviewModal
-              requestId={id!}
-              onClose={() => setIsModalOpen(false)}
-              fileName={generateFileName()}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
 
       <Card className="mb-6">
@@ -357,9 +348,9 @@ const EditQuoteRequest = () => {
           <CardDescription>Modifica los detalles de esta solicitud de cotización.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 border rounded-lg bg-muted/50">
             <div>
-              <Label htmlFor="company">Empresa de Origen</Label>
+              <Label htmlFor="company">Empresa de Origen *</Label>
               <SmartSearch
                 placeholder="Buscar empresa por RIF o nombre"
                 onSelect={handleCompanySelect}
@@ -369,7 +360,7 @@ const EditQuoteRequest = () => {
               {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
             </div>
             <div>
-              <Label htmlFor="supplier">Proveedor</Label>
+              <Label htmlFor="supplier">Proveedor *</Label>
               <SmartSearch
                 placeholder="Buscar proveedor por RIF o nombre"
                 onSelect={(supplier) => {
@@ -381,22 +372,38 @@ const EditQuoteRequest = () => {
               />
               {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
             </div>
-            {/* Moneda y Tasa de Cambio eliminados */}
           </div>
 
-          <h3 className="text-lg font-semibold mb-4">Ítems de la Solicitud</h3>
+          <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Ítems de la Solicitud</h3>
           <div className="space-y-4">
             {items.map(renderItemFields)}
             <div className="flex justify-between">
-              <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
+              <Button variant="outline" onClick={handleAddItem} className="w-full">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
               </Button>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
-              {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary" disabled={isSubmitting || !companyId || items.length === 0}>
+                  <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>Previsualización de Solicitud de Cotización</DialogTitle>
+                </DialogHeader>
+                <QuoteRequestPreviewModal
+                  requestId={id!}
+                  onClose={() => setIsModalOpen(false)}
+                  fileName={generateFileName()}
+                />
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || items.length === 0} className="bg-procarni-secondary hover:bg-green-700">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Cambios'}
             </Button>
           </div>
         </CardContent>

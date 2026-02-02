@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Trash2, Search, Eye, Edit, ArrowLeft, Archive, RotateCcw } from 'lucide-react';
+import { PlusCircle, Trash2, Search, Eye, Edit, ArrowLeft, Archive, RotateCcw, CheckCircle, Send, ListOrdered } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllPurchaseOrders, deletePurchaseOrder, archivePurchaseOrder, unarchivePurchaseOrder } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface PurchaseOrder {
   id: string;
@@ -146,6 +147,23 @@ const PurchaseOrderManagement = () => {
     navigate(`/purchase-orders/edit/${orderId}`);
   };
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'Sent':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'Approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      case 'Archived':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   if (error) {
     showError(error.message);
     return (
@@ -156,11 +174,11 @@ const PurchaseOrderManagement = () => {
   }
 
   const renderActions = (order: PurchaseOrder) => {
-    const isEditable = order.status !== 'Approved' && order.status !== 'Archived';
+    const isEditable = order.status === 'Draft';
     const isArchived = order.status === 'Archived';
 
     return (
-      <TableCell className="text-right">
+      <TableCell className="text-right whitespace-nowrap">
         <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
           <Eye className="h-4 w-4" />
         </Button>
@@ -169,19 +187,56 @@ const PurchaseOrderManagement = () => {
             <Edit className="h-4 w-4" />
           </Button>
         )}
+        {order.status === 'Sent' && (
+          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)} title="Reenviar">
+            <Send className="h-4 w-4 text-blue-600" />
+          </Button>
+        )}
+        {order.status === 'Draft' && (
+          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)} title="Aprobar">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </Button>
+        )}
         {!isArchived && (
-          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
+          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')} title="Archivar">
             <Archive className="h-4 w-4 text-muted-foreground" />
           </Button>
         )}
         {isArchived && (
-          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
+          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')} title="Desarchivar">
             <RotateCcw className="h-4 w-4 text-procarni-secondary" />
           </Button>
         )}
       </TableCell>
     );
   };
+
+  const renderMobileCard = (order: PurchaseOrder) => (
+    <Card key={order.id} className="p-4 shadow-md">
+      <div className="flex justify-between items-start mb-2">
+        <CardTitle className="text-lg truncate">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
+        <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
+          {order.status}
+        </span>
+      </div>
+      <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
+      <div className="text-sm space-y-1">
+        <p><strong>Empresa:</strong> {order.companies.name}</p>
+        <p><strong>Moneda:</strong> {order.currency}</p>
+        <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
+      </div>
+      <div className="flex justify-end gap-2 mt-4 border-t pt-3">
+        <Button variant="outline" size="sm" onClick={() => handleViewDetails(order.id)}>
+          <Eye className="h-4 w-4 mr-2" /> Ver Detalles
+        </Button>
+        {order.status !== 'Archived' && (
+          <Button variant="outline" size="sm" onClick={() => confirmAction(order.id, 'archive')}>
+            <Archive className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
 
   return (
     <div className="container mx-auto p-4">
@@ -210,7 +265,7 @@ const PurchaseOrderManagement = () => {
               <TabsTrigger value="archived">Archivadas</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="active" className="mt-4">
+            <TabsContent value={activeTab} className="mt-4">
               <div className="relative mb-4">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -223,35 +278,11 @@ const PurchaseOrderManagement = () => {
               </div>
 
               {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando órdenes activas...</div>
+                <div className="text-center text-muted-foreground p-8">Cargando órdenes...</div>
               ) : filteredPurchaseOrders.length > 0 ? (
                 isMobile ? (
                   <div className="grid gap-4">
-                    {filteredPurchaseOrders.map((order) => (
-                      <Card key={order.id} className="p-4">
-                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
-                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Empresa:</strong> {order.companies.name}</p>
-                          <p><strong>Moneda:</strong> {order.currency}</p>
-                          <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
-                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {order.status !== 'Approved' && (
-                            <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order.id)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
-                            <Archive className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                    {filteredPurchaseOrders.map(renderMobileCard)}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -262,19 +293,25 @@ const PurchaseOrderManagement = () => {
                           <TableHead>Proveedor</TableHead>
                           <TableHead>Empresa</TableHead>
                           <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Tasa</TableHead>
+                          <TableHead>Estado</TableHead>
                           <TableHead>Fecha Creación</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredPurchaseOrders.map((order) => (
-                          <TableRow key={order.id}>
+                          <TableRow key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                             <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
                             <TableCell>{order.suppliers.name}</TableCell>
                             <TableCell>{order.companies.name}</TableCell>
                             <TableCell>{order.currency}</TableCell>
                             <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell>
+                              <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
+                                {order.status}
+                              </span>
+                            </TableCell>
                             <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                             {renderActions(order)}
                           </TableRow>
@@ -285,156 +322,7 @@ const PurchaseOrderManagement = () => {
                 )
               ) : (
                 <div className="text-center text-muted-foreground p-8">
-                  No hay órdenes de compra activas o no se encontraron resultados para tu búsqueda.
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="approved" className="mt-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar en aprobadas..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando órdenes aprobadas...</div>
-              ) : filteredPurchaseOrders.length > 0 ? (
-                isMobile ? (
-                  <div className="grid gap-4">
-                    {filteredPurchaseOrders.map((order) => (
-                      <Card key={order.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500">
-                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
-                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Empresa:</strong> {order.companies.name}</p>
-                          <p><strong>Moneda:</strong> {order.currency}</p>
-                          <p><strong>Tasa de Cambio:</strong> {order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</p>
-                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')}>
-                            <Archive className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>N° Orden</TableHead>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
-                          <TableHead>Fecha Creación</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredPurchaseOrders.map((order) => (
-                          <TableRow key={order.id} className="bg-green-50/50 dark:bg-green-900/20">
-                            <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
-                            <TableCell>{order.suppliers.name}</TableCell>
-                            <TableCell>{order.companies.name}</TableCell>
-                            <TableCell>{order.currency}</TableCell>
-                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            {renderActions(order)}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay órdenes de compra aprobadas o no se encontraron resultados para tu búsqueda.
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="archived" className="mt-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar en archivados..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando órdenes archivadas...</div>
-              ) : filteredPurchaseOrders.length > 0 ? (
-                isMobile ? (
-                  <div className="grid gap-4">
-                    {filteredPurchaseOrders.map((order) => (
-                      <Card key={order.id} className="p-4 bg-gray-50 dark:bg-gray-800">
-                        <CardTitle className="text-lg mb-2">{formatSequenceNumber(order.sequence_number, order.created_at)}</CardTitle>
-                        <CardDescription className="mb-2">Proveedor: {order.suppliers.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Empresa:</strong> {order.companies.name}</p>
-                          <p><strong>Moneda:</strong> {order.currency}</p>
-                          <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'unarchive')}>
-                            <RotateCcw className="h-4 w-4 text-procarni-secondary" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>N° Orden</TableHead>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
-                          <TableHead>Fecha Creación</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredPurchaseOrders.map((order) => (
-                          <TableRow key={order.id} className="bg-gray-50 dark:bg-gray-800">
-                            <TableCell className="font-medium">{formatSequenceNumber(order.sequence_number, order.created_at)}</TableCell>
-                            <TableCell>{order.suppliers.name}</TableCell>
-                            <TableCell>{order.companies.name}</TableCell>
-                            <TableCell>{order.currency}</TableCell>
-                            <TableCell>{order.exchange_rate ? order.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                            {renderActions(order)}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay órdenes de compra archivadas o no se encontraron resultados para tu búsqueda.
+                  No hay órdenes de compra en este estado o no se encontraron resultados para tu búsqueda.
                 </div>
               )}
             </TabsContent>

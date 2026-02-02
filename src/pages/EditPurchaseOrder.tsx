@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, ArrowLeft } from 'lucide-react';
+import { PlusCircle, ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { getPurchaseOrderDetails, searchMaterialsBySupplier, updatePurchaseOrder } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
@@ -23,7 +23,7 @@ interface Company {
 
 interface PurchaseOrderItemForm {
   id?: string;
-  material_id?: string; // NEW: Added material_id
+  material_id?: string;
   material_name: string;
   supplier_code?: string;
   quantity: number;
@@ -31,7 +31,7 @@ interface PurchaseOrderItemForm {
   tax_rate?: number;
   is_exempt?: boolean;
   unit?: string;
-  description?: string; // ADDED
+  description?: string;
 }
 
 interface MaterialSearchResult {
@@ -41,7 +41,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
+  specification?: string;
 }
 
 const EditPurchaseOrder = () => {
@@ -96,7 +96,7 @@ const EditPurchaseOrder = () => {
 
       setItems(initialOrder.purchase_order_items.map(item => ({
         id: item.id,
-        material_id: item.material_id, // IMPORTANT: Load material ID
+        material_id: item.material_id,
         material_name: item.material_name,
         supplier_code: item.supplier_code || '',
         quantity: item.quantity,
@@ -104,7 +104,7 @@ const EditPurchaseOrder = () => {
         tax_rate: item.tax_rate,
         is_exempt: item.is_exempt,
         unit: item.unit || 'KG',
-        description: item.description || '', // ADDED description
+        description: item.description || '',
       })));
     }
   }, [initialOrder]);
@@ -124,12 +124,11 @@ const EditPurchaseOrder = () => {
   };
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
-    handleItemChange(index, 'material_id', material.id); // IMPORTANT: Capture material ID
+    handleItemChange(index, 'material_id', material.id);
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
-    handleItemChange(index, 'supplier_code', ''); // Ensure supplier_code is NOT auto-filled
-    // Import specification into description if available
+    handleItemChange(index, 'supplier_code', material.code || '');
     if (material.specification) {
       handleItemChange(index, 'description', material.specification);
     }
@@ -172,7 +171,6 @@ const EditPurchaseOrder = () => {
       return;
     }
     
-    // --- Refined Item Validation ---
     const invalidItem = items.find(item => 
       !item.material_id || 
       !item.material_name || 
@@ -197,7 +195,6 @@ const EditPurchaseOrder = () => {
       showError(specificError);
       return;
     }
-    // --- End Refined Item Validation ---
 
     if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {
       showError('Debe especificar los términos de pago personalizados.');
@@ -282,28 +279,31 @@ const EditPurchaseOrder = () => {
           <CardDescription>Modifica los detalles de esta orden de compra.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PurchaseOrderDetailsForm
-            companyId={companyId}
-            companyName={companyName}
-            supplierId={supplierId}
-            supplierName={supplierName}
-            currency={currency}
-            exchangeRate={exchangeRate}
-            deliveryDate={deliveryDate}
-            paymentTerms={paymentTerms}
-            customPaymentTerms={customPaymentTerms}
-            creditDays={creditDays}
-            observations={observations}
-            onCompanySelect={handleCompanySelect}
-            onSupplierSelect={handleSupplierSelect}
-            onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
-            onExchangeRateChange={setExchangeRate}
-            onDeliveryDateChange={setDeliveryDate}
-            onPaymentTermsChange={setPaymentTerms}
-            onCustomPaymentTermsChange={setCustomPaymentTerms}
-            onCreditDaysChange={setCreditDays}
-            onObservationsChange={setObservations}
-          />
+          <div className="p-4 border rounded-lg bg-muted/50 mb-6">
+            <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Detalles Generales</h3>
+            <PurchaseOrderDetailsForm
+              companyId={companyId}
+              companyName={companyName}
+              supplierId={supplierId}
+              supplierName={supplierName}
+              currency={currency}
+              exchangeRate={exchangeRate}
+              deliveryDate={deliveryDate}
+              paymentTerms={paymentTerms}
+              customPaymentTerms={customPaymentTerms}
+              creditDays={creditDays}
+              observations={observations}
+              onCompanySelect={handleCompanySelect}
+              onSupplierSelect={handleSupplierSelect}
+              onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
+              onExchangeRateChange={setExchangeRate}
+              onDeliveryDateChange={setDeliveryDate}
+              onPaymentTermsChange={setPaymentTerms}
+              onCustomPaymentTermsChange={setCustomPaymentTerms}
+              onCreditDaysChange={setCreditDays}
+              onObservationsChange={setObservations}
+            />
+          </div>
 
           <PurchaseOrderItemsTable
             items={items}
@@ -340,8 +340,8 @@ const EditPurchaseOrder = () => {
           <div className="flex justify-end gap-2 mt-6">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" disabled={isSubmitting || !companyId}>
-                  Previsualizar PDF
+                <Button variant="secondary" disabled={isSubmitting || !companyId || items.length === 0}>
+                  <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
@@ -357,7 +357,6 @@ const EditPurchaseOrder = () => {
                     status: initialOrder.status,
                     created_by: userEmail || 'unknown',
                     user_id: userId || '',
-                    // Pass new fields for preview
                     delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
                     payment_terms: paymentTerms,
                     custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
@@ -369,8 +368,8 @@ const EditPurchaseOrder = () => {
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !deliveryDate} className="bg-procarni-secondary hover:bg-green-700">
-              {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !deliveryDate || items.length === 0} className="bg-procarni-secondary hover:bg-green-700">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Cambios'}
             </Button>
           </div>
         </CardContent>

@@ -4,17 +4,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useSession } from '@/components/SessionContextProvider';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { createQuoteRequest, searchSuppliers, searchMaterialsBySupplier, searchCompanies } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { useLocation, useNavigate } from 'react-router-dom';
-import MaterialCreationDialog from '@/components/MaterialCreationDialog'; // Updated import
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import MaterialCreationDialog from '@/components/MaterialCreationDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Company {
   id: string;
@@ -36,7 +36,7 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
+  specification?: string;
 }
 
 const MATERIAL_UNITS = [
@@ -53,7 +53,6 @@ const GenerateQuoteRequest = () => {
   const [companyName, setCompanyName] = useState<string>('');
   const [supplierId, setSupplierId] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
-  // Moneda y Tasa de Cambio eliminados del estado
   const [items, setItems] = useState<QuoteRequestItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
@@ -61,11 +60,9 @@ const GenerateQuoteRequest = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Check if there's supplier data in the location state
   const supplierData = location.state?.supplier;
   const materialData = location.state?.material;
 
-  // Effect to prefill form from supplier data
   useEffect(() => {
     if (supplierData) {
       setSupplierId(supplierData.id);
@@ -73,20 +70,18 @@ const GenerateQuoteRequest = () => {
     }
   }, [supplierData]);
 
-  // Effect to prefill material if provided
   useEffect(() => {
     if (materialData) {
       // Add the material as the first item
       setItems([{
         material_name: materialData.name,
         quantity: 0,
-        description: '',
+        description: materialData.specification || '',
         unit: materialData.unit || MATERIAL_UNITS[0],
       }]);
     }
   }, [materialData]);
 
-  // New wrapper function for material search, filtered by selected supplier
   const searchSupplierMaterials = React.useCallback(async (query: string) => {
     if (!supplierId) return [];
     return searchMaterialsBySupplier(supplierId, query);
@@ -109,7 +104,6 @@ const GenerateQuoteRequest = () => {
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || MATERIAL_UNITS[0]);
-    // Import specification into description if available
     if (material.specification) {
       handleItemChange(index, 'description', material.specification);
     }
@@ -121,9 +115,7 @@ const GenerateQuoteRequest = () => {
   };
 
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
-    // Since the material is created and associated immediately in the dialog, 
-    // we just need to ensure the user can select it now.
-    // The user will select it via SmartSearch.
+    // Material created and associated, user can now select it via SmartSearch.
   };
 
   const handleSubmit = async () => {
@@ -139,8 +131,9 @@ const GenerateQuoteRequest = () => {
       showError('Por favor, selecciona un proveedor.');
       return;
     }
-    // Validación de ítems
-    if (items.length === 0 || items.some(item => !item.material_name || item.quantity <= 0 || !item.unit)) {
+    
+    const invalidItem = items.find(item => !item.material_name || item.quantity <= 0 || !item.unit);
+    if (items.length === 0 || invalidItem) {
       showError('Por favor, añade al menos un ítem válido con nombre, cantidad mayor a cero y unidad.');
       return;
     }
@@ -149,8 +142,8 @@ const GenerateQuoteRequest = () => {
     const requestData = {
       supplier_id: supplierId,
       company_id: companyId,
-      currency: 'USD' as const, // Default to USD
-      exchange_rate: null, // Set to null
+      currency: 'USD' as const,
+      exchange_rate: null,
       created_by: userEmail || 'unknown',
       user_id: userId,
     };
@@ -170,69 +163,15 @@ const GenerateQuoteRequest = () => {
   };
 
   const renderItemFields = (item: QuoteRequestItem, index: number) => {
-    const fields = [
-      {
-        label: 'Material',
-        content: (
-          <SmartSearch
-            placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
-            onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
-            fetchFunction={searchSupplierMaterials}
-            displayValue={item.material_name}
-            disabled={!supplierId}
-          />
-        ),
-        span: isMobile ? 2 : 2,
-      },
-      {
-        label: 'Cantidad',
-        content: (
-          <Input
-            id={`quantity-${index}`}
-            type="number"
-            value={item.quantity}
-            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
-            min="0"
-          />
-        ),
-        span: isMobile ? 1 : 1,
-      },
-      {
-        label: 'Unidad',
-        content: (
-          <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
-            <SelectTrigger id={`unit-${index}`}>
-              <SelectValue placeholder="Unidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {MATERIAL_UNITS.map(unitOption => (
-                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ),
-        span: isMobile ? 1 : 1,
-      },
-      {
-        label: 'Descripción',
-        content: (
-          <Textarea
-            id={`description-${index}`}
-            value={item.description}
-            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-            placeholder="Especificación, marca, etc."
-            rows={1}
-          />
-        ),
-        span: isMobile ? 2 : 2,
-      },
-    ];
+    const isMaterialSelected = !!item.material_name; // Simple check for name presence
 
     if (isMobile) {
       return (
         <div key={index} className="border rounded-md p-3 space-y-3 bg-white shadow-sm">
           <div className="flex justify-between items-center border-b pb-2">
-            <h4 className="font-semibold text-procarni-primary truncate">{item.material_name || 'Nuevo Ítem'}</h4>
+            <h4 className="font-semibold text-procarni-primary truncate flex items-center">
+              {item.material_name || 'Nuevo Ítem'}
+            </h4>
             <div className="flex gap-1">
               <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
                 <PlusCircle className="h-4 w-4" />
@@ -243,12 +182,53 @@ const GenerateQuoteRequest = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            {fields.map((field, fieldIndex) => (
-              <div key={fieldIndex} className={`space-y-1 ${field.span === 2 ? 'col-span-2' : ''}`}>
-                <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
-                {field.content}
-              </div>
-            ))}
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground flex items-center">
+                Material
+                {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+              </label>
+              <SmartSearch
+                placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+                onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+                fetchFunction={searchSupplierMaterials}
+                displayValue={item.material_name}
+                disabled={!supplierId}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Cantidad</label>
+              <Input
+                id={`quantity-${index}`}
+                type="number"
+                value={item.quantity}
+                onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+                min="0"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Unidad</label>
+              <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+                <SelectTrigger id={`unit-${index}`} className="h-9">
+                  <SelectValue placeholder="Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATERIAL_UNITS.map(unitOption => (
+                    <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+              <Textarea
+                id={`description-${index}`}
+                value={item.description}
+                onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                placeholder="Especificación, marca, etc."
+                rows={2}
+              />
+            </div>
           </div>
         </div>
       );
@@ -256,24 +236,55 @@ const GenerateQuoteRequest = () => {
 
     // Desktop/Tablet View
     return (
-      <div key={index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md">
+      <div key={index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md bg-white shadow-sm">
         <div className="col-span-2">
-          <Label htmlFor={`material_name-${index}`}>Material</Label>
-          {fields[0].content}
+          <Label htmlFor={`material_name-${index}`} className="flex items-center">
+            Material
+            {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+          </Label>
+          <SmartSearch
+            placeholder={supplierId ? "Buscar material asociado al proveedor" : "Selecciona un proveedor primero"}
+            onSelect={(material) => handleMaterialSelect(index, material as MaterialSearchResult)}
+            fetchFunction={searchSupplierMaterials}
+            displayValue={item.material_name}
+            disabled={!supplierId}
+          />
         </div>
         <div className="col-span-1">
           <Label htmlFor={`quantity-${index}`}>Cantidad</Label>
-          {fields[1].content}
+          <Input
+            id={`quantity-${index}`}
+            type="number"
+            value={item.quantity}
+            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value))}
+            min="0"
+          />
         </div>
         <div className="col-span-1">
           <Label htmlFor={`unit-${index}`}>Unidad</Label>
-          {fields[2].content}
+          <Select value={item.unit} onValueChange={(value) => handleItemChange(index, 'unit', value)}>
+            <SelectTrigger id={`unit-${index}`}>
+              <SelectValue placeholder="Unidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {MATERIAL_UNITS.map(unitOption => (
+                <SelectItem key={unitOption} value={unitOption}>{unitOption}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="col-span-2">
           <Label htmlFor={`description-${index}`}>Descripción</Label>
-          {fields[3].content}
+          <Textarea
+            id={`description-${index}`}
+            value={item.description}
+            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+            placeholder="Especificación, marca, etc."
+            rows={1}
+            className="min-h-10"
+          />
         </div>
-        <div className="flex flex-col space-y-2 col-span-1">
+        <div className="flex flex-col space-y-2 col-span-1 justify-end">
           <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8">
             <PlusCircle className="h-4 w-4" />
           </Button>
@@ -298,9 +309,9 @@ const GenerateQuoteRequest = () => {
           <CardDescription>Crea una nueva solicitud de cotización para tus proveedores.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 border rounded-lg bg-muted/50">
             <div>
-              <Label htmlFor="company">Empresa de Origen</Label>
+              <Label htmlFor="company">Empresa de Origen *</Label>
               <SmartSearch
                 placeholder="Buscar empresa por RIF o nombre"
                 onSelect={handleCompanySelect}
@@ -310,7 +321,7 @@ const GenerateQuoteRequest = () => {
               {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
             </div>
             <div>
-              <Label htmlFor="supplier">Proveedor</Label>
+              <Label htmlFor="supplier">Proveedor *</Label>
               <SmartSearch
                 placeholder="Buscar proveedor por RIF o nombre"
                 onSelect={(supplier) => {
@@ -322,22 +333,21 @@ const GenerateQuoteRequest = () => {
               />
               {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
             </div>
-            {/* Moneda y Tasa de Cambio eliminados */}
           </div>
 
-          <h3 className="text-lg font-semibold mb-4">Ítems de la Solicitud</h3>
+          <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Ítems de la Solicitud</h3>
           <div className="space-y-4">
             {items.map(renderItemFields)}
             <div className="flex justify-between">
-              <Button variant="outline" onClick={handleAddItem} className="w-full mr-2">
+              <Button variant="outline" onClick={handleAddItem} className="w-full">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Ítem
               </Button>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId} className="bg-procarni-secondary hover:bg-green-700">
-              {isSubmitting ? 'Guardando...' : 'Guardar Solicitud de Cotización'}
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || items.length === 0} className="bg-procarni-secondary hover:bg-green-700">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Solicitud de Cotización'}
             </Button>
           </div>
         </CardContent>

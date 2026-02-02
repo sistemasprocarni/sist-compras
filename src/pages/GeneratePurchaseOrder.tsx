@@ -4,30 +4,23 @@ import { Button } from '@/components/ui/button';
 import { useSession } from '@/components/SessionContextProvider';
 import { useShoppingCart } from '@/context/ShoppingCartContext';
 import { calculateTotals } from '@/utils/calculations';
-import { PlusCircle, Trash2, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 import { createPurchaseOrder, searchSuppliers, searchCompanies, searchMaterialsBySupplier, getSupplierDetails, updateQuoteRequest } from '@/integrations/supabase/data';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
-import SmartSearch from '@/components/SmartSearch';
-import { useQuery } from '@tanstack/react-query';
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Textarea } from '@/components/ui/textarea';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import { useLocation, useNavigate } from 'react-router-dom';
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
+import { format } from 'date-fns';
 
 interface Company {
   id: string;
   name: string;
-  rif: string; // Added rif for SmartSearch
+  rif: string;
 }
 
-// Define MaterialSearchResult structure based on what searchMaterialsBySupplier returns
 interface MaterialSearchResult {
   id: string;
   name: string;
@@ -35,10 +28,9 @@ interface MaterialSearchResult {
   category?: string;
   unit?: string;
   is_exempt?: boolean;
-  specification?: string; // Added specification field
+  specification?: string;
 }
 
-// Define las unidades de medida.
 const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA'
 ];
@@ -46,17 +38,16 @@ const MATERIAL_UNITS = [
 const GeneratePurchaseOrder = () => {
   const { session, isLoadingSession } = useSession();
   const { items, addItem, updateItem, removeItem, clearCart } = useShoppingCart();
-  const location = useLocation(); // Hook para obtener el estado de la navegación
-  const navigate = useNavigate(); // Hook para navegar
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [companyId, setCompanyId] = React.useState<string>(''); // Now explicitly selected
-  const [companyName, setCompanyName] = React.useState<string>(''); // For SmartSearch display
+  const [companyId, setCompanyId] = React.useState<string>('');
+  const [companyName, setCompanyName] = React.useState<string>('');
   const [supplierId, setSupplierId] = React.useState<string>('');
   const [supplierName, setSupplierName] = React.useState<string>('');
   const [currency, setCurrency] = React.useState<'USD' | 'VES'>('USD');
   const [exchangeRate, setExchangeRate] = React.useState<number | undefined>(undefined);
   
-  // New states for PO details
   const [deliveryDate, setDeliveryDate] = React.useState<Date | undefined>(undefined);
   const [paymentTerms, setPaymentTerms] = React.useState<'Contado' | 'Crédito' | 'Otro'>('Contado');
   const [customPaymentTerms, setCustomPaymentTerms] = React.useState<string>('');
@@ -69,12 +60,10 @@ const GeneratePurchaseOrder = () => {
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
 
-  // Check if there's a quote request in the location state
   const quoteRequest = location.state?.quoteRequest;
   const supplierData = location.state?.supplier;
-  const materialData = location.state?.material; // New: Check for material data
+  const materialData = location.state?.material;
 
-  // Effect to prefill form from quote request
   React.useEffect(() => {
     const loadQuoteRequestItems = async () => {
       if (quoteRequest) {
@@ -90,19 +79,14 @@ const GeneratePurchaseOrder = () => {
         
         const supplierIdForSearch = quoteRequest.supplier_id;
         
-        // Process items from quote request
         for (const item of quoteRequest.quote_request_items) {
           let materialId: string | undefined = undefined;
           let supplierCode: string = '';
           let isExempt: boolean = false;
           
-          // Attempt to find the material ID and supplier code by name and supplier ID
           if (supplierIdForSearch) {
             try {
-              // Search materials associated with the supplier by the material name
               const associatedMaterials = await searchMaterialsBySupplier(supplierIdForSearch, item.material_name);
-              
-              // Find an exact match by name
               const exactMatch = associatedMaterials.find(m => m.name.toLowerCase() === item.material_name.toLowerCase());
               
               if (exactMatch) {
@@ -116,15 +100,15 @@ const GeneratePurchaseOrder = () => {
           }
 
           addItem({
-            material_id: materialId, // Will be undefined if not found, forcing manual selection/entry
+            material_id: materialId,
             material_name: item.material_name,
             supplier_code: supplierCode,
             quantity: item.quantity,
-            unit_price: 0, // Price needs to be entered
+            unit_price: 0,
             tax_rate: 0.16,
             is_exempt: isExempt,
             unit: item.unit || MATERIAL_UNITS[0],
-            description: item.description || '', // ADDED description from QR item
+            description: item.description || '',
           });
         }
       }
@@ -133,7 +117,6 @@ const GeneratePurchaseOrder = () => {
     loadQuoteRequestItems();
   }, [quoteRequest]);
 
-  // Effect to prefill form from supplier data
   React.useEffect(() => {
     if (supplierData) {
       setSupplierId(supplierData.id);
@@ -141,12 +124,10 @@ const GeneratePurchaseOrder = () => {
     }
   }, [supplierData]);
 
-  // Effect to prefill material if provided
   React.useEffect(() => {
     if (materialData) {
-      // Add the material as the first item
       addItem({
-        material_id: materialData.id, // Include material ID
+        material_id: materialData.id,
         material_name: materialData.name,
         supplier_code: '',
         quantity: 0,
@@ -154,19 +135,17 @@ const GeneratePurchaseOrder = () => {
         tax_rate: 0.16,
         is_exempt: materialData.is_exempt || false,
         unit: materialData.unit || MATERIAL_UNITS[0],
-        description: materialData.specification || '', // ADDED description from material specification
+        description: materialData.specification || '',
       });
     }
   }, [materialData]);
 
-  // Fetch supplier details to get default payment terms
   const { data: supplierDetails } = useQuery({
     queryKey: ['supplierDetails', supplierId],
     queryFn: () => getSupplierDetails(supplierId),
     enabled: !!supplierId,
   });
 
-  // Effect to set default payment terms when supplier changes
   React.useEffect(() => {
     if (supplierDetails) {
       const terms = supplierDetails.payment_terms as 'Contado' | 'Crédito' | 'Otro';
@@ -174,7 +153,6 @@ const GeneratePurchaseOrder = () => {
       setCustomPaymentTerms(supplierDetails.custom_payment_terms || '');
       setCreditDays(supplierDetails.credit_days || 0);
     } else {
-      // Reset if supplier is cleared
       setPaymentTerms('Contado');
       setCustomPaymentTerms('');
       setCreditDays(0);
@@ -182,15 +160,13 @@ const GeneratePurchaseOrder = () => {
   }, [supplierDetails]);
 
   const handleMaterialSelect = (index: number, material: MaterialSearchResult) => {
-    // Update material_name, unit, is_exempt, and material_id based on selected material
     updateItem(index, {
-      material_id: material.id, // IMPORTANT: Capture material ID
+      material_id: material.id,
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
-      supplier_code: material.code || '', // Use material code as supplier code if available
-      // tax_rate remains 0.16 by default, calculation handles is_exempt
-      description: material.specification || '', // Update description with specification
+      supplier_code: material.code || '',
+      description: material.specification || '',
     });
   };
 
@@ -243,7 +219,6 @@ const GeneratePurchaseOrder = () => {
       return;
     }
     
-    // --- Refined Item Validation ---
     const invalidItem = items.find(item => 
       !item.material_id || 
       !item.material_name || 
@@ -268,7 +243,6 @@ const GeneratePurchaseOrder = () => {
       showError(specificError);
       return;
     }
-    // --- End Refined Item Validation ---
 
     if (paymentTerms === 'Otro' && (!customPaymentTerms || customPaymentTerms.trim() === '')) {
       showError('Debe especificar los términos de pago personalizados.');
@@ -286,28 +260,24 @@ const GeneratePurchaseOrder = () => {
     setIsSubmitting(true);
     const orderData = {
       supplier_id: supplierId,
-      company_id: companyId, // Use the selected company ID
+      company_id: companyId,
       currency,
       exchange_rate: currency === 'VES' ? exchangeRate : null,
-      status: 'Draft', // O el estado inicial que desees
+      status: 'Draft',
       created_by: userEmail || 'unknown',
       user_id: userId,
-      // New fields
       delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
       payment_terms: paymentTerms,
       custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
       credit_days: paymentTerms === 'Crédito' ? creditDays : 0,
       observations: observations || null,
-      // Link to quote request if it exists
       quote_request_id: quoteRequest?.id || null,
     };
 
     const createdOrder = await createPurchaseOrder(orderData, items);
 
     if (createdOrder) {
-      // 1. Archive the source Quote Request if it exists
       if (quoteRequest?.id && quoteRequest.quote_request_items) {
-        // Prepare items payload for update (removing id/request_id fields)
         const itemsPayload = quoteRequest.quote_request_items.map((item: any) => ({
           material_name: item.material_name,
           quantity: item.quantity,
@@ -336,7 +306,6 @@ const GeneratePurchaseOrder = () => {
       setCustomPaymentTerms('');
       setCreditDays(0);
       setObservations('');
-      // Optionally, redirect or show a success message
     }
     setIsSubmitting(false);
   };
@@ -412,8 +381,8 @@ const GeneratePurchaseOrder = () => {
           <div className="flex justify-end gap-2 mt-6">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
-                <Button variant="secondary" disabled={isSubmitting || !companyId}>
-                  Previsualizar PDF
+                <Button variant="secondary" disabled={isSubmitting || !companyId || items.length === 0}>
+                  <FileText className="mr-2 h-4 w-4" /> Previsualizar PDF
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-5xl h-[95vh] flex flex-col">
@@ -423,13 +392,12 @@ const GeneratePurchaseOrder = () => {
                 <PurchaseOrderDraftPreview
                   orderData={{
                     supplier_id: supplierId,
-                    company_id: companyId || '', // Pass the selected company ID
+                    company_id: companyId || '',
                     currency,
                     exchange_rate: currency === 'VES' ? exchangeRate : null,
                     status: 'Draft',
                     created_by: userEmail || 'unknown',
                     user_id: userId || '',
-                    // Pass new fields for preview
                     delivery_date: deliveryDate ? format(deliveryDate, 'yyyy-MM-dd') : undefined,
                     payment_terms: paymentTerms,
                     custom_payment_terms: paymentTerms === 'Otro' ? customPaymentTerms : null,
@@ -441,8 +409,8 @@ const GeneratePurchaseOrder = () => {
                 />
               </DialogContent>
             </Dialog>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !deliveryDate} className="bg-procarni-secondary hover:bg-green-700">
-              {isSubmitting ? 'Guardando...' : 'Guardar Orden de Compra'}
+            <Button onClick={handleSubmit} disabled={isSubmitting || !userId || !companyId || !deliveryDate || items.length === 0} className="bg-procarni-secondary hover:bg-green-700">
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Orden de Compra'}
             </Button>
           </div>
         </CardContent>

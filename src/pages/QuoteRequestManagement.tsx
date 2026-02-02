@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Eye, ArrowLeft, Archive, RotateCcw } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Eye, ArrowLeft, Archive, RotateCcw, CheckCircle, Send } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllQuoteRequests, deleteQuoteRequest, archiveQuoteRequest, unarchiveQuoteRequest } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface QuoteRequest {
   id: string;
@@ -74,7 +75,8 @@ const QuoteRequestManagement = () => {
     return currentRequests.filter(request =>
       request.suppliers.name.toLowerCase().includes(lowerCaseSearchTerm) ||
       request.companies.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      request.currency.toLowerCase().includes(lowerCaseSearchTerm)
+      request.currency.toLowerCase().includes(lowerCaseSearchTerm) ||
+      request.id.toLowerCase().includes(lowerCaseSearchTerm)
     );
   }, [currentRequests, searchTerm]);
 
@@ -157,6 +159,21 @@ const QuoteRequestManagement = () => {
     navigate(`/quote-requests/edit/${requestId}`);
   };
 
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'Sent':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'Approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'Archived':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
   if (error) {
     showError(error.message);
     return (
@@ -165,6 +182,72 @@ const QuoteRequestManagement = () => {
       </div>
     );
   }
+
+  const renderActions = (request: QuoteRequest) => {
+    const isEditable = request.status === 'Draft';
+    const isArchived = request.status === 'Archived';
+
+    return (
+      <TableCell className="text-right whitespace-nowrap">
+        <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        {isEditable && (
+          <Button variant="ghost" size="icon" onClick={() => handleEditRequest(request.id)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+        )}
+        {isEditable && (
+          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)} title="Enviar">
+            <Send className="h-4 w-4 text-blue-600" />
+          </Button>
+        )}
+        {!isArchived && (
+          <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')} title="Archivar">
+            <Archive className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+        {isArchived && (
+          <>
+            <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'unarchive')} title="Desarchivar">
+              <RotateCcw className="h-4 w-4 text-procarni-secondary" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => confirmDelete(request.id)} title="Eliminar Permanentemente">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        )}
+      </TableCell>
+    );
+  };
+
+  const renderMobileCard = (request: QuoteRequest) => (
+    <Card key={request.id} className="p-4 shadow-md">
+      <div className="flex justify-between items-start mb-2">
+        <CardTitle className="text-lg truncate">{request.suppliers.name}</CardTitle>
+        <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
+          {request.status}
+        </span>
+      </div>
+      <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
+      <div className="text-sm space-y-1">
+        <p><strong>ID:</strong> {request.id.substring(0, 8)}</p>
+        <p><strong>Moneda:</strong> {request.currency}</p>
+        {request.exchange_rate && <p><strong>Tasa:</strong> {request.exchange_rate.toFixed(2)}</p>}
+        <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
+      </div>
+      <div className="flex justify-end gap-2 mt-4 border-t pt-3">
+        <Button variant="outline" size="sm" onClick={() => handleViewDetails(request.id)}>
+          <Eye className="h-4 w-4 mr-2" /> Ver Detalles
+        </Button>
+        {request.status !== 'Archived' && (
+          <Button variant="outline" size="sm" onClick={() => confirmAction(request.id, 'archive')}>
+            <Archive className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
 
   return (
     <div className="container mx-auto p-4">
@@ -193,12 +276,12 @@ const QuoteRequestManagement = () => {
               <TabsTrigger value="archived">Archivadas</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="active" className="mt-4">
+            <TabsContent value={activeTab} className="mt-4">
               <div className="relative mb-4">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Buscar por proveedor, empresa, estado o moneda..."
+                  placeholder="Buscar por proveedor, empresa, estado o ID..."
                   className="w-full appearance-none bg-background pl-8 shadow-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -206,65 +289,42 @@ const QuoteRequestManagement = () => {
               </div>
               
               {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando solicitudes activas...</div>
+                <div className="text-center text-muted-foreground p-8">Cargando solicitudes...</div>
               ) : filteredQuoteRequests.length > 0 ? (
                 isMobile ? (
                   <div className="grid gap-4">
-                    {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4">
-                        <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
-                        <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Moneda:</strong> {request.currency}</p>
-                          {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
-                          <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditRequest(request.id)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
-                            <Archive className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                    {filteredQuoteRequests.map(renderMobileCard)}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>ID</TableHead>
                           <TableHead>Proveedor</TableHead>
                           <TableHead>Empresa</TableHead>
                           <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
+                          <TableHead>Tasa</TableHead>
+                          <TableHead>Estado</TableHead>
                           <TableHead>Fecha Creación</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredQuoteRequests.map((request) => (
-                          <TableRow key={request.id}>
-                            <TableCell>{request.suppliers.name}</TableCell>
+                          <TableRow key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <TableCell className="text-xs">{request.id.substring(0, 8)}</TableCell>
+                            <TableCell className="font-medium">{request.suppliers.name}</TableCell>
                             <TableCell>{request.companies.name}</TableCell>
                             <TableCell>{request.currency}</TableCell>
                             <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleEditRequest(request.id)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
+                            <TableCell>
+                              <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
+                                {request.status}
+                              </span>
                             </TableCell>
+                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+                            {renderActions(request)}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -273,170 +333,7 @@ const QuoteRequestManagement = () => {
                 )
               ) : (
                 <div className="text-center text-muted-foreground p-8">
-                  No hay solicitudes de cotización activas o no se encontraron resultados para tu búsqueda.
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="approved" className="mt-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar en aprobadas..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando solicitudes aprobadas...</div>
-              ) : filteredQuoteRequests.length > 0 ? (
-                isMobile ? (
-                  <div className="grid gap-4">
-                    {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500">
-                        <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
-                        <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Moneda:</strong> {request.currency}</p>
-                          {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
-                          <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
-                            <Archive className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
-                          <TableHead>Fecha Creación</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredQuoteRequests.map((request) => (
-                          <TableRow key={request.id} className="bg-green-50/50 dark:bg-green-900/20">
-                            <TableCell>{request.suppliers.name}</TableCell>
-                            <TableCell>{request.companies.name}</TableCell>
-                            <TableCell>{request.currency}</TableCell>
-                            <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')}>
-                                <Archive className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay solicitudes de cotización aprobadas o no se encontraron resultados para tu búsqueda.
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="archived" className="mt-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Buscar en archivados..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {isLoading ? (
-                <div className="text-center text-muted-foreground p-8">Cargando solicitudes archivadas...</div>
-              ) : filteredQuoteRequests.length > 0 ? (
-                isMobile ? (
-                  <div className="grid gap-4">
-                    {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4 bg-gray-50 dark:bg-gray-800">
-                        <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
-                        <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
-                        <div className="text-sm space-y-1">
-                          <p><strong>Moneda:</strong> {request.currency}</p>
-                          <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'unarchive')}>
-                            <RotateCcw className="h-4 w-4 text-procarni-secondary" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(request.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Proveedor</TableHead>
-                          <TableHead>Empresa</TableHead>
-                          <TableHead>Moneda</TableHead>
-                          <TableHead>Tasa de Cambio</TableHead>
-                          <TableHead>Fecha Creación</TableHead>
-                          <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredQuoteRequests.map((request) => (
-                          <TableRow key={request.id} className="bg-gray-50 dark:bg-gray-800">
-                            <TableCell>{request.suppliers.name}</TableCell>
-                            <TableCell>{request.companies.name}</TableCell>
-                            <TableCell>{request.currency}</TableCell>
-                            <TableCell>{request.exchange_rate ? request.exchange_rate.toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'unarchive')}>
-                                <RotateCcw className="h-4 w-4 text-procarni-secondary" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => confirmDelete(request.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No hay solicitudes de cotización archivadas o no se encontraron resultados para tu búsqueda.
+                  No hay solicitudes de cotización en este estado o no se encontraron resultados para tu búsqueda.
                 </div>
               )}
             </TabsContent>

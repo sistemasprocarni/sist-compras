@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail, MoreVertical, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail, MoreVertical, CheckCircle, Tag, Building2, DollarSign, Clock } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails, updateQuoteRequestStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
@@ -15,7 +15,7 @@ import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -80,7 +80,6 @@ const QuoteRequestDetails = () => {
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   
-  // Ref para acceder al componente interno y llamar a su función de cierre
   const qrViewerRef = React.useRef<QuoteRequestPreviewModalRef>(null);
 
   const { data: request, isLoading, error } = useQuery<QuoteRequestDetailsData | null>({
@@ -132,7 +131,6 @@ const QuoteRequestDetails = () => {
     if (!request) return '';
     const supplierName = request.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
     const date = new Date(request.created_at).toLocaleDateString('es-VE').replace(/\//g, '-');
-    // Formato: SC_ID_PROVEEDOR_FECHA.pdf
     return `SC_${request.id.substring(0, 8)}_${supplierName}_${date}.pdf`;
   };
 
@@ -141,7 +139,6 @@ const QuoteRequestDetails = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        console.log(`[QuoteRequestDetails] Base64 conversion complete. Length: ${result.length}`);
         resolve(result);
       };
       reader.onerror = (error) => {
@@ -159,7 +156,6 @@ const QuoteRequestDetails = () => {
 
     try {
       // 1. Generate PDF
-      console.log(`[QuoteRequestDetails] Generating PDF for request: ${request.id}`);
       const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-qr-pdf`, {
         method: 'POST',
         headers: {
@@ -175,10 +171,7 @@ const QuoteRequestDetails = () => {
       }
 
       const pdfBlob = await pdfResponse.blob();
-      console.log(`[QuoteRequestDetails] PDF blob size: ${pdfBlob.size} bytes`);
-      
       const pdfBase64 = await blobToBase64(pdfBlob);
-      console.log(`[QuoteRequestDetails] PDF base64 length: ${pdfBase64.length}`);
 
       // 2. Send Email
       const emailBody = `
@@ -190,7 +183,6 @@ const QuoteRequestDetails = () => {
         <p>Se adjunta el PDF con los detalles de la solicitud.</p>
       `;
 
-      console.log(`[QuoteRequestDetails] Sending email to: ${request.suppliers?.email}`);
       const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
         method: 'POST',
         headers: {
@@ -266,9 +258,23 @@ const QuoteRequestDetails = () => {
 
   const handleModalOpenChange = (open: boolean) => {
     setIsModalOpen(open);
-    // Si el modal se está cerrando (open es false), llamamos a la función de cierre interna
     if (!open && qrViewerRef.current) {
       qrViewerRef.current.handleClose();
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'Sent':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'Approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'Archived':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -291,7 +297,7 @@ const QuoteRequestDetails = () => {
             requestId={request.id}
             onClose={() => setIsModalOpen(false)}
             fileName={generateFileName()}
-            ref={qrViewerRef} // Pasar la referencia al componente interno
+            ref={qrViewerRef}
           />
         </DialogContent>
       </Dialog>
@@ -338,9 +344,13 @@ const QuoteRequestDetails = () => {
       )}
 
       {/* 6. Editar Solicitud */}
-      {isEditable && (
+      {isEditable ? (
         <DropdownMenuItem onSelect={() => navigate(`/quote-requests/edit/${request.id}`)} className="cursor-pointer">
           <Edit className="mr-2 h-4 w-4" /> Editar Solicitud
+        </DropdownMenuItem>
+      ) : (
+        <DropdownMenuItem disabled>
+          <Edit className="mr-2 h-4 w-4" /> Editar Solicitud (No editable)
         </DropdownMenuItem>
       )}
 
@@ -360,7 +370,6 @@ const QuoteRequestDetails = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         
-        {/* Always use DropdownMenu for actions */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary">
@@ -382,22 +391,45 @@ const QuoteRequestDetails = () => {
           <CardDescription>Detalles completos de la solicitud de cotización.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
-            <p><strong>Proveedor:</strong> {request.suppliers?.name || 'N/A'}</p>
-            <p><strong>Empresa:</strong> {request.companies?.name || 'N/A'}</p>
-            <p><strong>Moneda:</strong> {request.currency}</p>
-            {request.exchange_rate && <p><strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}</p>}
-            <p><strong>Fecha de Creación:</strong> {new Date(request.created_at).toLocaleDateString()} {new Date(request.created_at).toLocaleTimeString()}</p>
-            <p><strong>Creado por:</strong> {request.created_by || 'N/A'}</p>
-            <p><strong>Estado:</strong> <span className={`font-bold ${request.status === 'Approved' ? 'text-green-600' : request.status === 'Draft' ? 'text-yellow-600' : 'text-blue-600'}`}>{request.status}</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6 p-4 border rounded-lg bg-muted/50">
+            <p className="flex items-center">
+              <Tag className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>ID:</strong> {request.id.substring(0, 8)}
+            </p>
+            <p className="flex items-center">
+              <Building2 className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Empresa:</strong> {request.companies?.name || 'N/A'}
+            </p>
+            <p className="flex items-center">
+              <Users className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Proveedor:</strong> {request.suppliers?.name || 'N/A'}
+            </p>
+            <p className="flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Moneda:</strong> {request.currency}
+            </p>
+            {request.exchange_rate && <p className="flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Tasa de Cambio:</strong> {request.exchange_rate.toFixed(2)}
+            </p>}
+            <p className="flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString()}
+            </p>
+            <p className="md:col-span-3">
+              <strong>Estado:</strong> 
+              <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
+                {request.status}
+              </span>
+            </p>
           </div>
 
-          <h3 className="text-lg font-semibold mt-8 mb-4">Ítems Solicitados</h3>
+          <h3 className="text-lg font-semibold mt-8 mb-4 text-procarni-primary">Ítems Solicitados</h3>
           {request.quote_request_items && request.quote_request_items.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
                 {request.quote_request_items.map((item) => (
-                  <Card key={item.id} className="p-3">
+                  <Card key={item.id} className="p-3 shadow-sm">
                     <p className="font-semibold text-procarni-primary">{item.material_name}</p>
                     <div className="text-sm mt-1 space-y-0.5">
                       <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>
@@ -420,7 +452,7 @@ const QuoteRequestDetails = () => {
                   <TableBody>
                     {request.quote_request_items.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{item.material_name}</TableCell>
+                        <TableCell className="font-medium">{item.material_name}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{item.unit || 'N/A'}</TableCell>
                         <TableCell>{item.description || 'N/A'}</TableCell>
@@ -447,7 +479,6 @@ const QuoteRequestDetails = () => {
         documentId={request.id}
       />
 
-      {/* AlertDialog for Approval Confirmation */}
       <AlertDialog open={isApproveConfirmOpen} onOpenChange={setIsApproveConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

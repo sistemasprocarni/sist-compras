@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, Mail, MoreVertical, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, Mail, MoreVertical, CheckCircle, Tag, Building2, DollarSign, Clock, ListOrdered } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getPurchaseOrderDetails, updatePurchaseOrderStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
@@ -16,7 +16,7 @@ import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
-import { useIsMobile } from '@/hooks/use-mobile'; // Importar hook de móvil
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -36,7 +36,8 @@ interface PurchaseOrderItem {
   unit_price: number;
   tax_rate: number;
   is_exempt: boolean;
-  unit?: string; // Added unit field
+  unit?: string;
+  description?: string;
 }
 
 interface SupplierDetails {
@@ -97,7 +98,6 @@ const PurchaseOrderDetails = () => {
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   
-  // Ref para acceder al componente interno y llamar a su función de cierre
   const pdfViewerRef = React.useRef<PurchaseOrderPDFViewerRef>(null);
 
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
@@ -141,7 +141,6 @@ const PurchaseOrderDetails = () => {
   const generateFileName = () => {
     if (!order) return '';
     const sequence = formatSequenceNumber(order.sequence_number, order.created_at);
-    // Clean supplier name for filename
     const supplierName = order.suppliers?.name?.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Proveedor';
     return `${sequence}-${supplierName}.pdf`;
   };
@@ -151,7 +150,6 @@ const PurchaseOrderDetails = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        console.log(`[PurchaseOrderDetails] Base64 conversion complete. Length: ${result.length}`);
         resolve(result);
       };
       reader.onerror = (error) => {
@@ -194,7 +192,6 @@ const PurchaseOrderDetails = () => {
 
     try {
       // 1. Generate PDF
-      console.log(`[PurchaseOrderDetails] Generating PDF for order: ${order.id}`);
       const pdfResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-po-pdf`, {
         method: 'POST',
         headers: {
@@ -210,10 +207,7 @@ const PurchaseOrderDetails = () => {
       }
 
       const pdfBlob = await pdfResponse.blob();
-      console.log(`[PurchaseOrderDetails] PDF blob size: ${pdfBlob.size} bytes`);
-      
       const pdfBase64 = await blobToBase64(pdfBlob);
-      console.log(`[PurchaseOrderDetails] PDF base64 length: ${pdfBase64.length}`);
 
       // 2. Send Email
       const emailBody = `
@@ -226,7 +220,6 @@ const PurchaseOrderDetails = () => {
         <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
       `;
 
-      console.log(`[PurchaseOrderDetails] Sending email to: ${order.suppliers?.email}`);
       const emailResponse = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/send-email`, {
         method: 'POST',
         headers: {
@@ -302,9 +295,25 @@ const PurchaseOrderDetails = () => {
 
   const handleModalOpenChange = (open: boolean) => {
     setIsModalOpen(open);
-    // Si el modal se está cerrando (open es false), llamamos a la función de cierre interna
     if (!open && pdfViewerRef.current) {
       pdfViewerRef.current.handleClose();
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Draft':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'Sent':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'Approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      case 'Archived':
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -327,7 +336,7 @@ const PurchaseOrderDetails = () => {
             orderId={order.id}
             onClose={() => setIsModalOpen(false)}
             fileName={generateFileName()}
-            ref={pdfViewerRef} // Pasar la referencia al componente interno
+            ref={pdfViewerRef}
           />
         </DialogContent>
       </Dialog>
@@ -367,7 +376,7 @@ const PurchaseOrderDetails = () => {
       <DropdownMenuSeparator />
 
       {/* 5. Aprobar Orden */}
-      {isEditable && (
+      {isEditable && order.status !== 'Approved' && (
         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsApproveConfirmOpen(true); }} disabled={isApproving} className="cursor-pointer text-green-600 focus:text-green-700">
           <CheckCircle className="mr-2 h-4 w-4" /> Aprobar Orden
         </DropdownMenuItem>
@@ -380,7 +389,7 @@ const PurchaseOrderDetails = () => {
         </DropdownMenuItem>
       ) : (
         <DropdownMenuItem disabled>
-          <Edit className="mr-2 h-4 w-4" /> Editar Orden (Aprobada)
+          <Edit className="mr-2 h-4 w-4" /> Editar Orden (No editable)
         </DropdownMenuItem>
       )}
     </>
@@ -393,7 +402,6 @@ const PurchaseOrderDetails = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         
-        {/* Always use DropdownMenu for actions */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary">
@@ -415,26 +423,50 @@ const PurchaseOrderDetails = () => {
           <CardDescription>Detalles completos de la orden de compra.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6">
-            <p><strong>Proveedor:</strong> {order.suppliers?.name || 'N/A'}</p>
-            <p><strong>Empresa:</strong> {order.companies?.name || 'N/A'}</p>
-            <p><strong>Moneda:</strong> {order.currency}</p>
-            {order.exchange_rate && <p><strong>Tasa de Cambio:</strong> {order.exchange_rate.toFixed(2)}</p>}
-            <p><strong>Fecha de Creación:</strong> {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}</p>
-            <p><strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}</p>
-            <p><strong>Condición de Pago:</strong> {displayPaymentTerms()}</p>
-            <p><strong>Creado por:</strong> {order.created_by || 'N/A'}</p>
-            <p><strong>Estado:</strong> <span className={`font-bold ${order.status === 'Approved' ? 'text-green-600' : order.status === 'Draft' ? 'text-yellow-600' : 'text-blue-600'}`}>{order.status}</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-6 p-4 border rounded-lg bg-muted/50">
+            <p className="flex items-center">
+              <ListOrdered className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>N° Orden:</strong> {formatSequenceNumber(order.sequence_number, order.created_at)}
+            </p>
+            <p className="flex items-center">
+              <Building2 className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Empresa:</strong> {order.companies?.name || 'N/A'}
+            </p>
+            <p className="flex items-center">
+              <Tag className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Proveedor:</strong> {order.suppliers?.name || 'N/A'}
+            </p>
+            <p className="flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Moneda:</strong> {order.currency}
+            </p>
+            {order.exchange_rate && <p className="flex items-center">
+              <DollarSign className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Tasa de Cambio:</strong> {order.exchange_rate.toFixed(2)}
+            </p>}
+            <p className="flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
+              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP') : 'N/A'}
+            </p>
+            <p className="md:col-span-3">
+              <strong>Condición de Pago:</strong> {displayPaymentTerms()}
+            </p>
+            <p className="md:col-span-3">
+              <strong>Estado:</strong> 
+              <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(order.status))}>
+                {order.status}
+              </span>
+            </p>
           </div>
 
           {order.observations && (
             <div className="mb-6 p-3 border rounded-md bg-muted/50">
-              <p className="font-semibold text-sm mb-1">Observaciones:</p>
+              <p className="font-semibold text-sm mb-1 text-procarni-primary">Observaciones:</p>
               <p className="text-sm whitespace-pre-wrap">{order.observations}</p>
             </div>
           )}
 
-          <h3 className="text-lg font-semibold mt-8 mb-4">Ítems de la Orden</h3>
+          <h3 className="text-lg font-semibold mt-8 mb-4 text-procarni-primary">Ítems de la Orden</h3>
           {order.purchase_order_items && order.purchase_order_items.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
@@ -442,7 +474,7 @@ const PurchaseOrderDetails = () => {
                   const subtotal = item.quantity * item.unit_price;
                   const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
                   return (
-                        <Card key={item.id} className="p-3">
+                        <Card key={item.id} className="p-3 shadow-sm">
                           <p className="font-semibold text-procarni-primary">{item.material_name}</p>
                           <div className="text-sm mt-1 grid grid-cols-2 gap-2">
                             <p><strong>Cód. Prov:</strong> {item.supplier_code || 'N/A'}</p>
@@ -451,6 +483,7 @@ const PurchaseOrderDetails = () => {
                             <p><strong>Subtotal:</strong> {order.currency} {subtotal.toFixed(2)}</p>
                             <p><strong>IVA:</strong> {order.currency} {itemIva.toFixed(2)}</p>
                             <p><strong>Exento:</strong> {item.is_exempt ? 'Sí' : 'No'}</p>
+                            {item.description && <p className="col-span-2"><strong>Descripción:</strong> {item.description}</p>}
                           </div>
                           <div className="mt-2 pt-2 border-t flex justify-between font-bold text-sm">
                             <span>Total Ítem:</span>
@@ -472,6 +505,7 @@ const PurchaseOrderDetails = () => {
                           <TableHead>Subtotal ({order.currency})</TableHead>
                           <TableHead>IVA ({order.currency})</TableHead>
                           <TableHead>Exento</TableHead>
+                          <TableHead>Descripción</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -480,13 +514,14 @@ const PurchaseOrderDetails = () => {
                           const itemIva = item.is_exempt ? 0 : subtotal * item.tax_rate;
                           return (
                             <TableRow key={item.id}>
-                              <TableCell>{item.material_name}</TableCell>
+                              <TableCell className="font-medium">{item.material_name}</TableCell>
                               <TableCell>{item.supplier_code || 'N/A'}</TableCell>
                               <TableCell>{item.quantity} {item.unit || 'N/A'}</TableCell>
                               <TableCell>{item.unit_price.toFixed(2)}</TableCell>
                               <TableCell>{subtotal.toFixed(2)}</TableCell>
                               <TableCell>{itemIva.toFixed(2)}</TableCell>
                               <TableCell>{item.is_exempt ? 'Sí' : 'No'}</TableCell>
+                              <TableCell className="text-xs max-w-[150px] truncate">{item.description || 'N/A'}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -533,7 +568,6 @@ const PurchaseOrderDetails = () => {
         documentId={order.id}
       />
 
-      {/* AlertDialog for Approval Confirmation */}
       <AlertDialog open={isApproveConfirmOpen} onOpenChange={setIsApproveConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
