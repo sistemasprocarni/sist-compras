@@ -14,6 +14,7 @@ import PDFDownloadButton from '@/components/PDFDownloadButton';
 import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { calculateTotals, numberToWords } from '@/utils/calculations';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importar la localización en español
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -222,7 +223,7 @@ const PurchaseOrderDetails = () => {
         <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
         <p><strong>Empresa:</strong> ${order.companies?.name}</p>
         <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
-        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: { code: 'es-VE' } as any }) : 'N/A'}</p>
+        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}</p>
         <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
         ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
         <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
@@ -454,7 +455,7 @@ const PurchaseOrderDetails = () => {
             </p>}
             <p className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
-              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: { code: 'es-VE' } as any }) : 'N/A'}
+              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}
             </p>
             <p className="md:col-span-3">
               <strong>Condición de Pago:</strong> {displayPaymentTerms()}

@@ -13,6 +13,7 @@ import QuoteRequestPreviewModal, { QuoteRequestPreviewModalRef } from '@/compone
 import PDFDownloadButton from '@/components/PDFDownloadButton';
 import WhatsAppSenderButton from '@/components/WhatsAppSenderButton';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importar la localización en español
 import EmailSenderModal from '@/components/EmailSenderModal';
 import { useSession } from '@/components/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -185,7 +186,7 @@ const QuoteRequestDetails = () => {
         <h2>Solicitud de Cotización #${request.id.substring(0, 8)}</h2>
         <p><strong>Empresa:</strong> ${request.companies?.name}</p>
         <p><strong>Proveedor:</strong> ${request.suppliers?.name}</p>
-        <p><strong>Fecha:</strong> ${new Date(request.created_at).toLocaleDateString('es-VE')}</p>
+        <p><strong>Fecha:</strong> ${format(new Date(request.created_at), 'PPP', { locale: es })}</p>
         ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
         <p>Se adjunta el PDF con los detalles de la solicitud.</p>
       `;
@@ -421,7 +422,7 @@ const QuoteRequestDetails = () => {
             </p>}
             <p className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
-              <strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString('es-VE')}
+              <strong>Fecha:</strong> {format(new Date(request.created_at), 'PPP', { locale: es })}
             </p>
             <p className="md:col-span-3">
               <strong>Estado:</strong> 

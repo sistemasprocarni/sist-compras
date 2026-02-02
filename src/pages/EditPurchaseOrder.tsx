@@ -12,6 +12,7 @@ import { calculateTotals } from '@/utils/calculations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import PurchaseOrderDraftPreview from '@/components/PurchaseOrderDraftPreview';
 import { format, parseISO } from "date-fns";
+import { es } from 'date-fns/locale'; // Importar la localización en español
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
 

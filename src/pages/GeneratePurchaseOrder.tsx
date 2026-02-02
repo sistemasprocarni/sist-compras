@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importar la localización en español
 import { useQuery } from '@tanstack/react-query'; // IMPORTACIÓN FALTANTE
 
 interface Company {

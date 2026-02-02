@@ -18,6 +18,8 @@ import QuoteRequestPreviewModal from '@/components/QuoteRequestPreviewModal';
 import MaterialCreationDialog from '@/components/MaterialCreationDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importar la localización en español
 
 interface Company {
   id: string;
