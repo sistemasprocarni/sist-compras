@@ -1,5 +1,5 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, Users, Zap, FilePlus, ClipboardPlus, BarChart2, Scale, DollarSign } from 'lucide-react'; // Import Scale and DollarSign
 import { useQuery } from '@tanstack/react-query';
