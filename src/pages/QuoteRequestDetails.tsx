@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail, MoreVertical, CheckCircle, Tag, Building2, DollarSign, Clock, ListOrdered, Users } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, Download, ShoppingCart, Mail, MoreVertical, CheckCircle, Tag, Building2, DollarSign, Clock, Users } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getQuoteRequestDetails, updateQuoteRequestStatus } from '@/integrations/supabase/data';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
