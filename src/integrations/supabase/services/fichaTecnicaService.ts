@@ -73,18 +73,20 @@ const FichaTecnicaService = {
   },
 
   getBySupplierAndProduct: async (proveedorId: string, nombreProducto: string): Promise<FichaTecnica | null> => {
+    // Eliminamos .single() para evitar el error 406 si hay 0 o >1 resultado.
     const { data, error } = await supabase
       .from('fichas_tecnicas')
       .select('*')
       .eq('proveedor_id', proveedorId)
-      .eq('nombre_producto', nombreProducto)
-      .single();
+      .eq('nombre_producto', nombreProducto);
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+    if (error) {
       console.error('[FichaTecnicaService.getBySupplierAndProduct] Error:', error);
       return null;
     }
-    return data as FichaTecnica | null;
+    
+    // Si hay datos, devolvemos el primer resultado (o null si no hay)
+    return data.length > 0 ? data[0] as FichaTecnica : null;
   },
 
   delete: async (fichaId: string, storageUrl: string): Promise<boolean> => {
