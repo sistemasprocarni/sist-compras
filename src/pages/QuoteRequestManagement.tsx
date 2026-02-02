@@ -274,9 +274,16 @@ const QuoteRequestManagement = () => {
             <CardTitle className="text-procarni-primary">Gestión de Solicitudes de Cotización</CardTitle>
             <CardDescription>Administra tus solicitudes de cotización enviadas a proveedores.</CardDescription>
           </div>
-          <Button asChild className="bg-procarni-secondary hover:bg-green-700">
+          <Button 
+            asChild 
+            className={cn(
+              "bg-procarni-secondary hover:bg-green-700",
+              isMobile && "w-10 h-10 p-0" // Adaptación móvil
+            )}
+          >
             <Link to="/generate-quote">
-              <PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud
+              <PlusCircle className={cn("h-4 w-4", !isMobile && "mr-2")} /> 
+              {!isMobile && 'Nueva Solicitud'}
             </Link>
           </Button>
         </CardHeader>
