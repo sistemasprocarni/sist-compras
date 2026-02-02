@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { UploadCloud, FileText, Download, Trash2, DatabaseBackup, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileText, Download, Trash2, DatabaseBackup, RefreshCw, ArrowLeft } from 'lucide-react';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import PinInputDialog from '@/components/PinInputDialog';
 import ResetDataButton from '@/components/ResetDataButton'; // Import the new ResetDataButton component
+import { useNavigate } from 'react-router-dom';
 
 interface UploadResult {
   successCount: number;
@@ -20,6 +21,7 @@ interface UploadResult {
 
 const BulkUpload = () => {
   const { session } = useSession();
+  const navigate = useNavigate();
   const [supplierFile, setSupplierFile] = useState<File | null>(null);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [relationFile, setRelationFile] = useState<File | null>(null);
@@ -317,7 +319,12 @@ const BulkUpload = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <Card className="mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
+      <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Carga Masiva de Datos</CardTitle>
           <CardDescription>Sube tus proveedores, materiales y sus relaciones desde archivos Excel.</CardDescription>
@@ -342,7 +349,7 @@ const BulkUpload = () => {
         </CardContent>
       </Card>
 
-      <Card className="mb-6 border-destructive card-alert-border">
+      <Card className="mb-6 border-destructive card-alert-border shadow-lg">
         <CardHeader>
           <CardTitle className="text-destructive">Gestión Avanzada de Datos</CardTitle>
           <CardDescription>Opciones para respaldar, eliminar o reiniciar datos existentes. Requiere PIN de seguridad.</CardDescription>
@@ -407,7 +414,7 @@ const BulkUpload = () => {
         </CardContent>
       </Card>
 
-      <Card className="mb-6 border-destructive card-alert-border">
+      <Card className="mb-6 border-destructive card-alert-border shadow-lg">
         <CardHeader>
           <CardTitle className="text-destructive">Reinicio Completo de Datos</CardTitle>
           <CardDescription>

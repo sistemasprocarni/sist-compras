@@ -256,7 +256,7 @@ const GenerateQuoteRequest = () => {
 
     // Desktop/Tablet View
     return (
-      <div key={index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md">
+      <div key={index} className="grid grid-cols-7 gap-4 items-end border p-3 rounded-md shadow-sm">
         <div className="col-span-2">
           <Label htmlFor={`material_name-${index}`}>Material</Label>
           {fields[0].content}
@@ -292,7 +292,7 @@ const GenerateQuoteRequest = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Generar Solicitud de Cotización (SC)</CardTitle>
           <CardDescription>Crea una nueva solicitud de cotización para tus proveedores.</CardDescription>
@@ -325,7 +325,7 @@ const GenerateQuoteRequest = () => {
             {/* Moneda y Tasa de Cambio eliminados */}
           </div>
 
-          <h3 className="text-lg font-semibold mb-4">Ítems de la Solicitud</h3>
+          <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Ítems de la Solicitud</h3>
           <div className="space-y-4">
             {items.map(renderItemFields)}
             <div className="flex justify-between">

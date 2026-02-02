@@ -115,7 +115,12 @@ const SearchSuppliersByMaterial = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <Card className="mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
+      <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Buscar Proveedores por Material</CardTitle>
           <CardDescription>Encuentra proveedores que ofrecen un material específico.</CardDescription>
@@ -148,11 +153,11 @@ const SearchSuppliersByMaterial = () => {
 
           {!isLoadingSuppliers && suppliers.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Proveedores que ofrecen "{selectedMaterial?.name}"</h3>
+              <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Proveedores que ofrecen "{selectedMaterial?.name}"</h3>
               <Accordion type="single" collapsible className="w-full">
                 {suppliers.map((supplier) => (
-                  <AccordionItem key={supplier.id} value={supplier.id}>
-                    <AccordionTrigger className="text-left">
+                  <AccordionItem key={supplier.id} value={supplier.id} className="shadow-sm">
+                    <AccordionTrigger className="text-left hover:bg-muted/50">
                       <div className="flex flex-col items-start">
                         <span className="font-bold">{supplier.name}</span>
                         <span className="text-sm text-muted-foreground">RIF: {supplier.rif}</span>

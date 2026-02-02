@@ -185,7 +185,7 @@ const MaterialManagement = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle className="text-procarni-primary">Gestión de Materiales</CardTitle>
@@ -245,7 +245,7 @@ const MaterialManagement = () => {
             isMobile ? (
               <div className="grid gap-4">
                 {filteredMaterials.map((material) => (
-                  <Card key={material.id} className="p-4">
+                  <Card key={material.id} className="p-4 shadow-sm">
                     <CardTitle className="text-lg mb-2">{material.name}</CardTitle>
                     <CardDescription className="mb-2">Código: {material.code}</CardDescription>
                     <div className="text-sm space-y-1">

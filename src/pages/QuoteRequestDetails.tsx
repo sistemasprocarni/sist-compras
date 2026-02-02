@@ -376,7 +376,7 @@ const QuoteRequestDetails = () => {
         </DropdownMenu>
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-procarni-primary">Solicitud de Cotización #{request.id.substring(0, 8)}</CardTitle>
           <CardDescription>Detalles completos de la solicitud de cotización.</CardDescription>
@@ -392,12 +392,12 @@ const QuoteRequestDetails = () => {
             <p><strong>Estado:</strong> <span className={`font-bold ${request.status === 'Approved' ? 'text-green-600' : request.status === 'Draft' ? 'text-yellow-600' : 'text-blue-600'}`}>{request.status}</span></p>
           </div>
 
-          <h3 className="text-lg font-semibold mt-8 mb-4">Ítems Solicitados</h3>
+          <h3 className="text-lg font-semibold mt-8 mb-4 text-procarni-primary">Ítems Solicitados</h3>
           {request.quote_request_items && request.quote_request_items.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
                 {request.quote_request_items.map((item) => (
-                  <Card key={item.id} className="p-3">
+                  <Card key={item.id} className="p-3 shadow-sm">
                     <p className="font-semibold text-procarni-primary">{item.material_name}</p>
                     <div className="text-sm mt-1 space-y-0.5">
                       <p><strong>Cantidad:</strong> {item.quantity} {item.unit || 'N/A'}</p>

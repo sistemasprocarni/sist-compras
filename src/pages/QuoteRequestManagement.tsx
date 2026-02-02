@@ -173,7 +173,7 @@ const QuoteRequestManagement = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle className="text-procarni-primary">Gestión de Solicitudes de Cotización</CardTitle>
@@ -211,7 +211,7 @@ const QuoteRequestManagement = () => {
                 isMobile ? (
                   <div className="grid gap-4">
                     {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4">
+                      <Card key={request.id} className="p-4 shadow-sm">
                         <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
                         <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
                         <div className="text-sm space-y-1">
@@ -296,7 +296,7 @@ const QuoteRequestManagement = () => {
                 isMobile ? (
                   <div className="grid gap-4">
                     {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500">
+                      <Card key={request.id} className="p-4 bg-green-50/50 dark:bg-green-900/20 border-green-500 shadow-sm">
                         <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
                         <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
                         <div className="text-sm space-y-1">
@@ -375,7 +375,7 @@ const QuoteRequestManagement = () => {
                 isMobile ? (
                   <div className="grid gap-4">
                     {filteredQuoteRequests.map((request) => (
-                      <Card key={request.id} className="p-4 bg-gray-50 dark:bg-gray-800">
+                      <Card key={request.id} className="p-4 bg-gray-50 dark:bg-gray-800 shadow-sm">
                         <CardTitle className="text-lg mb-2">{request.suppliers.name}</CardTitle>
                         <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
                         <div className="text-sm space-y-1">

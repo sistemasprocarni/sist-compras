@@ -28,6 +28,7 @@ interface MaterialAssociation {
   materials: {
     id: string;
     name: string;
+    code: string;
     category?: string;
   };
 }
@@ -204,7 +205,7 @@ const SupplierDetails = () => {
         )}
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-procarni-primary">{supplier.name}</CardTitle>
           <CardDescription>Detalles completos del proveedor.</CardDescription>
@@ -249,7 +250,7 @@ const SupplierDetails = () => {
             <p><strong>Estado:</strong> {supplier.status}</p>
           </div>
 
-          <h3 className="text-lg font-semibold mt-8 mb-4">Materiales Ofrecidos</h3>
+          <h3 className="text-lg font-semibold mt-8 mb-4 text-procarni-primary">Materiales Ofrecidos</h3>
           {supplier.materials && supplier.materials.length > 0 ? (
             isMobile ? (
               <div className="space-y-3">
@@ -257,7 +258,7 @@ const SupplierDetails = () => {
                   const { data: hasFicha, isLoading: isLoadingFicha } = fichaStatusResults[index];
                   
                   return (
-                    <Card key={sm.id || index} className="p-3">
+                    <Card key={sm.id || index} className="p-3 shadow-sm">
                       <p className="font-semibold text-procarni-primary">{sm.materials.name}</p>
                       <div className="text-sm mt-1 space-y-0.5">
                         <p><strong>Código:</strong> {sm.materials.code || 'N/A'}</p>
