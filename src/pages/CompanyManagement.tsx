@@ -240,53 +240,53 @@ const CompanyManagement = () => {
                       </Button>
                     </div>
                   </Card>
-                ))
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>RIF</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Teléfono</TableHead>
-                        <TableHead>Dirección</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>RIF</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Dirección</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCompanies.map((company) => (
+                      <TableRow key={company.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <TableCell className="font-medium">{company.name}</TableCell>
+                        <TableCell>{company.rif}</TableCell>
+                        <TableCell>{company.email || 'N/A'}</TableCell>
+                        <TableCell>{company.phone || 'N/A'}</TableCell>
+                        <TableCell>{company.address || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); handleEditCompany(company); }}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); confirmDeleteCompany(company.id); }}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCompanies.map((company) => (
-                        <TableRow key={company.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <TableCell className="font-medium">{company.name}</TableCell>
-                          <TableCell>{company.rif}</TableCell>
-                          <TableCell>{company.email || 'N/A'}</TableCell>
-                          <TableCell>{company.phone || 'N/A'}</TableCell>
-                          <TableCell>{company.address || 'N/A'}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); handleEditCompany(company); }}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); confirmDeleteCompany(company.id); }}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <div className="text-center text-muted-foreground p-8">
               No hay empresas registradas o no se encontraron resultados para tu búsqueda.
