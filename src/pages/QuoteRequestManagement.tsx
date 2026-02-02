@@ -233,16 +233,20 @@ const QuoteRequestManagement = () => {
     <Card key={request.id} className="p-4 shadow-md">
       <div className="flex justify-between items-start mb-2">
         <CardTitle className="text-lg truncate">{request.suppliers.name}</CardTitle>
-        <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
-          {STATUS_TRANSLATIONS[request.status] || request.status}
-        </span>
+        {/* Status badge removed from top right */}
       </div>
       <CardDescription className="mb-2">Empresa: {request.companies.name}</CardDescription>
       <div className="text-sm space-y-1">
         <p><strong>ID:</strong> {request.id.substring(0, 8)}</p>
-        <p><strong>Moneda:</strong> {request.currency}</p>
-        {request.exchange_rate && <p><strong>Tasa:</strong> {request.exchange_rate.toFixed(2)}</p>}
+        {/* Removed Moneda line */}
         <p><strong>Fecha:</strong> {new Date(request.created_at).toLocaleDateString('es-VE')}</p>
+        {/* Status badge moved here */}
+        <p>
+          <strong>Estado:</strong> 
+          <span className={cn("ml-2 px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(request.status))}>
+            {STATUS_TRANSLATIONS[request.status] || request.status}
+          </span>
+        </p>
       </div>
       <div className="flex justify-end gap-2 mt-4 border-t pt-3">
         <Button variant="outline" size="sm" onClick={() => handleViewDetails(request.id)}>
