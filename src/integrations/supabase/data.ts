@@ -1,149 +1,124 @@
-import { supabase } from './client';
-import { showError } from '@/utils/toast';
-import {
-  getAllSuppliers,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier,
-  searchSuppliers,
-  getSupplierDetails,
-  getAllMaterials,
-  createMaterial,
-  updateMaterial,
-  deleteMaterial,
-  searchMaterials,
-  getAllCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-  searchCompanies,
-  getAllQuoteRequests,
-  createQuoteRequest,
-  updateQuoteRequest,
-  deleteQuoteRequest,
-  getQuoteRequestDetails,
-  archiveQuoteRequest, // Exported
-  unarchiveQuoteRequest, // Exported
-  updateQuoteRequestStatus, // NEW
-  getAllPurchaseOrders,
-  createPurchaseOrder,
-  updatePurchaseOrder,
-  deletePurchaseOrder,
-  getPurchaseOrderDetails,
-  archivePurchaseOrder,
-  unarchivePurchaseOrder,
-  updatePurchaseOrderStatus, // NEW
-  createSupplierMaterialRelation,
-  uploadFichaTecnica,
-  getAllFichasTecnicas,
-  deleteFichaTecnica,
-  getFichaTecnicaBySupplierAndProduct, // Exported
-  getPriceHistoryByMaterialId, // Exported
-  getAllAuditLogs, // NEW: Exported
-  logAudit, // NEW: Exported
-  getQuotesByMaterial, // NEW: Exported
-  createOrUpdateQuote, // NEW: Exported
-  deleteQuote, // NEW: Exported
-} from './services';
+import { supabase } from "@/integrations/supabase/client";
 
-// Funciones adicionales que no encajan directamente en un servicio CRUD
-export const getSuppliersByMaterial = async (materialId: string): Promise<any[]> => {
+// --- Type Definitions (Simplified for data layer) ---
+
+export type PurchaseOrder = {
+  id: string;
+  sequence_number: number | null;
+  supplier_id: string;
+  company_id: string;
+  currency: string;
+  exchange_rate: number | null;
+  status: string;
+  created_at: string;
+  user_id: string;
+  suppliers: { name: string };
+  companies: { name: string };
+};
+
+export type QuoteRequest = {
+  id: string;
+  supplier_id: string;
+  company_id: string;
+  currency: string;
+  exchange_rate: number | null;
+  status: string;
+  created_at: string;
+  user_id: string;
+  suppliers: { name: string; email: string | null }; // Added email here
+  companies: { name: string };
+};
+
+// --- Purchase Order Functions ---
+
+export async function getAllPurchaseOrders(statusFilter: string): Promise<PurchaseOrder[]> {
   const { data, error } = await supabase
-    .from('supplier_materials')
-    .select('*, suppliers(*)')
-    .eq('material_id', materialId);
+    .from('purchase_orders')
+    .select('*, suppliers(name), companies(name)')
+    .neq('status', 'Deleted')
+    .ilike('status', statusFilter === 'Active' ? 'Draft' : statusFilter)
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('[getSuppliersByMaterial] Error:', error);
-    return [];
-  }
+  if (error) throw new Error(error.message);
+  return data as PurchaseOrder[];
+}
 
-  return data.map(sm => ({
-    ...sm.suppliers,
-    specification: sm.specification,
-  }));
-};
+export async function deletePurchaseOrder(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({ status: 'Deleted' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
 
-// NEW FUNCTION: Search materials associated with a specific supplier
-export const searchMaterialsBySupplier = async (supplierId: string, query: string): Promise<any[]> => {
-  if (!supplierId) {
-    return [];
-  }
+export async function archivePurchaseOrder(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({ status: 'Archived' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
 
-  let selectQuery = supabase
-    .from('supplier_materials')
-    .select('materials:material_id(id, name, code, category, unit, is_exempt), specification')
-    .eq('supplier_id', supplierId);
+export async function unarchivePurchaseOrder(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({ status: 'Draft' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
 
-  // Eliminamos el límite de 50 en la consulta a Supabase para obtener todos los asociados.
-  const { data: relations, error } = await selectQuery;
+export async function approvePurchaseOrder(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('purchase_orders')
+    .update({ status: 'Approved' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
 
-  if (error) {
-    console.error('[searchMaterialsBySupplier] Error:', error);
-    return [];
-  }
 
-  let materials = relations.map(sm => ({
-    ...sm.materials,
-    specification: sm.specification,
-  })).filter(m => m !== null);
+// --- Quote Request Functions ---
 
-  // Client-side filtering based on query
-  if (query.trim()) {
-    const lowerCaseQuery = query.toLowerCase();
-    materials = materials.filter(m =>
-      m.name.toLowerCase().includes(lowerCaseQuery) ||
-      (m.code && m.code.toLowerCase().includes(lowerCaseQuery))
-    );
-  }
+export async function getAllQuoteRequests(statusFilter: string): Promise<QuoteRequest[]> {
+  // Fetch supplier email to check for sending constraint
+  const { data, error } = await supabase
+    .from('quote_requests')
+    .select('*, suppliers(name, email), companies(name)')
+    .neq('status', 'Deleted')
+    .ilike('status', statusFilter === 'Active' ? 'Draft' : statusFilter)
+    .order('created_at', { ascending: false });
 
-  // Eliminamos el límite de 10 en el cliente. Devolvemos todos los resultados filtrados.
-  return materials;
-};
+  if (error) throw new Error(error.message);
+  return data as QuoteRequest[];
+}
 
-// Exportaciones individuales para mantener compatibilidad
-export {
-  getAllSuppliers,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier,
-  searchSuppliers,
-  getSupplierDetails,
-  getAllMaterials,
-  createMaterial,
-  updateMaterial,
-  deleteMaterial,
-  searchMaterials,
-  getAllCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-  searchCompanies,
-  getAllQuoteRequests,
-  createQuoteRequest,
-  updateQuoteRequest,
-  deleteQuoteRequest,
-  getQuoteRequestDetails,
-  archiveQuoteRequest,
-  unarchiveQuoteRequest,
-  updateQuoteRequestStatus,
-  getAllPurchaseOrders,
-  createPurchaseOrder,
-  updatePurchaseOrder,
-  deletePurchaseOrder,
-  getPurchaseOrderDetails,
-  archivePurchaseOrder,
-  unarchivePurchaseOrder,
-  updatePurchaseOrderStatus,
-  createSupplierMaterialRelation,
-  uploadFichaTecnica,
-  getAllFichasTecnicas,
-  deleteFichaTecnica,
-  getFichaTecnicaBySupplierAndProduct,
-  getPriceHistoryByMaterialId,
-  getAllAuditLogs,
-  logAudit,
-  getQuotesByMaterial, // NEW
-  createOrUpdateQuote, // NEW
-  deleteQuote, // NEW
-};
+export async function deleteQuoteRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('quote_requests')
+    .delete()
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function archiveQuoteRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('quote_requests')
+    .update({ status: 'Archived' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function unarchiveQuoteRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('quote_requests')
+    .update({ status: 'Draft' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function sendQuoteRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('quote_requests')
+    .update({ status: 'Sent' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}

@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PlusCircle, Trash2, Search, Eye, Edit, ArrowLeft, Archive, RotateCcw, CheckCircle, Send, ListOrdered } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getAllPurchaseOrders, deletePurchaseOrder, archivePurchaseOrder, unarchivePurchaseOrder } from '@/integrations/supabase/data';
+import { getAllPurchaseOrders, deletePurchaseOrder, archivePurchaseOrder, unarchivePurchaseOrder, approvePurchaseOrder } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
@@ -133,6 +133,18 @@ const PurchaseOrderManagement = () => {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: approvePurchaseOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Active'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders', 'Approved'] });
+      showSuccess('Orden de compra aprobada exitosamente.');
+    },
+    onError: (err) => {
+      showError(`Error al aprobar orden: ${err.message}`);
+    },
+  });
+
   const confirmAction = (id: string, action: 'archive' | 'unarchive') => {
     setOrderToModify({ id, action });
     setIsConfirmDialogOpen(true);
@@ -154,6 +166,10 @@ const PurchaseOrderManagement = () => {
 
   const handleEditOrder = (orderId: string) => {
     navigate(`/purchase-orders/edit/${orderId}`);
+  };
+
+  const handleApproveOrder = async (orderId: string) => {
+    await approveMutation.mutateAsync(orderId);
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -202,7 +218,13 @@ const PurchaseOrderManagement = () => {
           </Button>
         )}
         {order.status === 'Draft' && (
-          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)} title="Aprobar">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleApproveOrder(order.id)} 
+            title="Aprobar"
+            disabled={approveMutation.isPending}
+          >
             <CheckCircle className="h-4 w-4 text-green-600" />
           </Button>
         )}

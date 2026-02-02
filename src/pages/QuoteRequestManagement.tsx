@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PlusCircle, Edit, Trash2, Search, Eye, ArrowLeft, Archive, RotateCcw, CheckCircle, Send } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { getAllQuoteRequests, deleteQuoteRequest, archiveQuoteRequest, unarchiveQuoteRequest } from '@/integrations/supabase/data';
+import { getAllQuoteRequests, deleteQuoteRequest, archiveQuoteRequest, unarchiveQuoteRequest, sendQuoteRequest } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 interface QuoteRequest {
   id: string;
   supplier_id: string;
-  suppliers: { name: string };
+  suppliers: { name: string; email: string | null };
   company_id: string;
   companies: { name: string };
   currency: string;
@@ -137,6 +137,17 @@ const QuoteRequestManagement = () => {
     },
   });
 
+  const sendMutation = useMutation({
+    mutationFn: sendQuoteRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quoteRequests', 'Active'] });
+      showSuccess('Solicitud de cotización enviada exitosamente.');
+    },
+    onError: (err) => {
+      showError(`Error al enviar solicitud: ${err.message}`);
+    },
+  });
+
   const confirmAction = (id: string, action: 'archive' | 'unarchive') => {
     setRequestToModify({ id, action });
     setIsConfirmDialogOpen(true);
@@ -167,6 +178,14 @@ const QuoteRequestManagement = () => {
     navigate(`/quote-requests/edit/${requestId}`);
   };
 
+  const handleSendRequest = async (request: QuoteRequest) => {
+    if (!request.suppliers.email) {
+      showError(`El proveedor ${request.suppliers.name} no tiene un correo electrónico registrado. No se puede enviar la solicitud.`);
+      return;
+    }
+    await sendMutation.mutateAsync(request.id);
+  };
+
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'Draft':
@@ -194,6 +213,7 @@ const QuoteRequestManagement = () => {
   const renderActions = (request: QuoteRequest) => {
     const isEditable = request.status === 'Draft';
     const isArchived = request.status === 'Archived';
+    const hasEmail = !!request.suppliers.email;
 
     return (
       <TableCell className="text-right whitespace-nowrap">
@@ -206,8 +226,14 @@ const QuoteRequestManagement = () => {
           </Button>
         )}
         {isEditable && (
-          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)} title="Enviar">
-            <Send className="h-4 w-4 text-blue-600" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => handleSendRequest(request)} 
+            title={hasEmail ? "Enviar" : "Proveedor sin email"}
+            disabled={sendMutation.isPending || !hasEmail}
+          >
+            <Send className={cn("h-4 w-4", hasEmail ? "text-blue-600" : "text-gray-400")} />
           </Button>
         )}
         {!isArchived && (
