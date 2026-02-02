@@ -352,70 +352,70 @@ const SupplierManagement = () => {
                       </Button>
                     </div>
                   </Card>
-                ))
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>RIF</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Teléfono</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>RIF</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <TableCell>{supplier.code || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{supplier.name}</TableCell>
+                        <TableCell>{supplier.rif}</TableCell>
+                        <TableCell>{supplier.email || 'N/A'}</TableCell>
+                        <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                        <TableCell>
+                          <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
+                            {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
+                            disabled={deleteMutation.isPending || isLoadingEditData}
+                          >
+                            {isLoadingEditData && editingSupplier?.id === supplier.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Edit className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSuppliers.map((supplier) => (
-                        <TableRow key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <TableCell>{supplier.code || 'N/A'}</TableCell>
-                          <TableCell className="font-medium">{supplier.name}</TableCell>
-                          <TableCell>{supplier.rif}</TableCell>
-                          <TableCell>{supplier.email || 'N/A'}</TableCell>
-                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                          <TableCell>
-                            <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
-                              {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); handleViewSupplier(supplier.id); }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); handleEditSupplier(supplier.id); }}
-                              disabled={deleteMutation.isPending || isLoadingEditData}
-                            >
-                              {isLoadingEditData && editingSupplier?.id === supplier.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Edit className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); confirmDeleteSupplier(supplier.id); }}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <div className="text-center text-muted-foreground p-8">
               No hay proveedores registrados o no se encontraron resultados para tu búsqueda.
