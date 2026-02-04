@@ -186,6 +186,16 @@ const PurchaseOrderService = {
         }));
 
       if (priceHistoryEntries.length > 0) {
+        // FIX: Delete existing price history entries for this PO ID before inserting new ones.
+        const { error: deleteHistoryError } = await supabase
+          .from('price_history')
+          .delete()
+          .eq('purchase_order_id', updatedOrder.id);
+
+        if (deleteHistoryError) {
+          console.error('[PurchaseOrderService.update] Error al eliminar historial de precios antiguo:', deleteHistoryError);
+        }
+        
         const { error: historyError } = await supabase
           .from('price_history')
           .insert(priceHistoryEntries);
@@ -249,7 +259,7 @@ const PurchaseOrderService = {
     if (data.length > 0) {
       logAudit('BULK_ARCHIVE_PURCHASE_ORDERS', { 
         table: 'purchase_orders',
-        description: `Archivado masivo de ${data.length} OCs`,
+        description: `Archivado masivo de ${data.length} OCs por inactividad de proveedor`,
         supplier_id: supplierId, 
         count: data.length 
       });
