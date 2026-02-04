@@ -288,7 +288,7 @@ const SupplierForm = ({ initialData, onSubmit, onCancel, isSubmitting }: Supplie
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Teléfono 1 (Opcional)</FormLabel>
+                <FormLabel>Teléfono 1</FormLabel>
                 <FormControl>
                   <Input placeholder="Teléfono principal" {...field} value={field.value || ''} />
                 </FormControl>
