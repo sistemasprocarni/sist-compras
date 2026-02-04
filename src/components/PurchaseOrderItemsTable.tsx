@@ -144,7 +144,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Precio Unit. ({currency})</label>
+              <label className="text-xs font-medium text-muted-foreground">P. Unit. ({currency})</label>
               <Input
                 type="number"
                 step="0.01"
