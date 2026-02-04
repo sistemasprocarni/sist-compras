@@ -77,7 +77,7 @@ const calculateTotals = (items: Array<{
 };
 
 const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVNTA'];
 const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
 
@@ -485,7 +485,7 @@ serve(async (req) => {
         const item = items[i];
         
         // Calculate item totals using the updated function
-        const { subtotal, discountAmount, salesAmount, itemIva, totalItem } = calculateTotals([{
+        const totals = calculateTotals([{
             quantity: item.quantity,
             unit_price: item.unit_price,
             tax_rate: item.tax_rate,
@@ -493,6 +493,13 @@ serve(async (req) => {
             sales_percentage: item.sales_percentage ?? 0, 
             discount_percentage: item.discount_percentage ?? 0, 
         }]);
+        
+        // CORRECTED: Map the Spanish keys from calculateTotals to local variables
+        const subtotalAfterDiscount = totals.baseImponible; // Base Imponible is subtotal after discount
+        const discountAmount = totals.montoDescuento;
+        const salesAmount = totals.montoVenta;
+        const itemIva = totals.montoIVA;
+        const totalItem = totals.total;
 
         // Combine material name and description for the first column
         let materialContent = String(item.material_name || ''); 
