@@ -47,7 +47,6 @@ const MATERIAL_CATEGORIES = [
   'MEDICION Y MANIPULACION',
   'ENCERADOS',
   'PUBLICIDAD', // Nueva categoría
-  'MAQUINARIA', // Nueva categoría
 ];
 
 const MaterialManagement = () => {
