@@ -179,19 +179,18 @@ serve(async (req) => {
 
     // --- Table Column Configuration ---
     const tableWidth = width - 2 * MARGIN;
-    // Columns: Proveedor, Cód. Proveedor, Precio Original, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
+    // Columns: Proveedor, Precio Original, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
     const colWidths = [
-      tableWidth * 0.20,  // 0. Proveedor (20%)
-      tableWidth * 0.10,  // 1. Cód. Proveedor (10%)
-      tableWidth * 0.12,  // 2. Precio Original (12%)
-      tableWidth * 0.08,  // 3. Moneda (8%)
-      tableWidth * 0.12,  // 4. Tasa (12%)
-      tableWidth * 0.15,  // 5. Precio Convertido (USD) (15%)
-      tableWidth * 0.15,  // 6. N° OC (15%)
-      tableWidth * 0.08,  // 7. Fecha (8%)
+      tableWidth * 0.30,  // 0. Proveedor (Increased from 20%)
+      tableWidth * 0.12,  // 1. Precio Original (12%)
+      tableWidth * 0.08,  // 2. Moneda (8%)
+      tableWidth * 0.12,  // 3. Tasa (12%)
+      tableWidth * 0.15,  // 4. Precio Convertido (USD) (15%)
+      tableWidth * 0.15,  // 5. N° OC (15%)
+      tableWidth * 0.08,  // 6. Fecha (8%)
     ];
     const colHeaders = [
-      'Proveedor', 'Cód. Prov.', 'Precio Orig.', 'Moneda', 'Tasa (USD/VES)', 
+      'Proveedor', 'Precio Orig.', 'Moneda', 'Tasa (USD/VES)', 
       'Precio Convertido (USD)', 'N° Orden Compra', 'Fecha'
     ];
     
@@ -258,8 +257,8 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Supplier Name ---
-            // Max characters per line for 20% width (approx 25 chars per line)
-            const maxCharsPerLine = 25; 
+            // Max characters per line for 30% width (approx 35 chars per line)
+            const maxCharsPerLine = 35; 
             const supplierLines = wrapText(entry.suppliers?.name || 'N/A', maxCharsPerLine);
             
             // Calculate height based on tighter line spacing
@@ -291,7 +290,8 @@ serve(async (req) => {
                 if (isRightAligned) {
                     xPos = currentX + cellWidth - 2 - textWidth; // Right aligned
                 } else {
-                    xPos = currentX + 2; // Left aligned
+                    // Center aligned for single line text, but left aligned for multi-line context
+                    xPos = currentX + 2; 
                 }
                 
                 drawText(state, text, xPos, verticalCenterY, { font: fontToUse });
@@ -306,28 +306,25 @@ serve(async (req) => {
             }
             currentX += colWidths[0];
 
-            // 2. Cód. Proveedor (Left Aligned)
-            drawCellData(entry.suppliers?.code || 'N/A', 1);
+            // 2. Precio Original (Right Aligned)
+            drawCellData(entry.unit_price.toFixed(2), 1, true);
 
-            // 3. Precio Original (Right Aligned)
-            drawCellData(entry.unit_price.toFixed(2), 2, true);
+            // 3. Moneda (Left Aligned)
+            drawCellData(entry.currency, 2);
 
-            // 4. Moneda (Left Aligned)
-            drawCellData(entry.currency, 3);
+            // 4. Tasa (Right Aligned)
+            drawCellData(entry.exchange_rate ? entry.exchange_rate.toFixed(4) : 'N/A', 3, true);
 
-            // 5. Tasa (Right Aligned)
-            drawCellData(entry.exchange_rate ? entry.exchange_rate.toFixed(4) : 'N/A', 4, true);
-
-            // 6. Precio Convertido (USD) (Right Aligned, Bold)
+            // 5. Precio Convertido (USD) (Right Aligned, Bold)
             const convertedText = convertedPrice !== null ? `USD ${convertedPrice.toFixed(2)}` : 'N/A';
-            drawCellData(convertedText, 5, true, boldFont);
+            drawCellData(convertedText, 4, true, boldFont);
 
-            // 7. N° OC (Left Aligned)
-            drawCellData(orderNumber, 6);
+            // 6. N° OC (Left Aligned)
+            drawCellData(orderNumber, 5);
 
-            // 8. Fecha (Left Aligned)
+            // 7. Fecha (Left Aligned)
             const dateText = new Date(entry.recorded_at).toLocaleDateString('es-VE');
-            drawCellData(dateText, 7);
+            drawCellData(dateText, 6);
 
             state.y = finalY; // Update Y position for the next row
         }
