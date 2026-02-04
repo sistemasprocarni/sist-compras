@@ -17,7 +17,7 @@ const LINE_HEIGHT = FONT_SIZE * 1.2;
 const TIGHT_LINE_SPACING = FONT_SIZE * 1.1;
 const MIN_ROW_HEIGHT = LINE_HEIGHT * 1.5;
 
-// --- UTILITY FUNCTIONS ---
+// --- UTILITY FUNCTIONS (Outside serve, as they don't depend on embedded fonts) ---
 
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
   if (!sequence) return 'N/A';
@@ -30,7 +30,6 @@ const formatSequenceNumber = (sequence?: number, dateString?: string): string =>
   return `OC-${year}-${month}-${seq}`;
 };
 
-// Helper function to convert price to the base currency (always USD for this report)
 const convertPriceToUSD = (entry: any): number | null => {
     const price = entry.unit_price;
     const currency = entry.currency;
@@ -143,13 +142,46 @@ serve(async (req) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+    // PDF State Management Interface
+    interface PDFState {
+      page: PDFPage;
+      y: number;
+      width: number;
+      height: number;
+      font: any;
+      boldFont: any;
+    }
+
     let state: PDFState = { page, y: height - MARGIN, width, height, font, boldFont };
+
+    // --- Core Drawing Helpers (Defined inside to access embedded fonts) ---
+    const drawText = (state: PDFState, text: string, x: number, yPos: number, options: any = {}) => {
+      const safeText = String(text || 'N/A'); 
+      state.page.drawText(safeText, {
+        x,
+        y: yPos,
+        font: state.font,
+        size: FONT_SIZE,
+        color: rgb(0, 0, 0),
+        ...options,
+      });
+    };
+
+    const checkPageBreak = (pdfDoc: PDFDocument, state: PDFState, requiredSpace: number, drawHeader: (state: PDFState) => PDFState): PDFState => {
+      // Check if required space pushes content below the footer area
+      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 2) {
+        state.page = pdfDoc.addPage();
+        state.y = state.height - MARGIN;
+        state = drawHeader(state); // Redraw headers on new page
+      }
+      return state;
+    };
+    // --------------------------------------------------------------------
 
     // --- Table Column Configuration ---
     const tableWidth = width - 2 * MARGIN;
     // Columns: Material, Cód. Material, Unidad, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
-    // Total 9 columns. We need to reduce the font size slightly more or use a landscape format.
-    // Let's try to fit it in portrait first with tighter columns.
+    // Total 9 columns.
     const colWidths = [
       tableWidth * 0.25,  // 0. Material (25%)
       tableWidth * 0.10,  // 1. Cód. Material (10%)
