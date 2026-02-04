@@ -168,37 +168,6 @@ serve(async (req) => {
       });
     };
 
-    const checkPageBreak = (pdfDoc: PDFDocument, state: PDFState, requiredSpace: number, drawHeader: (state: PDFState) => PDFState): PDFState => {
-      // Check if required space pushes content below the footer area
-      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 2) {
-        state.page = pdfDoc.addPage(PageSizes.A4_LANDSCAPE); // Use Landscape for new pages too
-        state.y = state.height - MARGIN;
-        state = drawHeader(state); // Redraw headers on new page
-      }
-      return state;
-    };
-    // --------------------------------------------------------------------
-
-    // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
-    const tableWidth = width - 2 * MARGIN; // Approx 780px
-    // Columns: Material, Cód. Material, Unidad, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
-    // Total 9 columns.
-    const colWidths = [
-      tableWidth * 0.25,  // 0. Material (25%) - Allows wrapping
-      tableWidth * 0.10,  // 1. Cód. Material (10%)
-      tableWidth * 0.08,  // 2. Unidad (8%)
-      tableWidth * 0.10,  // 3. Precio Unitario (10%)
-      tableWidth * 0.08,  // 4. Moneda (8%)
-      tableWidth * 0.10,  // 5. Tasa (10%)
-      tableWidth * 0.12,  // 6. Precio Convertido (USD) (12%)
-      tableWidth * 0.10,  // 7. N° OC (10%)
-      tableWidth * 0.07,  // 8. Fecha (7%)
-    ];
-    const colHeaders = [
-      'Material', 'Cód. Mat.', 'Unid.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
-      'Precio Convertido (USD)', 'N° Orden Compra', 'Fecha'
-    ];
-    
     const drawTableHeader = (state: PDFState): PDFState => {
       let currentX = MARGIN;
       
@@ -237,6 +206,37 @@ serve(async (req) => {
       return state;
     };
 
+    const checkPageBreak = (pdfDoc: PDFDocument, state: PDFState, requiredSpace: number, drawHeader: (state: PDFState) => PDFState): PDFState => {
+      // Check if required space pushes content below the footer area
+      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 2) {
+        state.page = pdfDoc.addPage(PageSizes.A4_LANDSCAPE); // Ensure Landscape on new page
+        state.y = state.height - MARGIN;
+        state = drawHeader(state); // Redraw headers on new page
+      }
+      return state;
+    };
+    // --------------------------------------------------------------------
+
+    // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
+    const tableWidth = width - 2 * MARGIN; // Approx 780px
+    // Columns: Material, Cód. Material, Unidad, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
+    // Total 9 columns.
+    const colWidths = [
+      tableWidth * 0.25,  // 0. Material (25%) - Allows wrapping
+      tableWidth * 0.10,  // 1. Cód. Material (10%)
+      tableWidth * 0.08,  // 2. Unidad (8%)
+      tableWidth * 0.10,  // 3. Precio Unitario (10%)
+      tableWidth * 0.08,  // 4. Moneda (8%)
+      tableWidth * 0.10,  // 5. Tasa (10%)
+      tableWidth * 0.12,  // 6. Precio Convertido (USD) (12%)
+      tableWidth * 0.10,  // 7. N° OC (10%)
+      tableWidth * 0.07,  // 8. Fecha (7%)
+    ];
+    const colHeaders = [
+      'Material', 'Cód. Mat.', 'Unid.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
+      'Precio Convertido (USD)', 'N° Orden Compra', 'Fecha'
+    ];
+    
     // --- Header ---
     drawText(state, 'REPORTE DE HISTORIAL DE PRECIOS POR PROVEEDOR', MARGIN, state.y, { font: boldFont, size: 16, color: PROC_RED });
     state.y -= LINE_HEIGHT * 2;
