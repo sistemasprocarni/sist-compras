@@ -205,11 +205,7 @@ const QuoteRequestManagement = () => {
             <Edit className="h-4 w-4" />
           </Button>
         )}
-        {isEditable && (
-          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(request.id)} title="Enviar">
-            <Send className="h-4 w-4 text-blue-600" />
-          </Button>
-        )}
+        {/* Removed Send button */}
         {!isArchived && (
           <Button variant="ghost" size="icon" onClick={() => confirmAction(request.id, 'archive')} title="Archivar">
             <Archive className="h-4 w-4 text-muted-foreground" />
