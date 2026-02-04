@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import SmartSearch from '@/components/SmartSearch';
-import { searchCompanies, searchSuppliers, getSupplierDetails } from '@/integrations/supabase/data';
+import { searchCompanies, getSupplierDetails } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import ExchangeRateInput from './ExchangeRateInput'; // NEW IMPORT
@@ -24,8 +24,8 @@ interface Company {
 interface PurchaseOrderDetailsFormProps {
   companyId: string;
   companyName: string;
-  supplierId: string;
-  supplierName: string;
+  supplierId: string; // Still needed for fetching details
+  supplierName: string; // Still needed for fetching details
   currency: 'USD' | 'VES';
   exchangeRate?: number;
   deliveryDate?: Date;
@@ -34,7 +34,7 @@ interface PurchaseOrderDetailsFormProps {
   creditDays: number;
   observations: string;
   onCompanySelect: (company: Company) => void;
-  onSupplierSelect: (supplier: { id: string; name: string }) => void;
+  // REMOVED: onSupplierSelect: (supplier: { id: string; name: string }) => void;
   onCurrencyChange: (checked: boolean) => void;
   onExchangeRateChange: (value: number | undefined) => void;
   onDeliveryDateChange: (date: Date | undefined) => void;
@@ -57,7 +57,6 @@ const PurchaseOrderDetailsForm: React.FC<PurchaseOrderDetailsFormProps> = ({
   creditDays,
   observations,
   onCompanySelect,
-  onSupplierSelect,
   onCurrencyChange,
   onExchangeRateChange,
   onDeliveryDateChange,
@@ -101,17 +100,7 @@ const PurchaseOrderDetailsForm: React.FC<PurchaseOrderDetailsFormProps> = ({
           />
           {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
         </div>
-        <div>
-          <Label htmlFor="supplier">Proveedor</Label>
-          <SmartSearch
-            placeholder="Buscar proveedor por RIF o nombre"
-            onSelect={onSupplierSelect}
-            fetchFunction={searchSuppliers}
-            displayValue={supplierName}
-          />
-          {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
-        </div>
-        <div>
+        <div className="md:col-span-1">
           <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
           <Popover>
             <PopoverTrigger asChild>

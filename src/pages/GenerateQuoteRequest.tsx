@@ -13,6 +13,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import SmartSearch from '@/components/SmartSearch';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MaterialCreationDialog from '@/components/MaterialCreationDialog';
+import SupplierCreationDialog from '@/components/SupplierCreationDialog'; // NEW IMPORT
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,11 @@ interface MaterialSearchResult {
   specification?: string;
 }
 
+interface Supplier { // Define Supplier type for the callback
+  id: string;
+  name: string;
+}
+
 const MATERIAL_UNITS = [
   'KG', 'LT', 'ROL', 'PAQ', 'SACO', 'GAL', 'UND', 'MT', 'RESMA', 'PZA', 'TAMB', 'MILL', 'CAJA', 'PAR'
 ];
@@ -56,6 +62,7 @@ const GenerateQuoteRequest = () => {
   const [items, setItems] = useState<QuoteRequestItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+  const [isAddSupplierDialogOpen, setIsAddSupplierDialogOpen] = useState(false); // NEW STATE
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
@@ -112,6 +119,19 @@ const GenerateQuoteRequest = () => {
   const handleCompanySelect = (company: Company) => {
     setCompanyId(company.id);
     setCompanyName(company.name);
+  };
+
+  const handleSupplierSelect = (supplier: { id: string; name: string }) => {
+    setSupplierId(supplier.id);
+    setSupplierName(supplier.name);
+  };
+  
+  // NEW HANDLER: Set the newly created supplier as selected
+  const handleSupplierCreated = (supplier: Supplier) => {
+    setSupplierId(supplier.id);
+    setSupplierName(supplier.name);
+    // Optionally, clear items if a new supplier is selected/created
+    setItems([]);
   };
 
   const handleMaterialAdded = (material: { id: string; name: string; unit?: string; is_exempt?: boolean; specification?: string }) => {
@@ -322,15 +342,23 @@ const GenerateQuoteRequest = () => {
             </div>
             <div>
               <Label htmlFor="supplier">Proveedor *</Label>
-              <SmartSearch
-                placeholder="Buscar proveedor por RIF o nombre"
-                onSelect={(supplier) => {
-                  setSupplierId(supplier.id);
-                  setSupplierName(supplier.name);
-                }}
-                fetchFunction={searchSuppliers}
-                displayValue={supplierName}
-              />
+              <div className="flex gap-2">
+                <SmartSearch
+                  placeholder="Buscar proveedor por RIF o nombre"
+                  onSelect={handleSupplierSelect}
+                  fetchFunction={searchSuppliers}
+                  displayValue={supplierName}
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => setIsAddSupplierDialogOpen(true)}
+                  className="shrink-0"
+                  title="Añadir nuevo proveedor"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
               {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
             </div>
           </div>
@@ -359,6 +387,11 @@ const GenerateQuoteRequest = () => {
         onMaterialCreated={handleMaterialAdded}
         supplierId={supplierId}
         supplierName={supplierName}
+      />
+      <SupplierCreationDialog
+        isOpen={isAddSupplierDialogOpen}
+        onClose={() => setIsAddSupplierDialogOpen(false)}
+        onSupplierCreated={handleSupplierCreated}
       />
     </div>
   );

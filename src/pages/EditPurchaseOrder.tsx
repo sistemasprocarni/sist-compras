@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useSession } from '@/components/SessionContextProvider';
 import { PlusCircle, ArrowLeft, Loader2, FileText } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { getPurchaseOrderDetails, searchMaterialsBySupplier, updatePurchaseOrder } from '@/integrations/supabase/data';
+import { getPurchaseOrderDetails, searchMaterialsBySupplier, updatePurchaseOrder, searchSuppliers } from '@/integrations/supabase/data';
 import { useQuery } from '@tanstack/react-query';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { calculateTotals } from '@/utils/calculations';
@@ -15,6 +15,9 @@ import { format, parseISO } from "date-fns";
 import { es } from 'date-fns/locale'; // Importar la localización en español
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
+import SupplierCreationDialog from '@/components/SupplierCreationDialog'; // NEW IMPORT
+import SmartSearch from '@/components/SmartSearch'; // Import SmartSearch
+import { Label } from '@/components/ui/label'; // Import Label
 
 interface Company {
   id: string;
@@ -33,8 +36,8 @@ interface PurchaseOrderItemForm {
   is_exempt?: boolean;
   unit?: string;
   description?: string;
-  sales_percentage?: number; // NEW
-  discount_percentage?: number; // NEW
+  sales_percentage?: number;
+  discount_percentage?: number;
 }
 
 interface MaterialSearchResult {
@@ -45,6 +48,11 @@ interface MaterialSearchResult {
   unit?: string;
   is_exempt?: boolean;
   specification?: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
 }
 
 const EditPurchaseOrder = () => {
@@ -68,6 +76,7 @@ const EditPurchaseOrder = () => {
   const [items, setItems] = useState<PurchaseOrderItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddSupplierDialogOpen, setIsAddSupplierDialogOpen] = useState(false); // NEW STATE
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
@@ -108,8 +117,8 @@ const EditPurchaseOrder = () => {
         is_exempt: item.is_exempt,
         unit: item.unit || 'KG',
         description: item.description || '',
-        sales_percentage: item.sales_percentage || 0, // NEW
-        discount_percentage: item.discount_percentage || 0, // NEW
+        sales_percentage: item.sales_percentage || 0,
+        discount_percentage: item.discount_percentage || 0,
       })));
     }
   }, [initialOrder]);
@@ -125,8 +134,8 @@ const EditPurchaseOrder = () => {
       is_exempt: false, 
       unit: 'KG', 
       description: '',
-      sales_percentage: 0, // NEW default
-      discount_percentage: 0, // NEW default
+      sales_percentage: 0,
+      discount_percentage: 0,
     }]);
   };
 
@@ -145,7 +154,6 @@ const EditPurchaseOrder = () => {
     handleItemChange(index, 'material_name', material.name);
     handleItemChange(index, 'unit', material.unit || 'KG');
     handleItemChange(index, 'is_exempt', material.is_exempt || false);
-    // Do not automatically set supplier_code, leave it blank/unchanged
     if (material.specification) {
       handleItemChange(index, 'description', material.specification);
     }
@@ -159,6 +167,12 @@ const EditPurchaseOrder = () => {
   const handleSupplierSelect = (supplier: { id: string; name: string }) => {
     setSupplierId(supplier.id);
     setSupplierName(supplier.name);
+  };
+  
+  const handleSupplierCreated = (supplier: Supplier) => {
+    setSupplierId(supplier.id);
+    setSupplierName(supplier.name);
+    setItems([]); // Clear items if a new supplier is selected/created
   };
 
   const totals = calculateTotals(items);
@@ -296,31 +310,61 @@ const EditPurchaseOrder = () => {
           <CardDescription>Modifica los detalles de esta orden de compra.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 border rounded-lg bg-muted/50 mb-6">
-            <h3 className="text-lg font-semibold mb-4 text-procarni-primary">Detalles Generales</h3>
-            <PurchaseOrderDetailsForm
-              companyId={companyId}
-              companyName={companyName}
-              supplierId={supplierId}
-              supplierName={supplierName}
-              currency={currency}
-              exchangeRate={exchangeRate}
-              deliveryDate={deliveryDate}
-              paymentTerms={paymentTerms}
-              customPaymentTerms={customPaymentTerms}
-              creditDays={creditDays}
-              observations={observations}
-              onCompanySelect={handleCompanySelect}
-              onSupplierSelect={handleSupplierSelect}
-              onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
-              onExchangeRateChange={setExchangeRate}
-              onDeliveryDateChange={setDeliveryDate}
-              onPaymentTermsChange={setPaymentTerms}
-              onCustomPaymentTermsChange={setCustomPaymentTerms}
-              onCreditDaysChange={setCreditDays}
-              onObservationsChange={setObservations}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="md:col-span-1">
+              <Label htmlFor="company">Empresa de Origen</Label>
+              <SmartSearch
+                placeholder="Buscar empresa por RIF o nombre"
+                onSelect={handleCompanySelect}
+                fetchFunction={searchCompanies}
+                displayValue={companyName}
+              />
+              {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
+            </div>
+            <div className="md:col-span-1">
+              <Label htmlFor="supplier">Proveedor</Label>
+              <div className="flex gap-2">
+                <SmartSearch
+                  placeholder="Buscar proveedor por RIF o nombre"
+                  onSelect={handleSupplierSelect}
+                  fetchFunction={searchSuppliers}
+                  displayValue={supplierName}
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => setIsAddSupplierDialogOpen(true)}
+                  className="shrink-0"
+                  title="Añadir nuevo proveedor"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
+            </div>
           </div>
+          
+          <PurchaseOrderDetailsForm
+            companyId={companyId}
+            companyName={companyName}
+            supplierId={supplierId}
+            supplierName={supplierName}
+            currency={currency}
+            exchangeRate={exchangeRate}
+            deliveryDate={deliveryDate}
+            paymentTerms={paymentTerms}
+            customPaymentTerms={customPaymentTerms}
+            creditDays={creditDays}
+            observations={observations}
+            onCompanySelect={handleCompanySelect}
+            onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
+            onExchangeRateChange={setExchangeRate}
+            onDeliveryDateChange={setDeliveryDate}
+            onPaymentTermsChange={setPaymentTerms}
+            onCustomPaymentTermsChange={setCustomPaymentTerms}
+            onCreditDaysChange={setCreditDays}
+            onObservationsChange={setObservations}
+          />
 
           <PurchaseOrderItemsTable
             items={items}
@@ -400,6 +444,11 @@ const EditPurchaseOrder = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+      <SupplierCreationDialog
+        isOpen={isAddSupplierDialogOpen}
+        onClose={() => setIsAddSupplierDialogOpen(false)}
+        onSupplierCreated={handleSupplierCreated}
+      />
     </div>
   );
 };

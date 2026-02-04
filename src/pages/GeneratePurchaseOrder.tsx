@@ -14,8 +14,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PurchaseOrderItemsTable from '@/components/PurchaseOrderItemsTable';
 import PurchaseOrderDetailsForm from '@/components/PurchaseOrderDetailsForm';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale'; // Importar la localización en español
-import { useQuery } from '@tanstack/react-query'; // IMPORTACIÓN FALTANTE
+import { es } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import SupplierCreationDialog from '@/components/SupplierCreationDialog';
+import SmartSearch from '@/components/SmartSearch';
+import { Label } from '@/components/ui/label';
 
 interface Company {
   id: string;
@@ -31,6 +34,11 @@ interface MaterialSearchResult {
   unit?: string;
   is_exempt?: boolean;
   specification?: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
 }
 
 const MATERIAL_UNITS = [
@@ -58,6 +66,7 @@ const GeneratePurchaseOrder = () => {
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isAddSupplierDialogOpen, setIsAddSupplierDialogOpen] = React.useState(false);
 
   const userId = session?.user?.id;
   const userEmail = session?.user?.email;
@@ -111,8 +120,8 @@ const GeneratePurchaseOrder = () => {
             is_exempt: isExempt,
             unit: item.unit || MATERIAL_UNITS[0],
             description: item.description || '',
-            sales_percentage: 0, // NEW default
-            discount_percentage: 0, // NEW default
+            sales_percentage: 0,
+            discount_percentage: 0,
           });
         }
       }
@@ -140,8 +149,8 @@ const GeneratePurchaseOrder = () => {
         is_exempt: materialData.is_exempt || false,
         unit: materialData.unit || MATERIAL_UNITS[0],
         description: materialData.specification || '',
-        sales_percentage: 0, // NEW default
-        discount_percentage: 0, // NEW default
+        sales_percentage: 0,
+        discount_percentage: 0,
       });
     }
   }, [materialData]);
@@ -171,7 +180,6 @@ const GeneratePurchaseOrder = () => {
       material_name: material.name,
       unit: material.unit || MATERIAL_UNITS[0],
       is_exempt: material.is_exempt || false,
-      // supplier_code is intentionally left blank/unchanged, as requested by the user.
       description: material.specification || '',
     });
   };
@@ -187,8 +195,8 @@ const GeneratePurchaseOrder = () => {
       is_exempt: false, 
       unit: MATERIAL_UNITS[0], 
       description: '',
-      sales_percentage: 0, // NEW default
-      discount_percentage: 0, // NEW default
+      sales_percentage: 0,
+      discount_percentage: 0,
     });
   };
 
@@ -208,6 +216,12 @@ const GeneratePurchaseOrder = () => {
   const handleSupplierSelect = (supplier: { id: string; name: string }) => {
     setSupplierId(supplier.id);
     setSupplierName(supplier.name);
+  };
+  
+  const handleSupplierCreated = (supplier: Supplier) => {
+    setSupplierId(supplier.id);
+    setSupplierName(supplier.name);
+    clearCart();
   };
 
   const totals = calculateTotals(items);
@@ -341,6 +355,40 @@ const GeneratePurchaseOrder = () => {
           <CardDescription>Crea una nueva orden de compra para tus proveedores.</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="md:col-span-1">
+              <Label htmlFor="company">Empresa de Origen</Label>
+              <SmartSearch
+                placeholder="Buscar empresa por RIF o nombre"
+                onSelect={handleCompanySelect}
+                fetchFunction={searchCompanies}
+                displayValue={companyName}
+              />
+              {companyName && <p className="text-sm text-muted-foreground mt-1">Empresa seleccionada: {companyName}</p>}
+            </div>
+            <div className="md:col-span-1">
+              <Label htmlFor="supplier">Proveedor</Label>
+              <div className="flex gap-2">
+                <SmartSearch
+                  placeholder="Buscar proveedor por RIF o nombre"
+                  onSelect={handleSupplierSelect}
+                  fetchFunction={searchSuppliers}
+                  displayValue={supplierName}
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => setIsAddSupplierDialogOpen(true)}
+                  className="shrink-0"
+                  title="Añadir nuevo proveedor"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              {supplierName && <p className="text-sm text-muted-foreground mt-1">Proveedor seleccionado: {supplierName}</p>}
+            </div>
+          </div>
+          
           <PurchaseOrderDetailsForm
             companyId={companyId}
             companyName={companyName}
@@ -354,7 +402,6 @@ const GeneratePurchaseOrder = () => {
             creditDays={creditDays}
             observations={observations}
             onCompanySelect={handleCompanySelect}
-            onSupplierSelect={handleSupplierSelect}
             onCurrencyChange={(checked) => setCurrency(checked ? 'VES' : 'USD')}
             onExchangeRateChange={setExchangeRate}
             onDeliveryDateChange={setDeliveryDate}
@@ -442,6 +489,11 @@ const GeneratePurchaseOrder = () => {
         </CardContent>
       </Card>
       <MadeWithDyad />
+      <SupplierCreationDialog
+        isOpen={isAddSupplierDialogOpen}
+        onClose={() => setIsAddSupplierDialogOpen(false)}
+        onSupplierCreated={handleSupplierCreated}
+      />
     </div>
   );
 };
