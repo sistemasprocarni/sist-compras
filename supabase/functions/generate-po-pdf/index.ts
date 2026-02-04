@@ -485,14 +485,13 @@ serve(async (req) => {
         const item = items[i];
         
         // Calculate item totals using the updated function
-        // FIX: Ensure all optional fields are explicitly passed as numbers (0) if null/undefined
         const { subtotal, discountAmount, salesAmount, itemIva, totalItem } = calculateTotals([{
             quantity: item.quantity,
             unit_price: item.unit_price,
             tax_rate: item.tax_rate,
             is_exempt: item.is_exempt,
-            sales_percentage: item.sales_percentage ?? 0, // Ensure number or 0
-            discount_percentage: item.discount_percentage ?? 0, // Ensure number or 0
+            sales_percentage: item.sales_percentage ?? 0, 
+            discount_percentage: item.discount_percentage ?? 0, 
         }]);
 
         // Combine material name and description for the first column
@@ -550,13 +549,13 @@ serve(async (req) => {
         };
 
         // 2. Cantidad
-        drawCellData(item.quantity.toString(), 1);
+        drawCellData(String(item.quantity ?? 0), 1); // Ensure quantity is safely accessed
 
         // 3. Unidad
         drawCellData(item.unit || 'UND', 2);
 
         // 4. P. Unitario
-        drawCellData((item.unit_price ?? 0).toFixed(2), 3); // FIX: Safely access unit_price
+        drawCellData((item.unit_price ?? 0).toFixed(2), 3); 
 
         // 5. Desc. (%) (NEW)
         drawCellData(`${(item.discount_percentage ?? 0).toFixed(2)}%`, 4);
