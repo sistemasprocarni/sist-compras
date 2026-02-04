@@ -109,6 +109,13 @@ const PurchaseOrderDetails = () => {
   
   const pdfViewerRef = React.useRef<PurchaseOrderPDFViewerRef>(null);
 
+  // Helper function to correctly parse date strings (YYYY-MM-DD) for display
+  const parseDateForDisplay = (dateString: string): Date => {
+    // Appending T12:00:00 ensures the date object is created at noon local time,
+    // preventing timezone offsets from shifting the date back a day.
+    return new Date(dateString + 'T12:00:00');
+  };
+
   const { data: order, isLoading, error } = useQuery<PurchaseOrderDetailsData | null>({
     queryKey: ['purchaseOrderDetails', id],
     queryFn: async () => {
@@ -223,7 +230,7 @@ const PurchaseOrderDetails = () => {
         <h2>Orden de Compra #${formatSequenceNumber(order.sequence_number, order.created_at)}</h2>
         <p><strong>Empresa:</strong> ${order.companies?.name}</p>
         <p><strong>Proveedor:</strong> ${order.suppliers?.name}</p>
-        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}</p>
+        <p><strong>Fecha de Entrega:</strong> ${order.delivery_date ? format(parseDateForDisplay(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}</p>
         <p><strong>Condición de Pago:</strong> ${displayPaymentTerms()}</p>
         ${customMessage ? `<p><strong>Mensaje:</strong><br>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
         <p>Se adjunta el PDF con los detalles de la orden de compra.</p>
@@ -455,7 +462,7 @@ const PurchaseOrderDetails = () => {
             </p>}
             <p className="flex items-center">
               <Clock className="mr-2 h-4 w-4 text-procarni-primary" />
-              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(new Date(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}
+              <strong>Fecha de Entrega:</strong> {order.delivery_date ? format(parseDateForDisplay(order.delivery_date), 'PPP', { locale: es }) : 'N/A'}
             </p>
             <p className="md:col-span-3">
               <strong>Condición de Pago:</strong> {displayPaymentTerms()}
