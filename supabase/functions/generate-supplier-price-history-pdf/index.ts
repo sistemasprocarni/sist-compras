@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { PDFDocument, rgb, StandardFonts, PDFPage } from 'https://esm.sh/pdf-lib@1.17.1';
+import { PDFDocument, rgb, StandardFonts, PDFPage, PageSizes } from 'https://esm.sh/pdf-lib@1.17.1'; // Import PageSizes
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +17,7 @@ const LINE_HEIGHT = FONT_SIZE * 1.2;
 const TIGHT_LINE_SPACING = FONT_SIZE * 1.1;
 const MIN_ROW_HEIGHT = LINE_HEIGHT * 1.5;
 
-// --- UTILITY FUNCTIONS (Outside serve, as they don't depend on embedded fonts) ---
+// --- UTILITY FUNCTIONS ---
 
 const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
   if (!sequence) return 'N/A';
@@ -136,7 +136,8 @@ serve(async (req) => {
 
     // --- PDF Setup ---
     const pdfDoc = await PDFDocument.create();
-    let page = pdfDoc.addPage(); 
+    // Use A4_LANDSCAPE for horizontal format
+    let page = pdfDoc.addPage(PageSizes.A4_LANDSCAPE); 
     const { width, height } = page.getSize();
 
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -170,7 +171,7 @@ serve(async (req) => {
     const checkPageBreak = (pdfDoc: PDFDocument, state: PDFState, requiredSpace: number, drawHeader: (state: PDFState) => PDFState): PDFState => {
       // Check if required space pushes content below the footer area
       if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 2) {
-        state.page = pdfDoc.addPage();
+        state.page = pdfDoc.addPage(PageSizes.A4_LANDSCAPE); // Use Landscape for new pages too
         state.y = state.height - MARGIN;
         state = drawHeader(state); // Redraw headers on new page
       }
@@ -178,12 +179,12 @@ serve(async (req) => {
     };
     // --------------------------------------------------------------------
 
-    // --- Table Column Configuration ---
-    const tableWidth = width - 2 * MARGIN;
+    // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
+    const tableWidth = width - 2 * MARGIN; // Approx 780px
     // Columns: Material, Cód. Material, Unidad, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
     // Total 9 columns.
     const colWidths = [
-      tableWidth * 0.25,  // 0. Material (25%)
+      tableWidth * 0.25,  // 0. Material (25%) - Allows wrapping
       tableWidth * 0.10,  // 1. Cód. Material (10%)
       tableWidth * 0.08,  // 2. Unidad (8%)
       tableWidth * 0.10,  // 3. Precio Unitario (10%)
@@ -271,8 +272,8 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Material Name ---
-            // Max characters per line for 25% width (approx 30 chars per line)
-            const maxCharsPerLine = 30; 
+            // Max characters per line for 25% width (approx 40 chars per line in landscape)
+            const maxCharsPerLine = 40; 
             const materialLines = wrapText(entry.materials?.name || 'N/A', maxCharsPerLine);
             
             // Calculate height based on tighter line spacing
