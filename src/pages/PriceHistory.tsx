@@ -213,13 +213,17 @@ const PriceHistory = () => {
                     ? format(new Date(data.latestEntry.recorded_at), 'dd/MM/yyyy') 
                     : 'N/A'}
                 </TableCell>
-                <TableCell className="text-green-600 font-semibold flex items-center">
-                  <TrendingDown className="mr-1 h-4 w-4" />
-                  {formatPrice(data.minPrice, data.baseCurrency)}
+                <TableCell className="text-green-600 font-semibold">
+                  <span className="flex items-center">
+                    <TrendingDown className="mr-1 h-4 w-4" />
+                    {formatPrice(data.minPrice, data.baseCurrency)}
+                  </span>
                 </TableCell>
-                <TableCell className="text-red-600 font-semibold flex items-center">
-                  <TrendingUp className="mr-1 h-4 w-4" />
-                  {formatPrice(data.maxPrice, data.baseCurrency)}
+                <TableCell className="text-red-600 font-semibold">
+                  <span className="flex items-center">
+                    <TrendingUp className="mr-1 h-4 w-4" />
+                    {formatPrice(data.maxPrice, data.baseCurrency)}
+                  </span>
                 </TableCell>
                 <TableCell>{formatPrice(data.avgPrice, data.baseCurrency)}</TableCell>
                 <TableCell>{data.priceCount}</TableCell>
