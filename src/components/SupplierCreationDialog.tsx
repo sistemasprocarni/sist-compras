@@ -30,7 +30,7 @@ const supplierCreationSchema = z.object({
   }),
   name: z.string().min(1, 'Nombre es requerido'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  phone: z.string().min(1, 'Teléfono principal es requerido.'),
+  phone: z.string().optional().or(z.literal('')), // CORREGIDO: Ahora es opcional
   payment_terms: z.enum(PAYMENT_TERMS_OPTIONS as [string, ...string[]], { message: 'Términos de pago son requeridos.' }),
   custom_payment_terms: z.string().optional().nullable(),
   credit_days: z.number().min(0, 'Días de crédito no puede ser negativo').optional(),
@@ -165,9 +165,9 @@ const SupplierCreationDialog: React.FC<SupplierCreationDialogProps> = ({
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Teléfono Principal *</FormLabel>
+                  <FormLabel>Teléfono Principal</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: +584121234567" {...field} disabled={isSubmitting} />
+                    <Input placeholder="Ej: +584121234567" {...field} value={field.value || ''} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
