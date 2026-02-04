@@ -227,14 +227,14 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[8%]"> {/* Changed width from w-[12%] to w-[8%] */}
+        <td className="px-2 py-2 whitespace-nowrap w-[10%]"> {/* Increased width from w-[8%] to w-[10%] */}
           <Input
             type="number"
             step="0.01"
             value={item.unit_price}
             onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
             min="0"
-            className="h-8 w-full" // Ensure input takes full width of the cell
+            className="h-8 w-full min-w-[80px]" // Added min-w-[80px] to prevent compression
           />
         </td>
         <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium w-[10%]">
@@ -250,7 +250,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             disabled={!item.material_name}
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[19%]"> {/* Increased width from w-[15%] to w-[19%] to compensate */}
+        <td className="px-2 py-2 whitespace-nowrap w-[15%]"> {/* Reduced width from w-[19%] to w-[15%] to compensate */}
           <Textarea
             value={item.description || ''}
             onChange={(e) => onItemChange(index, 'description', e.target.value)}
@@ -287,11 +287,11 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Código Prov.</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Cantidad</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Unidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Precio Unit.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">IVA</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Exento</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[19%]">Descripción</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Descripción</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Acción</th>
               </tr>
             </thead>
