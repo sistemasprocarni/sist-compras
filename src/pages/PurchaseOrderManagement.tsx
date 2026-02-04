@@ -201,11 +201,7 @@ const PurchaseOrderManagement = () => {
             <Send className="h-4 w-4 text-blue-600" />
           </Button>
         )}
-        {order.status === 'Draft' && (
-          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order.id)} title="Aprobar">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </Button>
-        )}
+        {/* Removed CheckCircle button as requested */}
         {!isArchived && (
           <Button variant="ghost" size="icon" onClick={() => confirmAction(order.id, 'archive')} title="Archivar">
             <Archive className="h-4 w-4 text-muted-foreground" />
