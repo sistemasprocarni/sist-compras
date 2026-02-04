@@ -20,12 +20,12 @@ const LOGO_SIZE = 50;
 // --- UTILITY FUNCTIONS (Kept outside serve) ---
 
 const calculateTotals = (items: Array<{ 
-  quantity: number; 
-  unit_price: number; 
-  tax_rate?: number; 
-  is_exempt?: boolean; 
-  sales_percentage?: number; 
-  discount_percentage?: number; 
+  quantity: number | null | undefined; 
+  unit_price: number | null | undefined; 
+  tax_rate?: number | null | undefined; 
+  is_exempt?: boolean | null | undefined; 
+  sales_percentage?: number | null | undefined; 
+  discount_percentage?: number | null | undefined; 
 }>) => {
   let baseImponible = 0; 
   let montoIVA = 0;
@@ -34,8 +34,8 @@ const calculateTotals = (items: Array<{
   let total = 0;
 
   items.forEach(item => {
-    const quantity = item.quantity ?? 0; // FIX: Safely handle null/undefined
-    const unitPrice = item.unit_price ?? 0; // FIX: Safely handle null/undefined
+    const quantity = item.quantity ?? 0; 
+    const unitPrice = item.unit_price ?? 0; 
     const itemValue = quantity * unitPrice;
     
     // Ensure percentages are treated as numbers, defaulting to 0
