@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import PriceHistoryDownloadButton from '@/components/PriceHistoryDownloadButton'; // NEW IMPORT
 
 interface MaterialSearchResult {
   id: string;
@@ -279,10 +280,20 @@ const PriceHistory = () => {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-4 flex items-center text-procarni-primary">
-            <DollarSign className="mr-2 h-5 w-5" />
-            Comparativa de Precios por Proveedor
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold flex items-center text-procarni-primary">
+              <DollarSign className="mr-2 h-5 w-5" />
+              Comparativa de Precios por Proveedor
+            </h3>
+            {/* NEW DOWNLOAD BUTTON */}
+            <PriceHistoryDownloadButton
+              materialId={selectedMaterial?.id || ''}
+              materialName={selectedMaterial?.name || 'Historial'}
+              baseCurrency={baseCurrency}
+              disabled={!selectedMaterial || comparisonData.length === 0}
+            />
+          </div>
+          
           {renderComparisonTable()}
           
           {/* Detailed History Table */}

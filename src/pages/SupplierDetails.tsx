@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check, DollarSign } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails, getFichaTecnicaBySupplierAndProduct } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import SupplierPriceHistoryDownloadButton from '@/components/SupplierPriceHistoryDownloadButton'; // NEW IMPORT
 
 interface MaterialAssociation {
   id: string; // ID of supplier_materials entry
@@ -173,6 +174,11 @@ const SupplierDetails = () => {
       >
         <ShoppingCart className="mr-2 h-4 w-4" /> Generar OC
       </Button>
+      <SupplierPriceHistoryDownloadButton
+        supplierId={supplier.id}
+        supplierName={supplier.name}
+        disabled={isLoading}
+      />
     </>
   );
 
