@@ -17,6 +17,18 @@ const LINE_HEIGHT = FONT_SIZE * 1.2;
 
 // --- UTILITY FUNCTIONS ---
 
+// Helper function to format PO sequence number
+const formatSequenceNumber = (sequence?: number, dateString?: string): string => {
+  if (!sequence) return 'N/A';
+  
+  const date = dateString ? new Date(dateString) : new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const seq = String(sequence).padStart(3, '0');
+  
+  return `OC-${year}-${month}-${seq}`;
+};
+
 // Helper function to convert price to the base currency (always USD for this report)
 const convertPriceToUSD = (entry: any): number | null => {
     const price = entry.unit_price;
@@ -220,7 +232,7 @@ serve(async (req) => {
 
             // Calculate required height (single line)
             const requiredHeight = LINE_HEIGHT * 1.5; 
-            state = checkPageBreak(pdfDoc, state, requiredHeight + 5, () => drawTableHeader(state)); 
+            state = checkPageBreak(pdfDoc, state, requiredHeight + 5, drawTableHeader); 
 
             // Draw separator line above row content
             state.page.drawLine({
