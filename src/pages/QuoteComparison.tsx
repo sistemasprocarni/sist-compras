@@ -221,12 +221,14 @@ const QuoteComparison = () => {
         }
 
         let convertedPrice: number | null = quote.unitPrice;
-        
+        let finalRate = quote.exchangeRate; // Start with the rate explicitly set on the quote
+
         if (quote.currency === comparisonBaseCurrency) {
             // USD -> USD
         } else if (quote.currency === 'VES' && comparisonBaseCurrency === 'USD') {
             if (rateToUse && rateToUse > 0) {
                 convertedPrice = quote.unitPrice / rateToUse;
+                finalRate = rateToUse; // Use the rate that was actually used (local or global)
             } else {
                 return { ...quote, convertedPrice: null, isValid: false, error: 'Falta Tasa de Cambio para VES a USD.' };
             }
@@ -236,7 +238,8 @@ const QuoteComparison = () => {
              return { ...quote, convertedPrice: null, isValid: false, error: 'Error de cálculo.' };
         }
         
-        return { ...quote, convertedPrice: convertedPrice, isValid: true, error: null };
+        // Ensure the final rate used for conversion is included in the result object
+        return { ...quote, convertedPrice: convertedPrice, isValid: true, error: null, exchangeRate: finalRate };
       });
 
       const validResults = results.filter(r => r.isValid && r.convertedPrice !== null);
