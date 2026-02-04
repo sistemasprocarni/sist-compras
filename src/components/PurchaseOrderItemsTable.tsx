@@ -212,7 +212,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             value={item.quantity}
             onChange={(e) => onItemChange(index, 'quantity', parseFloat(e.target.value))}
             min="0"
-            className="h-8"
+            className="h-8 w-full" // Ensure input takes full width of the cell
           />
         </td>
         <td className="px-2 py-2 whitespace-nowrap w-[8%]">
@@ -227,14 +227,14 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[12%]"> {/* Increased width from w-[10%] to w-[12%] */}
+        <td className="px-2 py-2 whitespace-nowrap w-[8%]"> {/* Changed width from w-[12%] to w-[8%] */}
           <Input
             type="number"
             step="0.01"
             value={item.unit_price}
             onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
             min="0"
-            className="h-8"
+            className="h-8 w-full" // Ensure input takes full width of the cell
           />
         </td>
         <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium w-[10%]">
@@ -250,7 +250,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             disabled={!item.material_name}
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[15%]">
+        <td className="px-2 py-2 whitespace-nowrap w-[19%]"> {/* Increased width from w-[15%] to w-[19%] to compensate */}
           <Textarea
             value={item.description || ''}
             onChange={(e) => onItemChange(index, 'description', e.target.value)}
@@ -259,7 +259,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             className="h-8 min-h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-right w-[8%]"> {/* Reduced width from w-[10%] to w-[8%] to compensate */}
+        <td className="px-2 py-2 whitespace-nowrap text-right w-[8%]">
           <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
             <PlusCircle className="h-4 w-4" />
           </Button>
@@ -287,11 +287,11 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Código Prov.</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Cantidad</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Unidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">Precio Unit.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Precio Unit.</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">IVA</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Exento</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Descripción</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[19%]">Descripción</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Acción</th>
               </tr>
             </thead>
