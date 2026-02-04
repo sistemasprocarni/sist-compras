@@ -42,7 +42,7 @@ const PriceHistory = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialSearchResult | null>(null);
-  const [baseCurrency, setBaseCurrency] = useState<'USD' | 'VES'>('USD'); // New state for base currency
+  const [baseCurrency, setBaseCurrency] = useState<'USD' | 'VES'>('USD'); // State for base currency (still needed for table display)
 
   const { data: priceHistory, isLoading, error } = useQuery<PriceHistoryEntry[]>({
     queryKey: ['priceHistory', selectedMaterial?.id],
@@ -289,7 +289,7 @@ const PriceHistory = () => {
             <PriceHistoryDownloadButton
               materialId={selectedMaterial?.id || ''}
               materialName={selectedMaterial?.name || 'Historial'}
-              baseCurrency={baseCurrency}
+              // baseCurrency={baseCurrency} // Removed baseCurrency prop
               disabled={!selectedMaterial || comparisonData.length === 0}
             />
           </div>
