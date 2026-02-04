@@ -127,3 +127,34 @@ export interface SupplierQuote {
   delivery_days?: number | null;
   created_at: string;
 }
+
+// --- NEW TYPES FOR QUOTE COMPARISON ---
+
+export interface QuoteComparison {
+  id: string;
+  user_id: string;
+  name: string;
+  base_currency: 'USD' | 'VES';
+  global_exchange_rate?: number | null;
+  created_at: string;
+  items?: QuoteComparisonItem[];
+}
+
+export interface QuoteComparisonItem {
+  id: string;
+  comparison_id: string;
+  material_id: string;
+  material_name: string;
+  quotes: Array<{
+    supplierId: string;
+    supplierName: string;
+    unitPrice: number;
+    currency: 'USD' | 'VES';
+    exchangeRate?: number;
+  }>;
+  created_at: string;
+  materials?: {
+    code: string;
+    name: string;
+  };
+}

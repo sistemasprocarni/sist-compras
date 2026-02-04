@@ -168,3 +168,34 @@ export type SupplierQuote = {
   delivery_days: number | null;
   created_at: string;
 };
+
+// --- NEW TYPES FOR QUOTE COMPARISON ---
+
+export type QuoteComparison = {
+  id: string;
+  user_id: string;
+  name: string;
+  base_currency: 'USD' | 'VES';
+  global_exchange_rate: number | null;
+  created_at: string;
+  items?: QuoteComparisonItem[]; // Joined items
+};
+
+export type QuoteComparisonItem = {
+  id: string;
+  comparison_id: string;
+  material_id: string;
+  material_name: string;
+  quotes: Array<{
+    supplierId: string;
+    supplierName: string;
+    unitPrice: number;
+    currency: 'USD' | 'VES';
+    exchangeRate?: number;
+  }>;
+  created_at: string;
+  materials?: { // Joined material details
+    code: string;
+    name: string;
+  };
+};

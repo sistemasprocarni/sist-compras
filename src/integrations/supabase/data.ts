@@ -44,6 +44,11 @@ import {
   getQuotesByMaterial, // NEW: Exported
   createOrUpdateQuote, // NEW: Exported
   deleteQuote, // NEW: Exported
+  getAllQuoteComparisons, // NEW: Exported
+  getQuoteComparisonById, // NEW: Exported
+  createQuoteComparison, // NEW: Exported
+  updateQuoteComparison, // NEW: Exported
+  deleteQuoteComparison, // NEW: Exported
 } from './services';
 
 // Funciones adicionales que no encajan directamente en un servicio CRUD
@@ -146,4 +151,9 @@ export {
   getQuotesByMaterial, // NEW
   createOrUpdateQuote, // NEW
   deleteQuote, // NEW
+  getAllQuoteComparisons, // NEW
+  getQuoteComparisonById, // NEW
+  createQuoteComparison, // NEW
+  updateQuoteComparison, // NEW
+  deleteQuoteComparison, // NEW
 };

@@ -27,7 +27,8 @@ import Settings from "./pages/Settings";
 import FichaTecnicaUpload from "./pages/FichaTecnicaUpload";
 import PriceHistory from "./pages/PriceHistory";
 import AuditLog from "./pages/AuditLog";
-import QuoteComparison from "./pages/QuoteComparison"; // NEW IMPORT
+import QuoteComparison from "./pages/QuoteComparison";
+import QuoteComparisonManagement from "./pages/QuoteComparisonManagement"; // NEW IMPORT
 
 const queryClient = new QueryClient();
 
@@ -66,7 +67,8 @@ const App = () => (
                 <Route path="/ficha-tecnica-upload" element={<FichaTecnicaUpload />} />
                 <Route path="/price-history" element={<PriceHistory />} />
                 <Route path="/audit-log" element={<AuditLog />} />
-                <Route path="/quote-comparison" element={<QuoteComparison />} /> {/* NEW ROUTE */}
+                <Route path="/quote-comparison" element={<QuoteComparison />} />
+                <Route path="/quote-comparison-management" element={<QuoteComparisonManagement />} /> {/* NEW ROUTE */}
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

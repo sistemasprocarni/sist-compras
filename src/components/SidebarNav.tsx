@@ -12,6 +12,7 @@ const navItems = [
       { to: '/', icon: <Search className="h-5 w-5" />, label: 'Búsqueda / Gestión' },
       { to: '/search-suppliers-by-material', icon: <Factory className="h-5 w-5" />, label: 'Buscar Proveedores por Material' },
       { to: '/quote-comparison', icon: <Scale className="h-5 w-5" />, label: 'Comparación de Cotizaciones' },
+      { to: '/quote-comparison-management', icon: <Scale className="h-5 w-5" />, label: 'Gestión de Comparaciones' }, // NEW ITEM
       { to: '/price-history', icon: <DollarSign className="h-5 w-5" />, label: 'Historial de Precios' },
     ]
   },
