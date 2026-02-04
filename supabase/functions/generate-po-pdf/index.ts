@@ -24,10 +24,10 @@ const calculateTotals = (items: Array<{
   unit_price: number; 
   tax_rate?: number; 
   is_exempt?: boolean; 
-  sales_percentage?: number; // NEW
-  discount_percentage?: number; // NEW
+  sales_percentage?: number; 
+  discount_percentage?: number; 
 }>) => {
-  let baseImponible = 0; // Suma de subtotales después de descuento (Base para IVA y Venta)
+  let baseImponible = 0; 
   let montoIVA = 0;
   let montoVenta = 0; 
   let montoDescuento = 0; 
@@ -36,8 +36,12 @@ const calculateTotals = (items: Array<{
   items.forEach(item => {
     const itemValue = item.quantity * item.unit_price;
     
-    // 1. Apply Discount
+    // Ensure percentages are treated as numbers, defaulting to 0
     const discountRate = (item.discount_percentage ?? 0) / 100;
+    const salesRate = (item.sales_percentage ?? 0) / 100;
+    const taxRate = item.tax_rate ?? 0.16;
+
+    // 1. Apply Discount
     const discountAmount = itemValue * discountRate;
     montoDescuento += discountAmount;
     
@@ -47,14 +51,12 @@ const calculateTotals = (items: Array<{
     baseImponible += subtotalAfterDiscount; 
 
     // 3. Apply Sales Percentage (Additional Tax)
-    const salesRate = (item.sales_percentage ?? 0) / 100;
     const salesAmount = subtotalAfterDiscount * salesRate;
     montoVenta += salesAmount;
 
     // 4. Apply IVA (Standard Tax)
     let ivaAmount = 0;
     if (!item.is_exempt) { 
-      const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
       ivaAmount = subtotalAfterDiscount * taxRate;
       montoIVA += ivaAmount;
     }
@@ -73,7 +75,7 @@ const calculateTotals = (items: Array<{
 };
 
 const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']; // FIXED TYPO: NOVNTA -> NOVENTA
+const decenas = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
 const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
 const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
 
@@ -263,9 +265,13 @@ serve(async (req) => {
     interface PDFState {
       page: PDFPage;
       y: number;
+      width: number;
+      height: number;
+      font: any;
+      boldFont: any;
     }
 
-    let state: PDFState = { page, y: height - MARGIN };
+    let state: PDFState = { page, y: height - MARGIN, width, height, font, boldFont };
 
     // --- Core Drawing Helpers ---
 
@@ -316,11 +322,10 @@ serve(async (req) => {
     };
 
     const checkPageBreak = (state: PDFState, requiredSpace: number): PDFState => {
-      // Check if required space pushes content below the footer area
-      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 10) { // Increased footer space check
+      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 10) { 
         state.page = pdfDoc.addPage();
         state.y = height - MARGIN;
-        state = drawTableHeader(state); // Redraw headers on new page
+        state = drawTableHeader(state); 
       }
       return state;
     };
@@ -391,13 +396,13 @@ serve(async (req) => {
       
       // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, 
         end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
       
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
+      state.y -= LINE_HEIGHT * 2; 
       
       drawText(state, `Nombre: ${order.suppliers?.name || 'N/A'}`, MARGIN, state.y);
       state.y -= LINE_HEIGHT;
@@ -414,13 +419,13 @@ serve(async (req) => {
       
       // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, 
         end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
       
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
+      state.y -= LINE_HEIGHT * 2; 
       
       drawText(state, `Fecha de Entrega: ${order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('es-VE') : 'N/A'}`, MARGIN, state.y);
       state.y -= LINE_HEIGHT;
@@ -437,13 +442,13 @@ serve(async (req) => {
       
       // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, 
         end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
       
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
+      state.y -= LINE_HEIGHT * 2; 
       
       const observationsText = order.observations;
       const maxCharsPerLine = 100; 
@@ -464,13 +469,13 @@ serve(async (req) => {
       
       // Draw separator line immediately below the title text area
       state.page.drawLine({
-        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, // Draw line 2 points below the text baseline
+        start: { x: MARGIN, y: state.y - FONT_SIZE - 2 }, 
         end: { x: width - MARGIN, y: state.y - FONT_SIZE - 2 },
         thickness: 0.5,
         color: LIGHT_GRAY,
       });
       
-      state.y -= LINE_HEIGHT * 2; // Move down past the title and the line
+      state.y -= LINE_HEIGHT * 2; 
       
       state = drawTableHeader(state);
 
@@ -478,13 +483,14 @@ serve(async (req) => {
         const item = items[i];
         
         // Calculate item totals using the updated function
+        // FIX: Ensure all optional fields are explicitly passed as numbers (0) if null/undefined
         const { subtotal, discountAmount, salesAmount, itemIva, totalItem } = calculateTotals([{
             quantity: item.quantity,
             unit_price: item.unit_price,
             tax_rate: item.tax_rate,
             is_exempt: item.is_exempt,
-            sales_percentage: item.sales_percentage,
-            discount_percentage: item.discount_percentage,
+            sales_percentage: item.sales_percentage ?? 0, // Ensure number or 0
+            discount_percentage: item.discount_percentage ?? 0, // Ensure number or 0
         }]);
 
         // Combine material name and description for the first column
@@ -526,10 +532,9 @@ serve(async (req) => {
 
         const finalY = state.y - requiredHeight;
         
-        // Helper to draw data centered vertically in the remaining columns
-        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true, size: number = FONT_SIZE) => {
+        // Helper to draw data centered vertically and right-aligned
+        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true, size: number = FONT_SIZE, fontToUse: any = font) => {
             const cellWidth = colWidths[colIndex];
-            const fontToUse = font;
             const textWidth = fontToUse.widthOfTextAtSize(text, size);
             
             const verticalCenterY = finalY + requiredHeight / 2 - size / 2;
@@ -538,7 +543,7 @@ serve(async (req) => {
                 ? currentX + cellWidth - 5 - textWidth 
                 : currentX + 5;
             
-            drawText(state, text, xPos, verticalCenterY, { size });
+            drawText(state, text, xPos, verticalCenterY, { size, font: fontToUse });
             currentX += cellWidth;
         };
 
@@ -561,7 +566,7 @@ serve(async (req) => {
         drawCellData(item.is_exempt ? 'EXENTO' : itemIva.toFixed(2), 6);
 
         // 8. Total
-        drawCellData(totalItem.toFixed(2), 7, true, FONT_SIZE + 1); // Slightly larger font for total
+        drawCellData(totalItem.toFixed(2), 7, true, FONT_SIZE + 1, boldFont); // Slightly larger font for total
 
         state.y = finalY; // Update Y position for the next row
       }
@@ -578,12 +583,20 @@ serve(async (req) => {
     };
 
     const drawTotalsAndSummary = (state: PDFState, order: any, items: any[]): PDFState => {
-      const calculatedTotals = calculateTotals(items);
+      const calculatedTotals = calculateTotals(items.map(item => ({
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_rate: item.tax_rate,
+        is_exempt: item.is_exempt,
+        sales_percentage: item.sales_percentage ?? 0,
+        discount_percentage: item.discount_percentage ?? 0,
+      })));
+      
       const totalSectionWidth = 200;
       const totalSectionX = width - MARGIN - totalSectionWidth; 
       
       // Determine number of rows needed for totals
-      let totalRows = 5; // Base Imponible, Descuento, Venta, IVA, TOTAL
+      let totalRows = 5; 
       let hasUsdTotal = false;
       if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
         totalRows = 6;
