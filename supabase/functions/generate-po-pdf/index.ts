@@ -34,7 +34,9 @@ const calculateTotals = (items: Array<{
   let total = 0;
 
   items.forEach(item => {
-    const itemValue = item.quantity * item.unit_price;
+    const quantity = item.quantity ?? 0; // FIX: Safely handle null/undefined
+    const unitPrice = item.unit_price ?? 0; // FIX: Safely handle null/undefined
+    const itemValue = quantity * unitPrice;
     
     // Ensure percentages are treated as numbers, defaulting to 0
     const discountRate = (item.discount_percentage ?? 0) / 100;
@@ -554,13 +556,13 @@ serve(async (req) => {
         drawCellData(item.unit || 'UND', 2);
 
         // 4. P. Unitario
-        drawCellData(item.unit_price.toFixed(2), 3);
+        drawCellData((item.unit_price ?? 0).toFixed(2), 3); // FIX: Safely access unit_price
 
         // 5. Desc. (%) (NEW)
-        drawCellData(`${(item.discount_percentage || 0).toFixed(2)}%`, 4);
+        drawCellData(`${(item.discount_percentage ?? 0).toFixed(2)}%`, 4);
 
         // 6. Venta (%) (NEW)
-        drawCellData(`${(item.sales_percentage || 0).toFixed(2)}%`, 5);
+        drawCellData(`${(item.sales_percentage ?? 0).toFixed(2)}%`, 5);
 
         // 7. IVA
         drawCellData(item.is_exempt ? 'EXENTO' : itemIva.toFixed(2), 6);
