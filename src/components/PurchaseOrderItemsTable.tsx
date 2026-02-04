@@ -116,7 +116,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 type="text"
                 value={item.supplier_code || ''}
                 onChange={(e) => onItemChange(index, 'supplier_code', e.target.value)}
-                placeholder="Código Prov."
+                placeholder="Cód. Prov."
                 className="h-9"
               />
             </div>
@@ -227,7 +227,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[10%]">
+        <td className="px-2 py-2 whitespace-nowrap w-[12%]"> {/* Increased width from w-[10%] to w-[12%] */}
           <Input
             type="number"
             step="0.01"
@@ -259,7 +259,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             className="h-8 min-h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-right w-[10%]">
+        <td className="px-2 py-2 whitespace-nowrap text-right w-[8%]"> {/* Reduced width from w-[10%] to w-[8%] to compensate */}
           <Button variant="outline" size="icon" onClick={() => setIsAddMaterialDialogOpen(true)} disabled={!supplierId} className="h-8 w-8 mr-1">
             <PlusCircle className="h-4 w-4" />
           </Button>
@@ -287,12 +287,12 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Código Prov.</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Cantidad</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Unidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">Precio Unit.</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">IVA</th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Exento</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Descripción</th>
-                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Acción</th>
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Acción</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
