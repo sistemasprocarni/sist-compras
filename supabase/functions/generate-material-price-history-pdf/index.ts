@@ -181,12 +181,12 @@ serve(async (req) => {
     const tableWidth = width - 2 * MARGIN;
     // Columns: Proveedor, Precio Original, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
     const colWidths = [
-      tableWidth * 0.30,  // 0. Proveedor (Increased from 20%)
-      tableWidth * 0.12,  // 1. Precio Original (12%)
+      tableWidth * 0.35,  // 0. Proveedor (Increased from 30% to 35%)
+      tableWidth * 0.10,  // 1. Precio Original (10%)
       tableWidth * 0.08,  // 2. Moneda (8%)
-      tableWidth * 0.12,  // 3. Tasa (12%)
-      tableWidth * 0.15,  // 4. Precio Convertido (USD) (15%)
-      tableWidth * 0.15,  // 5. N° OC (15%)
+      tableWidth * 0.10,  // 3. Tasa (Reduced from 12% to 10%)
+      tableWidth * 0.17,  // 4. Precio Convertido (USD) (Increased from 15% to 17%)
+      tableWidth * 0.12,  // 5. N° OC (Reduced from 15% to 12%)
       tableWidth * 0.08,  // 6. Fecha (8%)
     ];
     const colHeaders = [
@@ -206,10 +206,20 @@ serve(async (req) => {
       });
       
       for (let i = 0; i < colHeaders.length; i++) {
-        // Draw header text centered within its column width
+        // Determine alignment for header text
+        const isRightAligned = [1, 3, 4].includes(i); // Precio Orig, Tasa, Precio Convertido
+        
         const headerText = colHeaders[i];
         const textWidth = state.boldFont.widthOfTextAtSize(headerText, 8);
-        const xPos = currentX + (colWidths[i] / 2) - (textWidth / 2);
+        
+        let xPos;
+        if (isRightAligned) {
+            // Align header text to the right of the column, with 2pt padding
+            xPos = currentX + colWidths[i] - 2 - textWidth;
+        } else {
+            // Align header text to the left of the column, with 2pt padding
+            xPos = currentX + 2;
+        }
 
         drawText(state, headerText, xPos, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
           font: boldFont, 
@@ -257,8 +267,8 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Supplier Name ---
-            // Max characters per line for 30% width (approx 35 chars per line)
-            const maxCharsPerLine = 35; 
+            // Max characters per line for 35% width (approx 40 chars per line)
+            const maxCharsPerLine = 40; 
             const supplierLines = wrapText(entry.suppliers?.name || 'N/A', maxCharsPerLine);
             
             // Calculate height based on tighter line spacing
@@ -290,8 +300,7 @@ serve(async (req) => {
                 if (isRightAligned) {
                     xPos = currentX + cellWidth - 2 - textWidth; // Right aligned
                 } else {
-                    // Center aligned for single line text, but left aligned for multi-line context
-                    xPos = currentX + 2; 
+                    xPos = currentX + 2; // Left aligned
                 }
                 
                 drawText(state, text, xPos, verticalCenterY, { font: fontToUse });
