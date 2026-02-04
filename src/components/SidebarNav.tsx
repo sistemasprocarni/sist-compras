@@ -16,20 +16,20 @@ const navItems = [
     ]
   },
   {
-    category: 'Maestros de Datos',
-    items: [
-      { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
-      { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
-      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
-    ]
-  },
-  {
     category: 'Órdenes y Cotizaciones',
     items: [
       { to: '/generate-quote', icon: <FileText className="h-5 w-5" />, label: 'Generar Solicitud (SC)' },
       { to: '/quote-request-management', icon: <ClipboardList className="h-5 w-5" />, label: 'Gestión de Solicitudes (SC)' },
       { to: '/generate-po', icon: <ShoppingCart className="h-5 w-5" />, label: 'Generar Orden (OC)' },
       { to: '/purchase-order-management', icon: <ListOrdered className="h-5 w-5" />, label: 'Gestión de Órdenes (OC)' },
+    ]
+  },
+  {
+    category: 'Maestros de Datos',
+    items: [
+      { to: '/supplier-management', icon: <Users className="h-5 w-5" />, label: 'Gestión de Proveedores' },
+      { to: '/material-management', icon: <Box className="h-5 w-5" />, label: 'Gestión de Materiales' },
+      { to: '/company-management', icon: <Building2 className="h-5 w-5" />, label: 'Gestión de Empresas' },
     ]
   },
   {
@@ -44,7 +44,7 @@ const navItems = [
 ];
 
 const SidebarNav = () => {
-  const [openItems, setOpenItems] = useState<string[]>(['Inicio y Búsqueda', 'Maestros de Datos', 'Órdenes y Cotizaciones', 'Administración']);
+  const [openItems, setOpenItems] = useState<string[]>(['Inicio y Búsqueda', 'Órdenes y Cotizaciones', 'Maestros de Datos', 'Administración']);
 
   const handleValueChange = (value: string[]) => {
     setOpenItems(value);
@@ -64,23 +64,32 @@ const SidebarNav = () => {
           </AccordionTrigger>
           <AccordionContent className="pb-2">
             <nav className="grid items-start px-2 text-sm font-medium">
-              {category.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2 transition-all 
-                    ${
-                      isActive 
-                        ? 'bg-procarni-primary text-white' 
-                        : 'text-sidebar-foreground hover:bg-procarni-primary/10 hover:text-procarni-primary'
-                    }`
-                  }
-                >
-                  {item.icon}
-                  {item.label}
-                </NavLink>
-              ))}
+              {category.items.map((item) => {
+                const isOrdersCategory = category.category === 'Órdenes y Cotizaciones';
+                
+                // Determine classes based on category
+                const activeClasses = isOrdersCategory 
+                  ? 'bg-procarni-secondary text-white' 
+                  : 'bg-procarni-primary text-white';
+                
+                const hoverClasses = isOrdersCategory 
+                  ? 'text-sidebar-foreground hover:bg-procarni-secondary/10 hover:text-procarni-secondary'
+                  : 'text-sidebar-foreground hover:bg-procarni-primary/10 hover:text-procarni-primary';
+
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-2 transition-all 
+                      ${isActive ? activeClasses : hoverClasses}`
+                    }
+                  >
+                    {item.icon}
+                    {item.label}
+                  </NavLink>
+                );
+              })}
             </nav>
           </AccordionContent>
         </AccordionItem>
