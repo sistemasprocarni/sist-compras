@@ -29,10 +29,11 @@ const SupplierPriceHistoryDownloadButton: React.FC<SupplierPriceHistoryDownloadB
     }
 
     setIsDownloading(true);
-    const toastId = showLoading('Generando historial de precios del proveedor...');
+    const toastId = showLoading('Generando reporte PDF de historial de precios del proveedor...');
 
     try {
-      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/export-supplier-price-history`, {
+      // NEW: Call the PDF generation function
+      const response = await fetch(`https://sbmwuttfblpwwwpifmza.supabase.co/functions/v1/generate-supplier-price-history-pdf`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -43,13 +44,14 @@ const SupplierPriceHistoryDownloadButton: React.FC<SupplierPriceHistoryDownloadB
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al generar el historial de precios del proveedor.');
+        throw new Error(errorData.error || 'Error al generar el reporte PDF de historial de precios del proveedor.');
       }
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get('Content-Disposition');
       const fileNameMatch = contentDisposition && contentDisposition.match(/filename="([^"]+)"/);
-      const fileName = fileNameMatch ? fileNameMatch[1] : `historial_precios_proveedor_${supplierName}.xlsx`;
+      // Expecting a PDF filename now
+      const fileName = fileNameMatch ? fileNameMatch[1] : `historial_precios_proveedor_${supplierName}.pdf`;
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -61,11 +63,11 @@ const SupplierPriceHistoryDownloadButton: React.FC<SupplierPriceHistoryDownloadB
       window.URL.revokeObjectURL(url);
 
       dismissToast(toastId);
-      showSuccess('Historial de precios del proveedor descargado exitosamente.');
+      showSuccess('Reporte PDF descargado exitosamente.');
     } catch (error: any) {
       console.error('[SupplierPriceHistoryDownloadButton] Error downloading history:', error);
       dismissToast(toastId);
-      showError(error.message || 'Error desconocido al descargar el historial del proveedor.');
+      showError(error.message || 'Error desconocido al descargar el reporte PDF.');
     } finally {
       setIsDownloading(false);
     }
@@ -78,8 +80,8 @@ const SupplierPriceHistoryDownloadButton: React.FC<SupplierPriceHistoryDownloadB
       variant="outline"
       className="bg-blue-600 text-white hover:bg-blue-700"
     >
-      <DollarSign className="mr-2 h-4 w-4" />
-      {isDownloading ? 'Descargando...' : 'Descargar Historial de Precios'}
+      <Download className="mr-2 h-4 w-4" />
+      {isDownloading ? 'Descargando...' : 'Descargar Historial de Precios PDF'}
     </Button>
   );
 };

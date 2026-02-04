@@ -1,4 +1,6 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -30,6 +32,7 @@ const MATERIAL_CATEGORIES = [
   'MEDICION Y MANIPULACION',
   'ENCERADOS',
   'PUBLICIDAD', // Nueva categoría
+  'MAQUINARIA', // Nueva categoría
 ];
 
 // Define las unidades de medida.
