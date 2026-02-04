@@ -180,13 +180,14 @@ serve(async (req) => {
     // --- Table Column Configuration ---
     const tableWidth = width - 2 * MARGIN;
     // Columns: Proveedor, Precio Original, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
+    // Total width = 100%
     const colWidths = [
-      tableWidth * 0.35,  // 0. Proveedor (Increased from 30% to 35%)
-      tableWidth * 0.10,  // 1. Precio Original (10%)
+      tableWidth * 0.25,  // 0. Proveedor (Reduced from 35% to 25%)
+      tableWidth * 0.12,  // 1. Precio Original (12%)
       tableWidth * 0.08,  // 2. Moneda (8%)
-      tableWidth * 0.10,  // 3. Tasa (Reduced from 12% to 10%)
-      tableWidth * 0.17,  // 4. Precio Convertido (USD) (Increased from 15% to 17%)
-      tableWidth * 0.12,  // 5. N° OC (Reduced from 15% to 12%)
+      tableWidth * 0.12,  // 3. Tasa (Increased from 10% to 12%)
+      tableWidth * 0.18,  // 4. Precio Convertido (USD) (Increased from 17% to 18%)
+      tableWidth * 0.17,  // 5. N° OC (Increased from 12% to 17%)
       tableWidth * 0.08,  // 6. Fecha (8%)
     ];
     const colHeaders = [
@@ -267,8 +268,8 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Supplier Name ---
-            // Max characters per line for 35% width (approx 40 chars per line)
-            const maxCharsPerLine = 40; 
+            // Max characters per line for 25% width (approx 30 chars per line)
+            const maxCharsPerLine = 30; 
             const supplierLines = wrapText(entry.suppliers?.name || 'N/A', maxCharsPerLine);
             
             // Calculate height based on tighter line spacing
