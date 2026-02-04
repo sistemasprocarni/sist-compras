@@ -100,6 +100,8 @@ export interface PurchaseOrderItem {
   is_exempt?: boolean;
   unit?: string; // Added unit field
   description?: string; // ADDED
+  sales_percentage?: number; // NEW: Porcentaje de Venta (Additional Tax)
+  discount_percentage?: number; // NEW: Porcentaje de Descuento
 }
 
 export interface FichaTecnica {

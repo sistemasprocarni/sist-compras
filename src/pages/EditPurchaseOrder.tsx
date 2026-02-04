@@ -33,6 +33,8 @@ interface PurchaseOrderItemForm {
   is_exempt?: boolean;
   unit?: string;
   description?: string;
+  sales_percentage?: number; // NEW
+  discount_percentage?: number; // NEW
 }
 
 interface MaterialSearchResult {
@@ -106,12 +108,26 @@ const EditPurchaseOrder = () => {
         is_exempt: item.is_exempt,
         unit: item.unit || 'KG',
         description: item.description || '',
+        sales_percentage: item.sales_percentage || 0, // NEW
+        discount_percentage: item.discount_percentage || 0, // NEW
       })));
     }
   }, [initialOrder]);
 
   const handleAddItem = () => {
-    setItems((prevItems) => [...prevItems, { material_id: undefined, material_name: '', supplier_code: '', quantity: 0, unit_price: 0, tax_rate: 0.16, is_exempt: false, unit: 'KG', description: '' }]);
+    setItems((prevItems) => [...prevItems, { 
+      material_id: undefined, 
+      material_name: '', 
+      supplier_code: '', 
+      quantity: 0, 
+      unit_price: 0, 
+      tax_rate: 0.16, 
+      is_exempt: false, 
+      unit: 'KG', 
+      description: '',
+      sales_percentage: 0, // NEW default
+      discount_percentage: 0, // NEW default
+    }]);
   };
 
   const handleItemChange = (index: number, field: keyof PurchaseOrderItemForm, value: any) => {
@@ -323,8 +339,16 @@ const EditPurchaseOrder = () => {
               <span>{currency} {totals.baseImponible.toFixed(2)}</span>
             </div>
             <div className="flex justify-end items-center mb-2">
+              <span className="font-semibold mr-2">Monto Descuento:</span>
+              <span className="text-red-600">- {currency} {totals.montoDescuento.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-end items-center mb-2">
+              <span className="font-semibold mr-2">Monto Venta:</span>
+              <span className="text-blue-600">+ {currency} {totals.montoVenta.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-end items-center mb-2">
               <span className="font-semibold mr-2">Monto IVA:</span>
-              <span>{currency} {totals.montoIVA.toFixed(2)}</span>
+              <span>+ {currency} {totals.montoIVA.toFixed(2)}</span>
             </div>
             <div className="flex justify-end items-center text-xl font-bold">
               <span className="mr-2">TOTAL:</span>

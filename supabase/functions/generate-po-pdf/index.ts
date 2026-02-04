@@ -19,27 +19,55 @@ const LOGO_SIZE = 50;
 
 // --- UTILITY FUNCTIONS (Kept outside serve) ---
 
-const calculateTotals = (items: Array<{ quantity: number; unit_price: number; tax_rate?: number; is_exempt?: boolean }>) => {
-  let baseImponible = 0;
+const calculateTotals = (items: Array<{ 
+  quantity: number; 
+  unit_price: number; 
+  tax_rate?: number; 
+  is_exempt?: boolean; 
+  sales_percentage?: number; // NEW
+  discount_percentage?: number; // NEW
+}>) => {
+  let baseImponible = 0; // Suma de subtotales después de descuento (Base para IVA y Venta)
   let montoIVA = 0;
+  let montoVenta = 0; 
+  let montoDescuento = 0; 
   let total = 0;
 
   items.forEach(item => {
-    const itemTotal = item.quantity * item.unit_price;
-    baseImponible += itemTotal;
+    const itemValue = item.quantity * item.unit_price;
+    
+    // 1. Apply Discount
+    const discountRate = (item.discount_percentage ?? 0) / 100;
+    const discountAmount = itemValue * discountRate;
+    montoDescuento += discountAmount;
+    
+    const subtotalAfterDiscount = itemValue - discountAmount;
+    
+    // 2. Calculate Base Imponible (Subtotal after discount, before taxes)
+    baseImponible += subtotalAfterDiscount; 
 
-    if (!item.is_exempt) {
-      const taxRate = item.tax_rate ?? 0.16;
-      montoIVA += itemTotal * taxRate;
+    // 3. Apply Sales Percentage (Additional Tax)
+    const salesRate = (item.sales_percentage ?? 0) / 100;
+    const salesAmount = subtotalAfterDiscount * salesRate;
+    montoVenta += salesAmount;
+
+    // 4. Apply IVA (Standard Tax)
+    let ivaAmount = 0;
+    if (!item.is_exempt) { 
+      const taxRate = item.tax_rate ?? 0.16; // Default IVA 16%
+      ivaAmount = subtotalAfterDiscount * taxRate;
+      montoIVA += ivaAmount;
     }
-    total += itemTotal;
+    
+    // 5. Calculate Total Item
+    total += subtotalAfterDiscount + salesAmount + ivaAmount;
   });
-
-  total += montoIVA;
 
   return {
     baseImponible: parseFloat(baseImponible.toFixed(2)),
     montoIVA: parseFloat(montoIVA.toFixed(2)),
+    montoVenta: parseFloat(montoVenta.toFixed(2)),
+    montoDescuento: parseFloat(montoDescuento.toFixed(2)),
     total: parseFloat(total.toFixed(2)),
   };
 };
@@ -216,18 +244,20 @@ serve(async (req) => {
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const italicFont = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
-    // Table column configuration (Original 6 columns)
+    // Table column configuration (Original 6 columns + 2 new percentage columns)
     const tableWidth = width - 2 * MARGIN;
-    const originalColWidths = [
-      tableWidth * 0.30,  // 1. Material/Description
-      tableWidth * 0.10,  // 2. Cantidad
-      tableWidth * 0.10,  // 3. Unidad
-      tableWidth * 0.15,  // 4. P. Unitario
-      tableWidth * 0.15,  // 5. IVA
-      tableWidth * 0.20   // 6. Total
+    // Total 8 columns: Material, Cantidad, Unidad, P. Unitario, Desc. (%), Venta (%), IVA, Total
+    const colWidths = [
+      tableWidth * 0.25,  // 1. Material/Description (Reduced from 30%)
+      tableWidth * 0.08,  // 2. Cantidad
+      tableWidth * 0.08,  // 3. Unidad
+      tableWidth * 0.12,  // 4. P. Unitario
+      tableWidth * 0.08,  // 5. Desc. (%) (NEW)
+      tableWidth * 0.08,  // 6. Venta (%) (NEW)
+      tableWidth * 0.10,  // 7. IVA (Reduced from 15%)
+      tableWidth * 0.21   // 8. Total (Increased from 20%)
     ];
-    // UPDATED HEADER NAME
-    const colHeaders = ['Material', 'Cantidad', 'Unidad', 'P. Unitario', 'IVA', 'Total'];
+    const colHeaders = ['Material', 'Cant.', 'Unid.', 'P. Unit.', 'Desc. (%)', 'Venta (%)', 'IVA', 'Total'];
 
     // PDF State Management
     interface PDFState {
@@ -276,10 +306,10 @@ serve(async (req) => {
       for (let i = 0; i < colHeaders.length; i++) {
         drawText(state, colHeaders[i], currentX + 5, state.y - LINE_HEIGHT + (LINE_HEIGHT - FONT_SIZE) / 2, { 
           font: boldFont, 
-          size: 10,
+          size: 8, // Reduced font size for headers to fit
           color: PROC_RED
         });
-        currentX += originalColWidths[i];
+        currentX += colWidths[i];
       }
       state.y -= LINE_HEIGHT;
       return state;
@@ -287,7 +317,7 @@ serve(async (req) => {
 
     const checkPageBreak = (state: PDFState, requiredSpace: number): PDFState => {
       // Check if required space pushes content below the footer area
-      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 6) {
+      if (state.y - requiredSpace < MARGIN + LINE_HEIGHT * 10) { // Increased footer space check
         state.page = pdfDoc.addPage();
         state.y = height - MARGIN;
         state = drawTableHeader(state); // Redraw headers on new page
@@ -295,8 +325,8 @@ serve(async (req) => {
       return state;
     };
 
-    // --- Modular Drawing Functions ---
-
+    // --- Modular Drawing Functions (Header, Details, Observations remain the same) ---
+    
     const drawHeader = async (state: PDFState, order: any): Promise<PDFState> => {
       let companyLogoImage = null;
       if (order.companies?.logo_url) {
@@ -447,25 +477,32 @@ serve(async (req) => {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         
+        // Calculate item totals using the updated function
+        const { subtotal, discountAmount, salesAmount, itemIva, totalItem } = calculateTotals([{
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            tax_rate: item.tax_rate,
+            is_exempt: item.is_exempt,
+            sales_percentage: item.sales_percentage,
+            discount_percentage: item.discount_percentage,
+        }]);
+
         // Combine material name and description for the first column
-        let materialContent = String(item.material_name || ''); // ENSURE IT STARTS AS STRING
+        let materialContent = String(item.material_name || ''); 
         
-        // Add supplier code and description if available
         if (item.supplier_code || item.description) {
-            // Only add supplier code if it exists
             if (item.supplier_code) {
                 materialContent += `\n(Cód. Prov: ${item.supplier_code})`;
             }
-            // Add description if it exists
             if (item.description) {
                 materialContent += `\n${item.description}`;
             }
         }
         
-        // Wrap the combined content for the first column (30% width, approx 35 chars per line)
-        const materialLines = wrapText(materialContent, 35); 
+        // Wrap the combined content for the first column (25% width, approx 30 chars per line)
+        const materialLines = wrapText(materialContent, 30); 
         const lineSpacing = (FONT_SIZE - 1) * 1.2;
-        const requiredHeight = materialLines.length * lineSpacing + 5; // Calculate height based on smaller font size + padding
+        const requiredHeight = materialLines.length * lineSpacing + 5; 
 
         state = checkPageBreak(state, requiredHeight + 10); 
 
@@ -477,37 +514,31 @@ serve(async (req) => {
           color: LIGHT_GRAY,
         });
 
-        const subtotal = item.quantity * item.unit_price;
-        const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
-        const totalItem = subtotal + itemIva;
-
         let currentX = MARGIN;
-        // Adjusted currentY to start drawing 3 points below the top line (state.y)
         let currentY = state.y - 3; 
 
         // 1. Material/Description (Multi-line)
         for (const line of materialLines) {
-          drawText(state, line, currentX + 5, currentY - (FONT_SIZE - 1), { size: FONT_SIZE - 1 }); // Draw text, adjusting for font size
+          drawText(state, line, currentX + 5, currentY - (FONT_SIZE - 1), { size: FONT_SIZE - 1 }); 
           currentY -= lineSpacing;
         }
-        currentX += originalColWidths[0];
+        currentX += colWidths[0];
 
-        // Calculate the final Y position for the row based on the wrapped text height
         const finalY = state.y - requiredHeight;
         
         // Helper to draw data centered vertically in the remaining columns
-        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true) => {
-            const cellWidth = originalColWidths[colIndex];
-            const textWidth = font.widthOfTextAtSize(text, FONT_SIZE);
+        const drawCellData = (text: string, colIndex: number, isRightAligned: boolean = true, size: number = FONT_SIZE) => {
+            const cellWidth = colWidths[colIndex];
+            const fontToUse = font;
+            const textWidth = fontToUse.widthOfTextAtSize(text, size);
             
-            // Calculate vertical center position: finalY (bottom of cell) + requiredHeight/2 (center) - FONT_SIZE/2 (baseline adjustment)
-            const verticalCenterY = finalY + requiredHeight / 2 - FONT_SIZE / 2;
+            const verticalCenterY = finalY + requiredHeight / 2 - size / 2;
 
             const xPos = isRightAligned 
                 ? currentX + cellWidth - 5 - textWidth 
                 : currentX + 5;
             
-            drawText(state, text, xPos, verticalCenterY);
+            drawText(state, text, xPos, verticalCenterY, { size });
             currentX += cellWidth;
         };
 
@@ -518,13 +549,19 @@ serve(async (req) => {
         drawCellData(item.unit || 'UND', 2);
 
         // 4. P. Unitario
-        drawCellData(`${order.currency} ${item.unit_price.toFixed(2)}`, 3);
+        drawCellData(item.unit_price.toFixed(2), 3);
 
-        // 5. IVA
-        drawCellData(item.is_exempt ? 'EXENTO' : `${order.currency} ${itemIva.toFixed(2)}`, 4);
+        // 5. Desc. (%) (NEW)
+        drawCellData(`${(item.discount_percentage || 0).toFixed(2)}%`, 4);
 
-        // 6. Total
-        drawCellData(`${order.currency} ${totalItem.toFixed(2)}`, 5);
+        // 6. Venta (%) (NEW)
+        drawCellData(`${(item.sales_percentage || 0).toFixed(2)}%`, 5);
+
+        // 7. IVA
+        drawCellData(item.is_exempt ? 'EXENTO' : itemIva.toFixed(2), 6);
+
+        // 8. Total
+        drawCellData(totalItem.toFixed(2), 7, true, FONT_SIZE + 1); // Slightly larger font for total
 
         state.y = finalY; // Update Y position for the next row
       }
@@ -545,16 +582,16 @@ serve(async (req) => {
       const totalSectionWidth = 200;
       const totalSectionX = width - MARGIN - totalSectionWidth; 
       
-      let totalRows = 3;
+      // Determine number of rows needed for totals
+      let totalRows = 5; // Base Imponible, Descuento, Venta, IVA, TOTAL
       let hasUsdTotal = false;
       if (order.currency === 'VES' && order.exchange_rate && order.exchange_rate > 0) {
-        totalRows = 4;
+        totalRows = 6;
         hasUsdTotal = true;
       }
       
-      // Use a fixed row height for the totals table for consistent spacing
-      const totalRowHeight = LINE_HEIGHT * 1.5; // Increased height for padding
-      const totalSectionHeight = totalRowHeight * totalRows + 5; // 5 points padding at top/bottom
+      const totalRowHeight = LINE_HEIGHT * 1.5; 
+      const totalSectionHeight = totalRowHeight * totalRows + 5; 
 
       state = checkPageBreak(state, totalSectionHeight + LINE_HEIGHT * 3); 
 
@@ -564,14 +601,11 @@ serve(async (req) => {
         borderWidth: 1,
       });
       
-      // Start drawing content slightly below the top edge of the box
-      let currentY = state.y - 5; // Initial padding from top edge
+      let currentY = state.y - 5; 
 
       const drawTotalRow = (label: string, value: string, isBold: boolean = false, color: rgb = rgb(0, 0, 0), size: number = FONT_SIZE) => {
         const fontToUse = isBold ? boldFont : font;
         
-        // Calculate vertical center position within the totalRowHeight
-        // We use currentY (top of the row) and subtract half the row height, then add half the font size for baseline alignment
         const verticalCenterY = currentY - totalRowHeight / 2 + size / 2;
         
         // Draw label (left aligned)
@@ -581,15 +615,21 @@ serve(async (req) => {
         const valueWidth = fontToUse.widthOfTextAtSize(value, size);
         drawText(state, value, totalSectionX + totalSectionWidth - 5 - valueWidth, verticalCenterY, { font: fontToUse, size, color });
         
-        currentY -= totalRowHeight; // Move Y down by the fixed row height
+        currentY -= totalRowHeight; 
       };
 
       // Draw rows
       drawTotalRow('Base Imponible:', `${order.currency} ${calculatedTotals.baseImponible.toFixed(2)}`);
+      
+      // NEW: Descuento
+      drawTotalRow('Monto Descuento:', `- ${order.currency} ${calculatedTotals.montoDescuento.toFixed(2)}`, false, PROC_RED);
 
-      drawTotalRow('Monto IVA:', `${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+      // NEW: Venta
+      drawTotalRow('Monto Venta:', `+ ${order.currency} ${calculatedTotals.montoVenta.toFixed(2)}`, false, PROC_RED);
 
-      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); // Make TOTAL bigger and red
+      drawTotalRow('Monto IVA:', `+ ${order.currency} ${calculatedTotals.montoIVA.toFixed(2)}`);
+
+      drawTotalRow('TOTAL:', `${order.currency} ${calculatedTotals.total.toFixed(2)}`, true, PROC_RED, FONT_SIZE + 2); 
       
       if (hasUsdTotal) {
         const totalInUSD = (calculatedTotals.total / order.exchange_rate).toFixed(2);

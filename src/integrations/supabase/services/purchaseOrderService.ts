@@ -70,6 +70,8 @@ const PurchaseOrderService = {
         is_exempt: item.is_exempt,
         unit: item.unit,
         description: item.description, // ADDED
+        sales_percentage: item.sales_percentage, // NEW
+        discount_percentage: item.discount_percentage, // NEW
       }));
 
       const { error: itemsError } = await supabase
@@ -160,6 +162,8 @@ const PurchaseOrderService = {
         is_exempt: item.is_exempt,
         unit: item.unit,
         description: item.description, // ADDED
+        sales_percentage: item.sales_percentage, // NEW
+        discount_percentage: item.discount_percentage, // NEW
       }));
 
       const { error: itemsError } = await supabase

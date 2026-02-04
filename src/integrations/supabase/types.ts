@@ -88,6 +88,8 @@ export type PurchaseOrderItem = {
   unit: string | null;
   material_id: string | null;
   description: string | null; // ADDED
+  sales_percentage: number | null; // NEW
+  discount_percentage: number | null; // NEW
 };
 
 export type QuoteRequest = {

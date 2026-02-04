@@ -21,6 +21,8 @@ interface PurchaseOrderItemForm {
   is_exempt?: boolean;
   unit?: string;
   description?: string; // ADDED
+  sales_percentage?: number; // NEW
+  discount_percentage?: number; // NEW
 }
 
 interface MaterialSearchResult {
@@ -73,9 +75,32 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
     // we rely on the user searching/selecting it via SmartSearch.
   };
 
+  const calculateItemTotals = (item: PurchaseOrderItemForm) => {
+    const itemValue = item.quantity * item.unit_price;
+    
+    const discountRate = (item.discount_percentage ?? 0) / 100;
+    const discountAmount = itemValue * discountRate;
+    
+    const subtotalAfterDiscount = itemValue - discountAmount;
+    
+    const salesRate = (item.sales_percentage ?? 0) / 100;
+    const salesAmount = subtotalAfterDiscount * salesRate;
+
+    const itemIva = item.is_exempt ? 0 : subtotalAfterDiscount * (item.tax_rate || 0.16);
+    
+    const totalItem = subtotalAfterDiscount + salesAmount + itemIva;
+
+    return {
+      subtotal: itemValue,
+      discountAmount: discountAmount,
+      salesAmount: salesAmount,
+      itemIva: itemIva,
+      totalItem: totalItem,
+    };
+  };
+
   const renderItemRow = (item: PurchaseOrderItemForm, index: number) => {
-    const subtotal = item.quantity * item.unit_price;
-    const itemIva = item.is_exempt ? 0 : subtotal * (item.tax_rate || 0.16);
+    const { subtotal, discountAmount, salesAmount, itemIva, totalItem } = calculateItemTotals(item);
     const isMaterialSelected = !!item.material_id; // Check if material ID is present
 
     if (isMobile) {
@@ -154,6 +179,35 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
                 className="h-9"
               />
             </div>
+            
+            {/* NEW FIELDS */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Desc. (%)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={item.discount_percentage || ''}
+                onChange={(e) => onItemChange(index, 'discount_percentage', parseFloat(e.target.value) || undefined)}
+                min="0"
+                max="100"
+                placeholder="0%"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Venta (%)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={item.sales_percentage || ''}
+                onChange={(e) => onItemChange(index, 'sales_percentage', parseFloat(e.target.value) || undefined)}
+                min="0"
+                placeholder="0%"
+                className="h-9"
+              />
+            </div>
+            {/* END NEW FIELDS */}
+
             <div className="space-y-1 col-span-2">
               <label className="text-xs font-medium text-muted-foreground">Descripción Adicional</label>
               <Textarea
@@ -175,9 +229,12 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </div>
           </div>
           
-          <div className="flex justify-between items-center pt-2 border-t mt-3">
-            <span className="text-xs font-medium text-muted-foreground">Total Ítem:</span>
-            <span className="font-bold text-sm">{currency} {(subtotal + itemIva).toFixed(2)}</span>
+          <div className="flex flex-col pt-2 border-t mt-3 text-right">
+            <span className="text-xs text-muted-foreground">Subtotal: {currency} {subtotal.toFixed(2)}</span>
+            {discountAmount > 0 && <span className="text-xs text-red-600">Descuento: -{currency} {discountAmount.toFixed(2)}</span>}
+            {salesAmount > 0 && <span className="text-xs text-blue-600">Venta: +{currency} {salesAmount.toFixed(2)}</span>}
+            {itemIva > 0 && <span className="text-xs text-muted-foreground">IVA: +{currency} {itemIva.toFixed(2)}</span>}
+            <span className="font-bold text-sm mt-1">Total Ítem: {currency} {totalItem.toFixed(2)}</span>
           </div>
         </div>
       );
@@ -197,7 +254,7 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
           />
           {isMaterialSelected && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
+        <td className="px-2 py-2 whitespace-nowrap w-[6%]">
           <Input
             type="text"
             value={item.supplier_code || ''}
@@ -206,16 +263,16 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             className="h-8"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
+        <td className="px-2 py-2 whitespace-nowrap w-[6%]">
           <Input
             type="number"
             value={item.quantity}
             onChange={(e) => onItemChange(index, 'quantity', parseFloat(e.target.value))}
             min="0"
-            className="h-8 w-full" // Ensure input takes full width of the cell
+            className="h-8 w-full"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
+        <td className="px-2 py-2 whitespace-nowrap w-[6%]">
           <Select value={item.unit} onValueChange={(value) => onItemChange(index, 'unit', value)}>
             <SelectTrigger className="h-8">
               <SelectValue placeholder="Unidad" />
@@ -227,30 +284,55 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[10%]"> {/* Increased width from w-[8%] to w-[10%] */}
+        <td className="px-2 py-2 whitespace-nowrap w-[8%]">
           <Input
             type="number"
             step="0.01"
             value={item.unit_price}
             onChange={(e) => onItemChange(index, 'unit_price', parseFloat(e.target.value))}
             min="0"
-            className="h-8 w-full min-w-[80px]" // Added min-w-[80px] to prevent compression
+            className="h-8 w-full min-w-[80px]"
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium w-[10%]">
+        {/* NEW COLUMNS: Discount % and Sales % */}
+        <td className="px-2 py-2 whitespace-nowrap w-[6%]">
+          <Input
+            type="number"
+            step="0.01"
+            value={item.discount_percentage || ''}
+            onChange={(e) => onItemChange(index, 'discount_percentage', parseFloat(e.target.value) || undefined)}
+            min="0"
+            max="100"
+            placeholder="0%"
+            className="h-8 w-full"
+          />
+        </td>
+        <td className="px-2 py-2 whitespace-nowrap w-[6%]">
+          <Input
+            type="number"
+            step="0.01"
+            value={item.sales_percentage || ''}
+            onChange={(e) => onItemChange(index, 'sales_percentage', parseFloat(e.target.value) || undefined)}
+            min="0"
+            placeholder="0%"
+            className="h-8 w-full"
+          />
+        </td>
+        {/* END NEW COLUMNS */}
+        <td className="px-2 py-2 whitespace-nowrap text-right text-sm font-medium w-[8%]">
           {currency} {subtotal.toFixed(2)}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-center text-sm w-[8%]">
+        <td className="px-2 py-2 whitespace-nowrap text-center text-sm w-[6%]">
           {currency} {itemIva.toFixed(2)}
         </td>
-        <td className="px-2 py-2 whitespace-nowrap text-center w-[8%]">
+        <td className="px-2 py-2 whitespace-nowrap text-center w-[6%]">
           <Switch
             checked={item.is_exempt}
             onCheckedChange={(checked) => onItemChange(index, 'is_exempt', checked)}
             disabled={!item.material_name}
           />
         </td>
-        <td className="px-2 py-2 whitespace-nowrap w-[15%]"> {/* Reduced width from w-[19%] to w-[15%] to compensate */}
+        <td className="px-2 py-2 whitespace-nowrap w-[15%]">
           <Textarea
             value={item.description || ''}
             onChange={(e) => onItemChange(index, 'description', e.target.value)}
@@ -284,13 +366,15 @@ const PurchaseOrderItemsTable: React.FC<PurchaseOrderItemsTableProps> = ({
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Producto</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Código Prov.</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Cantidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Unidad</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Precio Unit.</th>
-                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">Monto</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">IVA</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Exento</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Cód. Prov.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Cant.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Unidad</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">P. Unit.</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Desc. (%)</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Venta (%)</th>
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Monto</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">IVA</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Exento</th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">Descripción</th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">Acción</th>
               </tr>
