@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram, Filter, Tag } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Search, Phone, Mail, Eye, Loader2, ArrowLeft, Instagram, Filter, Tag, AlertTriangle } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getAllSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierDetails } from '@/integrations/supabase/data';
 import { showError, showSuccess } from '@/utils/toast';
 import SupplierForm from '@/components/SupplierForm';
 import { useSession } from '@/components/SessionContextProvider';
 import { Input } from '@/components/ui/input';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 import { cn } from '@/lib/utils';
 
@@ -325,7 +325,13 @@ const SupplierManagement = () => {
                     </CardDescription>
                     <div className="text-sm space-y-1 mt-2 w-full">
                       {/* Eliminado el email para ahorrar espacio */}
-                      {supplier.phone && <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>}
+                      {supplier.phone ? (
+                        <p className="flex items-center"><Phone className="mr-1 h-3 w-3" /> Teléfono: {supplier.phone}</p>
+                      ) : (
+                        <p className="flex items-center text-procarni-alert">
+                          <AlertTriangle className="mr-1 h-3 w-3" /> Teléfono: Faltante
+                        </p>
+                      )}
                       <p>
                         <strong>Términos:</strong> {supplier.payment_terms === 'Otro' && supplier.custom_payment_terms ? supplier.custom_payment_terms : supplier.payment_terms}
                       </p>
@@ -391,7 +397,13 @@ const SupplierManagement = () => {
                         <TableCell className="font-medium">{supplier.name}</TableCell>
                         <TableCell>{supplier.rif}</TableCell>
                         <TableCell>{supplier.email || 'N/A'}</TableCell>
-                        <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                        <TableCell className={cn(supplier.phone ? '' : 'text-procarni-alert font-medium')}>
+                          {supplier.phone || (
+                            <span className="flex items-center">
+                              <AlertTriangle className="h-4 w-4 mr-1" /> Faltante
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", getStatusBadgeClass(supplier.status))}>
                             {supplier.status === 'Active' ? 'Activo' : 'Inactivo'}
