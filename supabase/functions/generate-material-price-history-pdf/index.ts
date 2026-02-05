@@ -86,8 +86,8 @@ const drawText = (state: PDFState, text: string, x: number, yPos: number, option
   state.page.drawText(safeText, {
     x,
     y: yPos,
-    font: options.font || state.font, // FIX: Use font object from options or default
-    size: options.size || FONT_SIZE, // FIX: Use size from options or default
+    font: options.font || state.font, 
+    size: options.size || FONT_SIZE, 
     color: rgb(0, 0, 0),
     ...options,
   });
@@ -182,12 +182,12 @@ serve(async (req) => {
     // Columns: Proveedor, Precio Original, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
     // Total width = 100%
     const colWidths = [
-      tableWidth * 0.25,  // 0. Proveedor (Reduced from 35% to 25%)
+      tableWidth * 0.25,  // 0. Proveedor (25%)
       tableWidth * 0.12,  // 1. Precio Original (12%)
       tableWidth * 0.08,  // 2. Moneda (8%)
-      tableWidth * 0.12,  // 3. Tasa (Increased from 10% to 12%)
-      tableWidth * 0.18,  // 4. Precio Convertido (USD) (Increased from 17% to 18%)
-      tableWidth * 0.17,  // 5. N° OC (Increased from 12% to 17%)
+      tableWidth * 0.12,  // 3. Tasa (12%)
+      tableWidth * 0.18,  // 4. Precio Convertido (USD) (18%)
+      tableWidth * 0.17,  // 5. N° OC (17%)
       tableWidth * 0.08,  // 6. Fecha (8%)
     ];
     const colHeaders = [
@@ -289,7 +289,7 @@ serve(async (req) => {
             });
 
             let currentX = MARGIN;
-            const finalY = state.y - requiredHeight;
+            const finalY = state.y - rowHeight;
             const verticalCenterY = finalY + rowHeight / 2 - FONT_SIZE / 2;
 
             // Helper to draw data
@@ -308,7 +308,7 @@ serve(async (req) => {
                 currentX += cellWidth;
             };
             
-            // 1. Proveedor (Multi-line, Left Aligned)
+            // 0. Proveedor (Multi-line, Left Aligned)
             let currentY = state.y - 3; // Start drawing 3 points below the top line
             for (const line of supplierLines) {
                 drawText(state, line, currentX + 2, currentY - FONT_SIZE, { size: FONT_SIZE }); 
@@ -316,23 +316,23 @@ serve(async (req) => {
             }
             currentX += colWidths[0];
 
-            // 2. Precio Original (Right Aligned)
+            // 1. Precio Original (Right Aligned)
             drawCellData(entry.unit_price.toFixed(2), 1, true);
 
-            // 3. Moneda (Left Aligned)
+            // 2. Moneda (Left Aligned)
             drawCellData(entry.currency, 2);
 
-            // 4. Tasa (Right Aligned)
+            // 3. Tasa (Right Aligned)
             drawCellData(entry.exchange_rate ? entry.exchange_rate.toFixed(4) : 'N/A', 3, true);
 
-            // 5. Precio Convertido (USD) (Right Aligned, Bold)
+            // 4. Precio Convertido (USD) (Right Aligned, Bold)
             const convertedText = convertedPrice !== null ? `USD ${convertedPrice.toFixed(2)}` : 'N/A';
             drawCellData(convertedText, 4, true, boldFont);
 
-            // 6. N° OC (Left Aligned)
+            // 5. N° OC (Left Aligned)
             drawCellData(orderNumber, 5);
 
-            // 7. Fecha (Left Aligned)
+            // 6. Fecha (Left Aligned)
             const dateText = new Date(entry.recorded_at).toLocaleDateString('es-VE');
             drawCellData(dateText, 6);
 

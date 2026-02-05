@@ -161,13 +161,31 @@ serve(async (req) => {
       state.page.drawText(safeText, {
         x,
         y: yPos,
-        font: options.font || state.font, // FIX: Use font object from options or default
-        size: options.size || FONT_SIZE, // FIX: Use size from options or default
+        font: options.font || state.font, 
+        size: options.size || FONT_SIZE, 
         color: rgb(0, 0, 0),
         ...options,
       });
     };
 
+    // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
+    const tableWidth = width - 2 * MARGIN; // Approx 780px
+    // Columns: Material, Cód. Material, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC
+    // Total 7 columns.
+    const colWidths = [
+      tableWidth * 0.30,  // 0. Material (30%)
+      tableWidth * 0.10,  // 1. Cód. Material (10%) - REDUCED
+      tableWidth * 0.12,  // 2. Precio Unitario (12%)
+      tableWidth * 0.08,  // 3. Moneda (8%) - REDUCED
+      tableWidth * 0.12,  // 4. Tasa (12%)
+      tableWidth * 0.18,  // 5. Precio Convertido (USD) (18%) - INCREASED
+      tableWidth * 0.10,  // 6. N° OC (10%)
+    ];
+    const colHeaders = [
+      'Material', 'Cód. Mat.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
+      'Precio Convertido (USD)', 'N° Orden Compra'
+    ];
+    
     const drawTableHeader = (state: PDFState): PDFState => {
       let currentX = MARGIN;
       
@@ -180,8 +198,8 @@ serve(async (req) => {
       });
       
       for (let i = 0; i < colHeaders.length; i++) {
-        // Determine alignment for header text (New indices: 2, 4, 5 are right aligned)
-        const isRightAligned = [2, 4, 5].includes(i); 
+        // Determine alignment for header text (Indices: 1, 2, 4, 5 are right aligned)
+        const isRightAligned = [1, 2, 4, 5].includes(i); 
         
         const headerText = colHeaders[i];
         const textWidth = state.boldFont.widthOfTextAtSize(headerText, 7); // Use smaller font for headers
@@ -216,24 +234,6 @@ serve(async (req) => {
       return state;
     };
     // --------------------------------------------------------------------
-
-    // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
-    const tableWidth = width - 2 * MARGIN; // Approx 780px
-    // Columns: Material, Cód. Material, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC
-    // Total 7 columns.
-    const colWidths = [
-      tableWidth * 0.30,  // 0. Material (30%)
-      tableWidth * 0.12,  // 1. Cód. Material (12%)
-      tableWidth * 0.12,  // 2. Precio Unitario (12%)
-      tableWidth * 0.10,  // 3. Moneda (10%)
-      tableWidth * 0.12,  // 4. Tasa (12%)
-      tableWidth * 0.14,  // 5. Precio Convertido (USD) (14%)
-      tableWidth * 0.10,  // 6. N° OC (10%)
-    ];
-    const colHeaders = [
-      'Material', 'Cód. Mat.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
-      'Precio Convertido (USD)', 'N° Orden Compra'
-    ];
     
     // --- Header ---
     drawText(state, 'REPORTE DE HISTORIAL DE PRECIOS POR PROVEEDOR', MARGIN, state.y, { font: boldFont, size: 16, color: PROC_RED });
@@ -270,15 +270,10 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Material Name ---
-            // Max characters per line for 30% width (approx 40 chars per line in landscape)
             const maxCharsPerLine = 40; 
-            // NOTE: entry.materials is now guaranteed to exist due to the select query
             const materialLines = wrapText(entry.materials?.name || 'N/A', maxCharsPerLine);
             
-            // Calculate height based on tighter line spacing
-            const requiredTextHeight = materialLines.length * TIGHT_LINE_SPACING + 5; // Add padding
-            
-            // Determine final row height
+            const requiredTextHeight = materialLines.length * TIGHT_LINE_SPACING + 5; 
             const rowHeight = Math.max(MIN_ROW_HEIGHT, requiredTextHeight); 
             
             state = checkPageBreak(pdfDoc, state, rowHeight + 5, drawTableHeader); 
@@ -312,15 +307,15 @@ serve(async (req) => {
             };
             
             // 0. Material (Multi-line, Left Aligned)
-            let currentY = state.y - 3; // Start drawing 3 points below the top line
+            let currentY = state.y - 3; 
             for (const line of materialLines) {
                 drawText(state, line, currentX + 2, currentY - FONT_SIZE, { size: FONT_SIZE }); 
                 currentY -= TIGHT_LINE_SPACING;
             }
             currentX += colWidths[0];
 
-            // 1. Cód. Material (Left Aligned)
-            drawCellData(entry.materials?.code || 'N/A', 1);
+            // 1. Cód. Material (Right Aligned)
+            drawCellData(entry.materials?.code || 'N/A', 1, true);
 
             // 2. Precio Unitario (Right Aligned)
             drawCellData(entry.unit_price.toFixed(2), 2, true);
