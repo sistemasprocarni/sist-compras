@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check, DollarSign } from 'lucide-react';
+import { ArrowLeft, Phone, Instagram, PlusCircle, ShoppingCart, FileText, MoreVertical, Check, DollarSign, Edit } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { getSupplierDetails, getFichaTecnicaBySupplierAndProduct } from '@/integrations/supabase/data';
 import { showError } from '@/utils/toast';
@@ -20,7 +20,7 @@ import {
   DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import SupplierPriceHistoryDownloadButton from '@/components/SupplierPriceHistoryDownloadButton'; // NEW IMPORT
+import SupplierPriceHistoryDownloadButton from '@/components/SupplierPriceHistoryDownloadButton';
 
 interface MaterialAssociation {
   id: string; // ID of supplier_materials entry
@@ -160,28 +160,6 @@ const SupplierDetails = () => {
     );
   }
 
-  const ActionButtons = () => (
-    <>
-      <Button 
-        onClick={handleGenerateSC} 
-        className={cn("bg-procarni-secondary hover:bg-green-700", isMobile ? 'w-full justify-start' : '')}
-      >
-        <PlusCircle className="mr-2 h-4 w-4" /> Generar SC
-      </Button>
-      <Button 
-        onClick={handleGenerateOC} 
-        className={cn("bg-blue-600 hover:bg-blue-700", isMobile ? 'w-full justify-start' : '')}
-      >
-        <ShoppingCart className="mr-2 h-4 w-4" /> Generar OC
-      </Button>
-      <SupplierPriceHistoryDownloadButton
-        supplierId={supplier.id}
-        supplierName={supplier.name}
-        disabled={isLoading}
-      />
-    </>
-  );
-
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -189,26 +167,46 @@ const SupplierDetails = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
         
-        {isMobile ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Acciones de Proveedor</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="flex flex-col gap-1 p-1">
-                <ActionButtons />
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex gap-2 flex-wrap justify-end">
-            <ActionButtons />
-          </div>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" className={cn(isMobile ? 'w-10 h-10 p-0' : '')}>
+              <MoreVertical className={cn("h-4 w-4", !isMobile && "mr-2")} />
+              {!isMobile && 'Acciones'}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Opciones de Proveedor</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {/* 1. Generar SC */}
+            <DropdownMenuItem onSelect={handleGenerateSC} className="cursor-pointer text-procarni-secondary focus:text-green-700">
+              <PlusCircle className="mr-2 h-4 w-4" /> Generar Solicitud (SC)
+            </DropdownMenuItem>
+            
+            {/* 2. Generar OC */}
+            <DropdownMenuItem onSelect={handleGenerateOC} className="cursor-pointer text-blue-600 focus:text-blue-700">
+              <ShoppingCart className="mr-2 h-4 w-4" /> Generar Orden (OC)
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator />
+            
+            {/* 3. Editar Proveedor */}
+            <DropdownMenuItem onSelect={() => navigate(`/supplier-management?editId=${supplier.id}`)} className="cursor-pointer">
+              <Edit className="mr-2 h-4 w-4" /> Editar Proveedor
+            </DropdownMenuItem>
+            
+            {/* 4. Historial de Precios (Download Button as DropdownMenuItem) */}
+            <DropdownMenuItem asChild>
+              <SupplierPriceHistoryDownloadButton
+                supplierId={supplier.id}
+                supplierName={supplier.name}
+                disabled={isLoading}
+                asChild
+              />
+            </DropdownMenuItem>
+            
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="mb-6">
