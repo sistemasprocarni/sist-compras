@@ -161,7 +161,8 @@ serve(async (req) => {
       state.page.drawText(safeText, {
         x,
         y: yPos,
-        font: FONT_SIZE, // Use FONT_SIZE constant
+        font: options.font || state.font, // FIX: Use font object from options or default
+        size: options.size || FONT_SIZE, // FIX: Use size from options or default
         color: rgb(0, 0, 0),
         ...options,
       });

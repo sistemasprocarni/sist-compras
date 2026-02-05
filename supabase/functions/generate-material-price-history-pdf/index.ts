@@ -86,8 +86,8 @@ const drawText = (state: PDFState, text: string, x: number, yPos: number, option
   state.page.drawText(safeText, {
     x,
     y: yPos,
-    font: state.font,
-    size: FONT_SIZE,
+    font: options.font || state.font, // FIX: Use font object from options or default
+    size: options.size || FONT_SIZE, // FIX: Use size from options or default
     color: rgb(0, 0, 0),
     ...options,
   });
@@ -289,7 +289,7 @@ serve(async (req) => {
             });
 
             let currentX = MARGIN;
-            const finalY = state.y - rowHeight;
+            const finalY = state.y - requiredHeight;
             const verticalCenterY = finalY + rowHeight / 2 - FONT_SIZE / 2;
 
             // Helper to draw data
