@@ -81,7 +81,7 @@ const SupplierPriceHistoryDownloadButton: React.FC<SupplierPriceHistoryDownloadB
       className="bg-blue-600 text-white hover:bg-blue-700"
     >
       <Download className="mr-2 h-4 w-4" />
-      {isDownloading ? 'Descargando...' : 'Descargar Historial de Precios PDF'}
+      {isDownloading ? 'Descargando...' : 'Historial de Precios'}
     </Button>
   );
 };
