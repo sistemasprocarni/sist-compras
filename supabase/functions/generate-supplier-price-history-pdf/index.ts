@@ -161,8 +161,7 @@ serve(async (req) => {
       state.page.drawText(safeText, {
         x,
         y: yPos,
-        font: state.font,
-        size: FONT_SIZE,
+        font: FONT_SIZE, // Use FONT_SIZE constant
         color: rgb(0, 0, 0),
         ...options,
       });
@@ -180,8 +179,8 @@ serve(async (req) => {
       });
       
       for (let i = 0; i < colHeaders.length; i++) {
-        // Determine alignment for header text
-        const isRightAligned = [3, 5, 6].includes(i); // P. Unit, Tasa, Precio Convertido
+        // Determine alignment for header text (New indices: 2, 4, 5 are right aligned)
+        const isRightAligned = [2, 4, 5].includes(i); 
         
         const headerText = colHeaders[i];
         const textWidth = state.boldFont.widthOfTextAtSize(headerText, 7); // Use smaller font for headers
@@ -219,22 +218,20 @@ serve(async (req) => {
 
     // --- Table Column Configuration (Adjusted for Landscape A4: ~780px width) ---
     const tableWidth = width - 2 * MARGIN; // Approx 780px
-    // Columns: Material, Cód. Material, Unidad, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC, Fecha
-    // Total 9 columns.
+    // Columns: Material, Cód. Material, Precio Unitario, Moneda, Tasa, Precio Convertido (USD), N° OC
+    // Total 7 columns.
     const colWidths = [
-      tableWidth * 0.25,  // 0. Material (25%) - Allows wrapping
-      tableWidth * 0.10,  // 1. Cód. Material (10%)
-      tableWidth * 0.08,  // 2. Unidad (8%)
-      tableWidth * 0.10,  // 3. Precio Unitario (10%)
-      tableWidth * 0.08,  // 4. Moneda (8%)
-      tableWidth * 0.10,  // 5. Tasa (10%)
-      tableWidth * 0.12,  // 6. Precio Convertido (USD) (12%)
-      tableWidth * 0.10,  // 7. N° OC (10%)
-      tableWidth * 0.07,  // 8. Fecha (7%)
+      tableWidth * 0.30,  // 0. Material (30%)
+      tableWidth * 0.12,  // 1. Cód. Material (12%)
+      tableWidth * 0.12,  // 2. Precio Unitario (12%)
+      tableWidth * 0.10,  // 3. Moneda (10%)
+      tableWidth * 0.12,  // 4. Tasa (12%)
+      tableWidth * 0.14,  // 5. Precio Convertido (USD) (14%)
+      tableWidth * 0.10,  // 6. N° OC (10%)
     ];
     const colHeaders = [
-      'Material', 'Cód. Mat.', 'Unid.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
-      'Precio Convertido (USD)', 'N° Orden Compra', 'Fecha'
+      'Material', 'Cód. Mat.', 'P. Unit.', 'Moneda', 'Tasa (USD/VES)', 
+      'Precio Convertido (USD)', 'N° Orden Compra'
     ];
     
     // --- Header ---
@@ -272,8 +269,9 @@ serve(async (req) => {
             const orderNumber = orderSequence ? formatSequenceNumber(orderSequence, orderDate) : 'N/A';
 
             // --- Calculate required row height based on wrapped Material Name ---
-            // Max characters per line for 25% width (approx 40 chars per line in landscape)
+            // Max characters per line for 30% width (approx 40 chars per line in landscape)
             const maxCharsPerLine = 40; 
+            // NOTE: entry.materials is now guaranteed to exist due to the select query
             const materialLines = wrapText(entry.materials?.name || 'N/A', maxCharsPerLine);
             
             // Calculate height based on tighter line spacing
@@ -312,7 +310,7 @@ serve(async (req) => {
                 currentX += cellWidth;
             };
             
-            // 1. Material (Multi-line, Left Aligned)
+            // 0. Material (Multi-line, Left Aligned)
             let currentY = state.y - 3; // Start drawing 3 points below the top line
             for (const line of materialLines) {
                 drawText(state, line, currentX + 2, currentY - FONT_SIZE, { size: FONT_SIZE }); 
@@ -320,31 +318,24 @@ serve(async (req) => {
             }
             currentX += colWidths[0];
 
-            // 2. Cód. Material (Left Aligned)
+            // 1. Cód. Material (Left Aligned)
             drawCellData(entry.materials?.code || 'N/A', 1);
 
-            // 3. Unidad (Left Aligned)
-            drawCellData(entry.materials?.unit || 'N/A', 2);
+            // 2. Precio Unitario (Right Aligned)
+            drawCellData(entry.unit_price.toFixed(2), 2, true);
 
-            // 4. Precio Unitario (Right Aligned)
-            drawCellData(entry.unit_price.toFixed(2), 3, true);
+            // 3. Moneda (Left Aligned)
+            drawCellData(entry.currency, 3);
 
-            // 5. Moneda (Left Aligned)
-            drawCellData(entry.currency, 4);
+            // 4. Tasa (Right Aligned)
+            drawCellData(entry.exchange_rate ? entry.exchange_rate.toFixed(4) : 'N/A', 4, true);
 
-            // 6. Tasa (Right Aligned)
-            drawCellData(entry.exchange_rate ? entry.exchange_rate.toFixed(4) : 'N/A', 5, true);
-
-            // 7. Precio Convertido (USD) (Right Aligned, Bold)
+            // 5. Precio Convertido (USD) (Right Aligned, Bold)
             const convertedText = convertedPrice !== null ? `USD ${convertedPrice.toFixed(2)}` : 'N/A';
-            drawCellData(convertedText, 6, true, boldFont);
+            drawCellData(convertedText, 5, true, boldFont);
 
-            // 8. N° OC (Left Aligned)
-            drawCellData(orderNumber, 7);
-
-            // 9. Fecha (Left Aligned)
-            const dateText = new Date(entry.recorded_at).toLocaleDateString('es-VE');
-            drawCellData(dateText, 8);
+            // 6. N° OC (Left Aligned)
+            drawCellData(orderNumber, 6);
 
             state.y = finalY; // Update Y position for the next row
         }
